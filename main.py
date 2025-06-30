@@ -305,7 +305,10 @@ async def withdraw(interaction: discord.Interaction, amount: str):
         f"New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}"
     )
 
-@tree.command(name="commute", description="Commute to or from work using different methods")
+@tree.command(
+    name="commute", 
+    description="Commute to or from work. Methods: drive (-$10), bike (+$10), subway (-$10), bus (-$5)"
+)
 @app_commands.describe(method="Method of commute", direction="Direction of commute (to or from work)")
 @app_commands.autocomplete(method=commute_method_autocomplete, direction=commute_direction_autocomplete)
 async def commute(interaction: discord.Interaction, method: str, direction: str):
@@ -379,12 +382,14 @@ async def commute(interaction: discord.Interaction, method: str, direction: str)
 
     if cost > 0 and reward == 0:
         await interaction.response.send_message(
-            f"🚗 You {direction} work by {method} and spent ${cost}.\n"
-            f"New checking balance: ${user['checking_account']:,}.")
+            f"🚗 You commuted {direction} work by {method} and spent ${cost}.\n"
+            f"New checking balance: ${user['checking_account']:,}."
+        )
     elif reward > 0:
         await interaction.response.send_message(
-            f"🚴 You {direction} work by bike and earned $10 for being green!\n"
-            f"New checking balance: ${user['checking_account']:,}.")
+            f"🚴 You commuted {direction} work by bike and earned $10 for being green!\n"
+            f"New checking balance: ${user['checking_account']:,}."
+        )
     else:
         await interaction.response.send_message("Something unexpected happened.", ephemeral=True)
 
