@@ -41,6 +41,30 @@ last_paycheck_times = {}
 def normalize(text):
     return re.sub(r'[\s\-]', '', text.lower())
 
+def parse_amount(amount_str: str) -> int | None:
+    """
+    Parse a string amount that can contain commas and suffixes like 'k' or 'm'.
+    Returns integer value or None if invalid.
+    Examples:
+      "10k" -> 10000
+      "1,000,000" -> 1000000
+      "5m" -> 5000000
+    """
+    amount_str = amount_str.lower().replace(',', '').strip()
+    match = re.fullmatch(r'(\d+)([km]?)', amount_str)
+    if not match:
+        return None
+
+    number = int(match.group(1))
+    suffix = match.group(2)
+
+    if suffix == 'k':
+        number *= 1_000
+    elif suffix == 'm':
+        number *= 1_000_000
+
+    return number if number > 0 else None
+
 # --- Database functions ---
 
 async def create_pool():
@@ -188,8 +212,14 @@ async def bank(interaction: discord.Interaction):
 
 @tree.command(name="deposit", description="Deposit money from checking to savings")
 @app_commands.describe(amount="Amount to deposit from checking to savings")
-async def deposit(interaction: discord.Interaction, amount: int):
-    if amount <= 0:
+async def deposit(interaction: discord.Interaction, amount: str):
+    parsed_amount = parse_amount(amount)
+    if parsed_amount is None:
+        await interaction.response.send_message("❌ Invalid amount format. Use numbers, commas, or suffixes like 'k' or 'm'.", ephemeral=True)
+        return
+
+    amount_int = parsed_amount
+    if amount_int <= 0:
         await interaction.response.send_message("❌ Please enter a positive amount to deposit.", ephemeral=True)
         return
 
@@ -206,23 +236,29 @@ async def deposit(interaction: discord.Interaction, amount: int):
             'fridge': []
         }
 
-    if user['checking_account'] < amount:
+    if user['checking_account'] < amount_int:
         await interaction.response.send_message("❌ You don't have enough money in your checking account.", ephemeral=True)
         return
 
-    user['checking_account'] -= amount
-    user['savings_account'] += amount
+    user['checking_account'] -= amount_int
+    user['savings_account'] += amount_int
     await upsert_user(pool, user_id, user)
 
     await interaction.response.send_message(
-        f"✅ Successfully deposited ${amount:,} from 💰 checking to 🏦 savings.\n"
+        f"✅ Successfully deposited ${amount_int:,} from 💰 checking to 🏦 savings.\n"
         f"New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}"
     )
 
 @tree.command(name="withdraw", description="Withdraw money from savings to checking")
 @app_commands.describe(amount="Amount to withdraw from savings to checking")
-async def withdraw(interaction: discord.Interaction, amount: int):
-    if amount <= 0:
+async def withdraw(interaction: discord.Interaction, amount: str):
+    parsed_amount = parse_amount(amount)
+    if parsed_amount is None:
+        await interaction.response.send_message("❌ Invalid amount format. Use numbers, commas, or suffixes like 'k' or 'm'.", ephemeral=True)
+        return
+
+    amount_int = parsed_amount
+    if amount_int <= 0:
         await interaction.response.send_message("❌ Please enter a positive amount to withdraw.", ephemeral=True)
         return
 
@@ -239,16 +275,16 @@ async def withdraw(interaction: discord.Interaction, amount: int):
             'fridge': []
         }
 
-    if user['savings_account'] < amount:
+    if user['savings_account'] < amount_int:
         await interaction.response.send_message("❌ You don't have enough money in your savings account.", ephemeral=True)
         return
 
-    user['savings_account'] -= amount
-    user['checking_account'] += amount
+    user['savings_account'] -= amount_int
+    user['checking_account'] += amount_int
     await upsert_user(pool, user_id, user)
 
     await interaction.response.send_message(
-        f"✅ Successfully withdrew ${amount:,} from 🏦 savings to 💰 checking.\n"
+        f"✅ Successfully withdrew ${amount_int:,} from 🏦 savings to 💰 checking.\n"
         f"New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}"
     )
 
