@@ -8,7 +8,7 @@ import re
 import time
 import asyncpg
 
-# Load categories JSON
+# Load categories JSON.
 with open('categories.json', 'r') as f:
     categories = json.load(f)
 
