@@ -7,6 +7,7 @@ import os
 import re
 import time
 import asyncpg
+import ssl
 
 # Load categories JSON.
 with open('categories.json', 'r') as f:
@@ -32,7 +33,6 @@ if not DATABASE_URL:
     print("ERROR: DATABASE_URL environment variable is missing.")
     exit(1)  # This only stops the app if the URL isn't found
 
-
 # Globals
 pool = None
 last_paycheck_times = {}
@@ -42,16 +42,12 @@ def normalize(text):
     return re.sub(r'[\s\-]', '', text.lower())
 
 # --- Database functions ---
-import ssl
-import asyncpg
 
 async def create_pool():
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
-
     return await asyncpg.create_pool(DATABASE_URL, ssl=ssl_context)
-
 
 async def init_db(pool):
     async with pool.acquire() as conn:
@@ -168,7 +164,7 @@ async def submitword(interaction: discord.Interaction, category: str):
     modal = SubmitWordModal(category)
     await interaction.response.send_modal(modal)
 
-@tree.command(name="bank", description="View your current checking account balance")
+@tree.command(name="bank", description="View your checking and savings account balances")
 async def bank(interaction: discord.Interaction):
     user_id = interaction.user.id
     user = await get_user(pool, user_id)
@@ -185,7 +181,75 @@ async def bank(interaction: discord.Interaction):
         await upsert_user(pool, user_id, user)
 
     await interaction.response.send_message(
-        f"💰 {interaction.user.display_name}, your current checking account balance is ${user['checking_account']:,}."
+        f"💰 {interaction.user.display_name}, your account balances are:\n"
+        f"💰 Checking Account: ${user['checking_account']:,}\n"
+        f"🏦 Savings Account:  ${user['savings_account']:,}"
+    )
+
+@tree.command(name="deposit", description="Deposit money from checking to savings")
+@app_commands.describe(amount="Amount to deposit from checking to savings")
+async def deposit(interaction: discord.Interaction, amount: int):
+    if amount <= 0:
+        await interaction.response.send_message("❌ Please enter a positive amount to deposit.", ephemeral=True)
+        return
+
+    user_id = interaction.user.id
+    user = await get_user(pool, user_id)
+    if user is None:
+        user = {
+            'checking_account': 0,
+            'savings_account': 0,
+            'hunger_level': 100,
+            'relationship_status': 'single',
+            'car': None,
+            'bike': None,
+            'fridge': []
+        }
+
+    if user['checking_account'] < amount:
+        await interaction.response.send_message("❌ You don't have enough money in your checking account.", ephemeral=True)
+        return
+
+    user['checking_account'] -= amount
+    user['savings_account'] += amount
+    await upsert_user(pool, user_id, user)
+
+    await interaction.response.send_message(
+        f"✅ Successfully deposited ${amount:,} from 💰 checking to 🏦 savings.\n"
+        f"New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}"
+    )
+
+@tree.command(name="withdraw", description="Withdraw money from savings to checking")
+@app_commands.describe(amount="Amount to withdraw from savings to checking")
+async def withdraw(interaction: discord.Interaction, amount: int):
+    if amount <= 0:
+        await interaction.response.send_message("❌ Please enter a positive amount to withdraw.", ephemeral=True)
+        return
+
+    user_id = interaction.user.id
+    user = await get_user(pool, user_id)
+    if user is None:
+        user = {
+            'checking_account': 0,
+            'savings_account': 0,
+            'hunger_level': 100,
+            'relationship_status': 'single',
+            'car': None,
+            'bike': None,
+            'fridge': []
+        }
+
+    if user['savings_account'] < amount:
+        await interaction.response.send_message("❌ You don't have enough money in your savings account.", ephemeral=True)
+        return
+
+    user['savings_account'] -= amount
+    user['checking_account'] += amount
+    await upsert_user(pool, user_id, user)
+
+    await interaction.response.send_message(
+        f"✅ Successfully withdrew ${amount:,} from 🏦 savings to 💰 checking.\n"
+        f"New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}"
     )
 
 @tree.command(name="paycheck", description="Claim your paycheck ($10,000 every 12 hours)")
@@ -222,7 +286,7 @@ async def paycheck(interaction: discord.Interaction):
     last_paycheck_times[user_id] = now
 
     await interaction.response.send_message(
-        f"💵 {interaction.user.display_name}, you have received your paycheck of $10,000! Your new balance is ${user['checking_account']:,}.",
+        f"💵 {interaction.user.display_name}, you have received your paycheck of $10,000! Your new 💰 checking balance is ${user['checking_account']:,}.",
         ephemeral=True
     )
 
@@ -274,7 +338,7 @@ async def startcategories(interaction: discord.Interaction, category: str):
         if word_clean in valid_words:
             used_words.add(word_clean)
 
-            # Award $10 for correct answer
+            # Award $10 for correct answer into checking account
             user_id = interaction.user.id
             user = await get_user(pool, user_id)
             if user is None:
@@ -310,7 +374,6 @@ async def on_ready():
     print(f'Logged in as {client.user} (ID: {client.user.id})')
     await tree.sync()
     print("Commands synced.")
-
 
 # --- Run bot ---
 
