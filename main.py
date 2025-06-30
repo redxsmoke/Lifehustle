@@ -43,9 +43,13 @@ def normalize(text):
 
 # --- Database functions ---
 import ssl
+import asyncpg
 
 async def create_pool():
     ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
     return await asyncpg.create_pool(DATABASE_URL, ssl=ssl_context)
 
 
