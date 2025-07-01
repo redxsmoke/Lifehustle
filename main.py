@@ -762,7 +762,6 @@ class TransportationShopButtons(View):
 
     @discord.ui.button(label="Buy Bike 🚴", style=discord.ButtonStyle.success, custom_id="buy_bike")
     async def buy_bike(self, interaction: discord.Interaction, button: Button):
-        # Choose random color and set pristine condition
         color = random.choice(BIKE_COLORS)
         condition = "Pristine"
         bike_item = {
@@ -771,7 +770,6 @@ class TransportationShopButtons(View):
             "condition": condition,
             "purchase_date": datetime.date.today().isoformat()
         }
-        # Pass this dict to handle_vehicle_purchase (modify that function to accept dicts)
         await handle_vehicle_purchase(interaction, item=bike_item, cost=2000)
 
     @discord.ui.button(label="Buy Beater Car 🚙", style=discord.ButtonStyle.primary, custom_id="buy_blue_car")
@@ -812,6 +810,7 @@ class TransportationShopButtons(View):
 
 
 
+
 async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, cost: int):
     user_id = interaction.user.id
     user = await get_user(pool, user_id)
@@ -823,17 +822,15 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
         await interaction.response.send_message(f"🚫 Not enough money to buy {item.get('type', 'that item')}.", ephemeral=True)
         return
 
-    # Initialize inventory if missing
     inventory = user.get("inventory", [])
 
-    # Check if user already owns this exact item (by unique keys)
-    # For bikes, uniqueness by color + purchase_date
-    # For cars, uniqueness by plate number
+    # Check if the exact same vehicle already exists
     def item_exists(new_item, inv):
         for owned in inv:
             if isinstance(new_item, dict) and isinstance(owned, dict):
                 if new_item.get("type") == "Bike" and owned.get("type") == "Bike":
-                    if new_item.get("color") == owned.get("color") and new_item.get("purchase_date") == owned.get("purchase_date"):
+                    if (new_item.get("color") == owned.get("color") and
+                        new_item.get("purchase_date") == owned.get("purchase_date")):
                         return True
                 elif new_item.get("type") == owned.get("type") and new_item.get("plate") == owned.get("plate"):
                     return True
@@ -845,16 +842,14 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
         await interaction.response.send_message(f"🚗 You already own this {item.get('type', 'vehicle')}.", ephemeral=True)
         return
 
-    # Deduct cost and add to inventory
+    # Deduct money and add vehicle to inventory
     user["checking_account"] -= cost
     inventory.append(item)
     user["inventory"] = inventory
 
     await upsert_user(pool, user_id, user)
 
-    await interaction.response.send_message(
-        f"✅ You purchased a {item.get('type', 'vehicle')} for ${cost:,}!", ephemeral=True
-    )
+    await interaction.response.send_message(f"✅ You purchased a {item.get('type', 'vehicle')} for ${cost:,}!", ephemeral=True)
 
 
 
@@ -1328,16 +1323,11 @@ async def stash(interaction: discord.Interaction, category: app_commands.Choice[
                     color = item.get("color", "Unknown Color")
                     condition = item.get("condition", "Unknown Condition")
                     purchase_date_str = item.get("purchase_date")
-                    if purchase_date_str:
-                        purchase_date = datetime.date.fromisoformat(purchase_date_str)
-                    else:
-                        purchase_date = datetime.date.today()
-
+                    purchase_date = datetime.date.fromisoformat(purchase_date_str) if purchase_date_str else datetime.date.today()
                     desc = bike_description(purchase_date, condition)
-
                     owned_descriptions.append(f"🚴 {vehicle_type} - {color} - {desc} ({condition})")
 
-                else:  # Car or truck
+                else:  # Cars/trucks
                     plate = item.get("plate", "N/A")
                     emoji_map = {
                         "Blue Car": "🚙",
@@ -1347,9 +1337,6 @@ async def stash(interaction: discord.Interaction, category: app_commands.Choice[
                     }
                     emoji = emoji_map.get(vehicle_type, "🚗")
                     owned_descriptions.append(f"{emoji} {vehicle_type} - Plate #: {plate}")
-
-            elif isinstance(item, str):
-                owned_descriptions.append(f"> {item}")
 
         if not owned_descriptions:
             owned_descriptions = ["You don’t own any transportation items yet."]
@@ -1371,8 +1358,8 @@ async def stash(interaction: discord.Interaction, category: app_commands.Choice[
             f"{item['emoji']} {item['name']}": item.get("category", "Misc") for item in item_data
         }
 
-        vehicle_names = {"🚴 Bike", "🚙 Blue Car", "🚗 Red Car", "🏎️ Sports Car", "🛻 Pickup Truck"}
-        groceries = [item for item in inventory if item not in vehicle_names]
+        # Only strings are groceries, skip dicts
+        groceries = [item for item in inventory if isinstance(item, str)]
         counts = Counter(groceries)
 
         if not counts:
@@ -1412,6 +1399,23 @@ async def stash(interaction: discord.Interaction, category: app_commands.Choice[
             await view.send(interaction)
 
 
+async def migrate_inventory_column():
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            ALTER TABLE users
+            ALTER COLUMN inventory TYPE jsonb USING inventory::jsonb;
+        """)
+
+# Call this once when the bot starts
+async def on_ready():
+    print("Bot is ready!")
+    try:
+        await migrate_inventory_column()
+        print("Inventory column migration completed.")
+    except Exception as e:
+        print(f"Migration skipped or failed: {e}")
+
+client.event(on_ready)
 
 # --- Bot events ---
 
