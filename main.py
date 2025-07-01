@@ -705,19 +705,19 @@ class TransportationShopButtons(View):
     async def buy_bike(self, interaction: discord.Interaction, button: Button):
         await handle_vehicle_purchase(interaction, item="🚴 Bike", cost=2000)
 
-    @discord.ui.button(label="Buy Blue Car 🚙", style=discord.ButtonStyle.primary, custom_id="buy_blue_car")
+    @discord.ui.button(label="Buy Beater Car 🚙", style=discord.ButtonStyle.primary, custom_id="buy_blue_car")
     async def buy_blue_car(self, interaction: discord.Interaction, button: Button):
         await handle_vehicle_purchase(interaction, item="🚙 Blue Car", cost=10000)
 
-    @discord.ui.button(label="Buy Red Car 🚗", style=discord.ButtonStyle.primary, custom_id="buy_red_car")
+    @discord.ui.button(label="Buy Sedan Car 🚗", style=discord.ButtonStyle.primary, custom_id="buy_red_car")
     async def buy_red_car(self, interaction: discord.Interaction, button: Button):
         await handle_vehicle_purchase(interaction, item="🚗 Red Car", cost=25000)
 
-    @discord.ui.button(label="Buy Sports Car 🏎️", style=discord.ButtonStyle.danger, custom_id="buy_sports_car")
+    @discord.ui.button(label="Buy Sports Car 🏎️", style=discord.ButtonStyle.primary, custom_id="buy_sports_car")
     async def buy_sports_car(self, interaction: discord.Interaction, button: Button):
         await handle_vehicle_purchase(interaction, item="🏎️ Sports Car", cost=100000)
 
-    @discord.ui.button(label="Buy Pickup Truck 🛻", style=discord.ButtonStyle.secondary, custom_id="buy_truck")
+    @discord.ui.button(label="Buy Pickup Truck 🛻", style=discord.ButtonStyle.primary, custom_id="buy_truck")
     async def buy_truck(self, interaction: discord.Interaction, button: Button):
         await handle_vehicle_purchase(interaction, item="🛻 Pickup Truck", cost=75000)
 
