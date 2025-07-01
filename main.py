@@ -539,6 +539,13 @@ async def handle_commute(interaction: discord.Interaction, method: str):
 
 # --- Database functions ---
 
+async def migrate_inventory_column():
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            ALTER TABLE users
+            ALTER COLUMN inventory TYPE jsonb USING inventory::jsonb;
+        """)
+
 async def create_pool():
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
@@ -1420,6 +1427,8 @@ async def on_ready():
         print("Inventory column migration completed.")
     except Exception as e:
         print(f"Migration skipped or failed: {e}")
+
+       
 
 # --- Run bot ---
 
