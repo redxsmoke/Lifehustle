@@ -150,6 +150,75 @@ def parse_amount(amount_str: str) -> int | None:
 pool = None
 last_paycheck_times = {}
 
+import discord
+from discord.ui import View, Button
+from discord import Interaction
+
+class GroceryCategoryView(View):
+    def __init__(self, pages, user_id, timeout=60):
+        super().__init__(timeout=timeout)
+        self.pages = pages  # List of tuples (category_title, description_text)
+        self.user_id = user_id
+        self.current_page = 0
+
+        # Disable previous button on first page initially
+        self.previous_button.disabled = True
+        # Disable next button if only one page
+        if len(pages) <= 1:
+            self.next_button.disabled = True
+
+    async def send(self, interaction: Interaction):
+        embed = self._get_embed()
+        await interaction.followup.send(embed=embed, view=self)
+
+    def _get_embed(self):
+        title, description = self.pages[self.current_page]
+        embed = discord.Embed(title=title, description=description, color=discord.Color.green())
+        embed.set_footer(text=f"Page {self.current_page + 1} of {len(self.pages)}")
+        return embed
+
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        # Only allow original user to interact
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This is not your stash to browse.", ephemeral=True)
+            return False
+        return True
+
+    async def on_timeout(self):
+        # Disable buttons when timed out
+        for child in self.children:
+            child.disabled = True
+        # Edit the original message to disable buttons
+        try:
+            await self.message.edit(view=self)
+        except Exception:
+            pass  # message could be deleted or unavailable
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary)
+    async def previous_button(self, interaction: Interaction, button: Button):
+        self.current_page -= 1
+        if self.current_page == 0:
+            button.disabled = True
+        self.next_button.disabled = False
+
+        embed = self._get_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary)
+    async def next_button(self, interaction: Interaction, button: Button):
+        self.current_page += 1
+        if self.current_page == len(self.pages) - 1:
+            button.disabled = True
+        self.previous_button.disabled = False
+
+        embed = self._get_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    async def on_send(self, message):
+        # Store the message object to edit later (timeout etc)
+        self.message = message
+
+
 class CommuteButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=60)
@@ -188,6 +257,36 @@ class CommuteButtons(discord.ui.View):
 
 
 # Make sure this is a top-level async function — NOT nested inside another function!
+
+async def handle_purchase(interaction, item, cost):
+    user_id = interaction.user.id
+    user = await get_user(pool, user_id)
+    
+    if not user:
+        await interaction.response.send_message("You don't have an account yet. Use `/start` to begin.", ephemeral=True)
+        return
+    
+    if user["checking_account"] < cost:
+        await interaction.response.send_message("🚫 You don’t have enough money.", ephemeral=True)
+        return
+    
+    inventory = user.get("inventory") or []
+    
+    if item in inventory:
+        await interaction.response.send_message(f"🚗 You already own **{item}**.", ephemeral=True)
+        return
+    
+    inventory.append(item)
+    
+    async with pool.acquire() as conn:
+        await conn.execute(
+            'UPDATE users SET checking_account=$1, inventory=$2 WHERE user_id=$3',
+            user["checking_account"] - cost,
+            json.dumps(inventory),
+            user_id
+        )
+    
+    await interaction.response.send_message(f"✅ You purchased **{item}** for ${cost:,}!", ephemeral=True)
 
 async def handle_commute(interaction: discord.Interaction, method: str):
     user_id = interaction.user.id
@@ -485,23 +584,24 @@ class TransportationShopButtons(discord.ui.View):
 
     @discord.ui.button(label="Buy Bike 🚴", style=discord.ButtonStyle.success, custom_id="buy_bike")
     async def buy_bike(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await handle_transportation_purchase(interaction, item="bike", cost=2000, emoji="🚴")
+        await handle_purchase(interaction, item="🚴 Bike", cost=2000)
 
     @discord.ui.button(label="Buy Beater Car 🚙", style=discord.ButtonStyle.primary, custom_id="buy_blue_car")
     async def buy_blue_car(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await handle_transportation_purchase(interaction, item="car", value="blue", cost=10000, emoji="🚙")
+        await handle_purchase(interaction, item="🚙 Beater Car", cost=10000)
 
-    @discord.ui.button(label="Buy Sedan 🚗", style=discord.ButtonStyle.primary, custom_id="buy_red_car")
+    @discord.ui.button(label="Buy Sedan Car 🚗", style=discord.ButtonStyle.primary, custom_id="buy_red_car")
     async def buy_red_car(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await handle_transportation_purchase(interaction, item="car", value="red", cost=25000, emoji="🚗")
+        await handle_purchase(interaction, item="🚗 Sedan Car", cost=25000)
 
     @discord.ui.button(label="Buy Sports Car 🏎️", style=discord.ButtonStyle.danger, custom_id="buy_sports_car")
     async def buy_sports_car(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await handle_transportation_purchase(interaction, item="car", value="sports", cost=100000, emoji="🏎️")
+        await handle_purchase(interaction, item="🏎️ Sports Car", cost=100000)
 
     @discord.ui.button(label="Buy Pickup Truck 🛻", style=discord.ButtonStyle.secondary, custom_id="buy_truck")
     async def buy_truck(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await handle_transportation_purchase(interaction, item="car", value="truck", cost=75000, emoji="🛻")
+        await handle_purchase(interaction, item="🛻 Pickup Truck", cost=75000)
+
 
 
 async def handle_transportation_purchase(interaction: discord.Interaction, item: str, cost: int, emoji: str, value: str = None):
@@ -957,8 +1057,8 @@ async def stash(interaction: discord.Interaction, category: app_commands.Choice[
     if category.value == "transportation":
         vehicles = {
             "🚴": "Bike",
-            "🚙": "Blue Car",
-            "🚗": "Red Car",
+            "🚙": "Beater Car",
+            "🚗": "Sedan Car",
             "🏎️": "Sports Car",
             "🛻": "Pickup Truck"
         }
