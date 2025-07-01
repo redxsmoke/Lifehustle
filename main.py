@@ -433,8 +433,8 @@ async def bank(interaction: discord.Interaction):
         embed=embed_message(
             "💰 Account Balances",
             f"> {interaction.user.display_name}, your account balances are:\n"
-            f"> > 💰 Checking Account: ${user['checking_account']:,}\n"
-            f"> > 🏦 Savings Account:  ${user['savings_account']:,}"
+            f"> \u2003 💰 Checking Account: ${user['checking_account']:,}\n"
+            f"> \u2003 🏦 Savings Account:  ${user['savings_account']:,}"
         )
     )
 
