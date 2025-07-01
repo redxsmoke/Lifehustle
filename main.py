@@ -24,11 +24,15 @@ DEFAULT_USER = {
 def embed_message(title: str, description: str, color: discord.Color = discord.Color.blue()) -> discord.Embed:
     return discord.Embed(title=title, description=description, color=color)
 
-
+#LOAD COMMUTE OUTCOMES JSON
 with open("commute_outcomes.json", "r") as f:
     COMMUTE_OUTCOMES = json.load(f)
 
-# Load categories JSON.
+#LOAD SHOP ITEMS JSON
+with open("shop_items.json", "r", encoding="utf-8") as f:
+    SHOP_ITEMS = json.load(f)
+
+#LOAD CATEGORIES JSON.
 with open('categories.json', 'r') as f:
     categories = json.load(f)
 
@@ -314,7 +318,8 @@ async def get_user(pool, user_id: int):
                 'car': row['car'],
                 'bike': row['bike'],
                 'fridge': json.loads(row['fridge']),
-                'debt': row['debt']
+                'debt': row['debt'],
+                'inventory': json.loads(row['inventory']) if row['inventory'] else []
             }
         else:
             return None
@@ -322,9 +327,10 @@ async def get_user(pool, user_id: int):
 async def upsert_user(pool, user_id: int, data: dict):
     async with pool.acquire() as conn:
         fridge_json = json.dumps(data.get('fridge', []))
+        inventory_json = json.dumps(data.get('inventory', []))
         await conn.execute('''
-            INSERT INTO users (user_id, checking_account, savings_account, hunger_level, relationship_status, car, bike, fridge, debt)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            INSERT INTO users (user_id, checking_account, savings_account, hunger_level, relationship_status, car, bike, fridge, debt, inventory)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             ON CONFLICT (user_id) DO UPDATE SET
                 checking_account = EXCLUDED.checking_account,
                 savings_account = EXCLUDED.savings_account,
@@ -333,7 +339,8 @@ async def upsert_user(pool, user_id: int, data: dict):
                 car = EXCLUDED.car,
                 bike = EXCLUDED.bike,
                 fridge = EXCLUDED.fridge,
-                debt = EXCLUDED.debt
+                debt = EXCLUDED.debt,
+                inventory = EXCLUDED.inventory
         ''', user_id,
              data.get('checking_account', 0),
              data.get('savings_account', 0),
@@ -342,7 +349,9 @@ async def upsert_user(pool, user_id: int, data: dict):
              data.get('car'),
              data.get('bike'),
              fridge_json,
-             data.get('debt', 0))
+             data.get('debt', 0),
+             inventory_json
+        )
 
 # --- Modal for word submission ---
 
@@ -437,6 +446,180 @@ async def bank(interaction: discord.Interaction):
             f"> \u2003 🏦 Savings Account:  ${user['savings_account']:,}"
         )
     )
+
+@tree.command(name="shop", description="Shop for items by category")
+@app_commands.describe(category="Which category of items do you want to browse?")
+@app_commands.choices(category=[
+    app_commands.Choice(name="Transportation", value="transportation"),
+    app_commands.Choice(name="Groceries", value="groceries")
+])
+async def shop(interaction: discord.Interaction, category: app_commands.Choice[str]):
+    if category.value == "transportation":
+        embed = embed_message(
+            "🛒 Transportation Shop",
+            (
+                "> Choose a vehicle to purchase:\n\n"
+                "> 🚴 **Bike** — $2,000\n"
+                "> 🚙 **Blue Car** — $10,000\n"
+                "> 🚗 **Red Car** — $25,000\n"
+                "> 🏎️ **Sports Car** — $100,000\n"
+                "> 🛻 **Pickup Truck** — $30,000\n\n"
+                "> Each vehicle comes with unique stats and perks!"
+            )
+        )
+        view = TransportationShopButtons()
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+class TransportationShopButtons(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=60)
+
+    @discord.ui.button(label="Buy Bike 🚴", style=discord.ButtonStyle.success, custom_id="buy_bike")
+    async def buy_bike(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await handle_transportation_purchase(interaction, item="bike", cost=2000, emoji="🚴")
+
+    @discord.ui.button(label="Buy Beater Car 🚙", style=discord.ButtonStyle.primary, custom_id="buy_blue_car")
+    async def buy_blue_car(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await handle_transportation_purchase(interaction, item="car", value="blue", cost=10000, emoji="🚙")
+
+    @discord.ui.button(label="Buy Sedan 🚗", style=discord.ButtonStyle.primary, custom_id="buy_red_car")
+    async def buy_red_car(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await handle_transportation_purchase(interaction, item="car", value="red", cost=25000, emoji="🚗")
+
+    @discord.ui.button(label="Buy Sports Car 🏎️", style=discord.ButtonStyle.danger, custom_id="buy_sports_car")
+    async def buy_sports_car(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await handle_transportation_purchase(interaction, item="car", value="sports", cost=100000, emoji="🏎️")
+
+    @discord.ui.button(label="Buy Pickup Truck 🛻", style=discord.ButtonStyle.secondary, custom_id="buy_truck")
+    async def buy_truck(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await handle_transportation_purchase(interaction, item="car", value="truck", cost=75000, emoji="🛻")
+
+
+async def handle_transportation_purchase(interaction: discord.Interaction, item: str, cost: int, emoji: str, value: str = None):
+    user_id = interaction.user.id
+    user = await get_user(pool, user_id)
+    if user is None:
+        user = DEFAULT_USER.copy()
+
+    balance = user.get('checking_account', 0)
+    if balance < cost:
+        await interaction.response.send_message(
+            embed=embed_message(
+                "❌ Insufficient Funds",
+                f"> You need ${cost:,} to buy this item, but you only have ${balance:,}.",
+                discord.Color.red()
+            ),
+            ephemeral=True
+        )
+        return
+
+    if item == "bike" and user.get("bike"):
+        await interaction.response.send_message(
+            embed=embed_message(
+                "🚴 Already Owned",
+                "> You already own a bike!"
+            ),
+            ephemeral=True
+        )
+        return
+    elif item == "car" and user.get("car"):
+        await interaction.response.send_message(
+            embed=embed_message(
+                "🚗 Already Own a Car",
+                f"> You already own a car (**{user['car']}**). Sell or remove it before buying a new one."
+            ),
+            ephemeral=True
+        )
+        return
+
+    user['checking_account'] -= cost
+    if item == "bike":
+        user['bike'] = "basic"
+    elif item == "car":
+        user['car'] = value
+
+    await upsert_user(pool, user_id, user)
+
+    await interaction.response.send_message(
+        embed=embed_message(
+            f"✅ Purchase Successful",
+            f"> You bought a {emoji} **{value or 'bike'}** for ${cost:,}.",
+            discord.Color.green()
+        ),
+        ephemeral=True
+    )
+
+from discord.ui import View, Button
+
+class ShopView(View):
+    def __init__(self, items, user_id):
+        super().__init__(timeout=60)
+        self.items = items
+        self.user_id = user_id
+
+        for item in items:
+            button = Button(label=f"{item['emoji']} {item['name']} - ${item['price']}", style=discord.ButtonStyle.primary, custom_id=item['id'])
+            button.callback = self.make_callback(item)
+            self.add_item(button)
+
+    def make_callback(self, item):
+        async def callback(interaction: discord.Interaction):
+            if interaction.user.id != self.user_id:
+                await interaction.response.send_message("❌ You can't use this button.", ephemeral=True)
+                return
+            
+            user = await get_user(pool, self.user_id)
+            if user is None:
+                user = DEFAULT_USER.copy()
+            
+            if user['checking_account'] < item['price']:
+                await interaction.response.send_message(
+                    f"❌ You don't have enough money to buy {item['emoji']} {item['name']}.",
+                    ephemeral=True
+                )
+                return
+            
+            user['checking_account'] -= item['price']
+
+            # Add item id to inventory
+            inventory = user.get('inventory', [])
+            inventory.append(item['id'])
+            user['inventory'] = inventory
+
+            # If the item is a vehicle, assign ownership (special logic)
+            if item['id'] == "bike":
+                user['bike'] = item['id']
+            elif item['id'] in ["blue_car", "red_car", "sports_car", "pickup_truck"]:
+                user['car'] = item['id']
+
+            await upsert_user(pool, self.user_id, user)
+
+            await interaction.response.send_message(
+                f"✅ You bought {item['emoji']} {item['name']} for ${item['price']:,}!",
+                ephemeral=True
+            )
+            self.stop()  # optional, disables buttons after purchase
+        return callback
+
+
+@tree.command(name="shop", description="View and buy items from merchants")
+@app_commands.describe(category="Choose a merchant category")
+async def shop(interaction: discord.Interaction, category: str):
+    if category not in SHOP_ITEMS:
+        await interaction.response.send_message(f"❌ Category '{category}' does not exist.", ephemeral=True)
+        return
+
+    items = SHOP_ITEMS[category]
+
+    embed = discord.Embed(title=f"🛒 Shop - {category.capitalize()} Items", color=discord.Color.blue())
+    description_lines = []
+    for item in items:
+        description_lines.append(f"{item['emoji']} **{item['name']}** — ${item['price']:,}")
+    description_lines.append("\n> Click the buttons below to purchase an item.")
+    embed.description = "\n".join(description_lines)
+
+    view = ShopView(items, interaction.user.id)
+    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 @tree.command(name="deposit", description="Deposit money from checking to savings")
 @app_commands.describe(amount="Amount to deposit from checking to savings")

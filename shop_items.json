@@ -1,0 +1,46 @@
+{
+  "transportation": [
+    {"emoji": "🚴", "name": "Bike", "price": 2000},
+    {"emoji": "🚙", "name": "Blue Car", "price": 10000},
+    {"emoji": "🚗", "name": "Red Car", "price": 25000},
+    {"emoji": "🏎️", "name": "Sports Car", "price": 100000},
+    {"emoji": "🛻", "name": "Pickup Truck", "price": 30000}
+  ],
+  "groceries": {
+    "Produce": [
+      {"emoji": "🍎", "name": "Apple", "price": 3},
+      {"emoji": "🍌", "name": "Banana", "price": 2},
+      {"emoji": "🥕", "name": "Carrot", "price": 4},
+      {"emoji": "🍅", "name": "Tomato", "price": 3},
+      {"emoji": "🥔", "name": "Potato", "price": 2},
+      {"emoji": "🌽", "name": "Corn", "price": 3}
+    ],
+    "Dairy": [
+      {"emoji": "🧀", "name": "Cheese", "price": 6},
+      {"emoji": "🥛", "name": "Milk", "price": 4},
+      {"emoji": "🍦", "name": "Ice Cream", "price": 5},
+      {"emoji": "🍨", "name": "Frozen Yogurt", "price": 5}
+    ],
+    "Protein": [
+      {"emoji": "🍗", "name": "Chicken Leg", "price": 10},
+      {"emoji": "🥩", "name": "Steak", "price": 15},
+      {"emoji": "🍖", "name": "Ribs", "price": 12},
+      {"emoji": "🍤", "name": "Shrimp", "price": 14},
+      {"emoji": "🥚", "name": "Eggs (dozen)", "price": 4}
+    ],
+    "Snacks": [
+      {"emoji": "🍿", "name": "Popcorn", "price": 3},
+      {"emoji": "🍫", "name": "Chocolate Bar", "price": 4},
+      {"emoji": "🍪", "name": "Cookie", "price": 2},
+      {"emoji": "🍩", "name": "Donut", "price": 3},
+      {"emoji": "🍟", "name": "French Fries", "price": 5}
+    ],
+    "Beverages": [
+      {"emoji": "☕", "name": "Coffee", "price": 4},
+      {"emoji": "🍵", "name": "Tea", "price": 3},
+      {"emoji": "🥤", "name": "Soda", "price": 3},
+      {"emoji": "🍺", "name": "Beer", "price": 6},
+      {"emoji": "🍷", "name": "Wine", "price": 12}
+    ]
+  }
+}
