@@ -791,7 +791,7 @@ class GroceryCategoryView(View):
 
     def _get_embed(self):
         title, items = self.pages[self.current_page]
-        desc = "\n".join(f"{item['emoji']} {item['name']} — ${item['price']}" for item in items)
+        desc = "\n".join(f"> {item['emoji']} {item['name']} — ${item['price']}" for item in items)
         embed = discord.Embed(
             title=f"🛒 Groceries: {title}",
             description=desc,
@@ -1253,7 +1253,7 @@ async def stash(interaction: discord.Interaction, category: app_commands.Choice[
         categorized = defaultdict(list)
         for item, count in counts.items():
             category = name_to_category.get(item, "Misc").capitalize()
-            categorized[category].append(f"{item} x{count}")
+            categorized[category].append(f"> {item} -{count}")
 
         # Build embeds per category
         embeds = []
