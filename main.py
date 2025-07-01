@@ -1,3 +1,4 @@
+#IMPORTS
 import discord
 from discord import app_commands
 import random
@@ -19,6 +20,10 @@ DEFAULT_USER = {
     'fridge': [],
     'debt': 0
 }
+
+def embed_message(title: str, description: str, color: discord.Color = discord.Color.blue()) -> discord.Embed:
+    return discord.Embed(title=title, description=description, color=color)
+
 
 with open("commute_outcomes.json", "r") as f:
     COMMUTE_OUTCOMES = json.load(f)
@@ -268,7 +273,9 @@ async def handle_commute(interaction: discord.Interaction, method: str):
         f"New checking balance: ${user['checking_account']:,}."
     )
 
-    await interaction.response.send_message(msg)
+    embed = embed_message(f"{emoji} Commute Summary", msg)
+    await interaction.response.send_message(embed=embed)
+
 
 # --- Database functions ---
 
@@ -423,9 +430,12 @@ async def bank(interaction: discord.Interaction):
         await upsert_user(pool, user_id, user)
 
     await interaction.response.send_message(
-        f"💰 {interaction.user.display_name}, your account balances are:\n"
-        f"💰 Checking Account: ${user['checking_account']:,}\n"
-        f"🏦 Savings Account:  ${user['savings_account']:,}"
+        embed=embed_message(
+            "💰 Account Balances",
+            f"{interaction.user.display_name}, your account balances are:\n"
+            f"💰 Checking Account: ${user['checking_account']:,}\n"
+            f"🏦 Savings Account:  ${user['savings_account']:,}"
+        )
     )
 
 @tree.command(name="deposit", description="Deposit money from checking to savings")
@@ -434,8 +444,13 @@ async def deposit(interaction: discord.Interaction, amount: str):
     parsed_amount = parse_amount(amount)
     if parsed_amount is None:
         await interaction.response.send_message(
-            "❌ Invalid amount format. Use numbers, commas, or suffixes like 'k' or 'm', or 'all'.",
-            ephemeral=True)
+            embed=embed_message(
+                "❌ Invalid Format",
+                "Use numbers, commas, or suffixes like 'k' or 'm', or 'all'.",
+                discord.Color.red()
+            ),
+            ephemeral=True
+        )
         return
 
     user_id = interaction.user.id
@@ -449,8 +464,13 @@ async def deposit(interaction: discord.Interaction, amount: str):
         # 'all' means deposit all checking funds
         if checking_balance == 0:
             await interaction.response.send_message(
-                "❌ Aww man - if only you didn't spend it all on booze and OnlyFans LOL - Try depositing when your balance is higher than your IQ",
-                ephemeral=True)
+                embed=embed_message(
+                    "❌ Insufficient Funds",
+                    "Aww man - if only you didn't spend it all on booze and OnlyFans LOL - Try depositing when your balance is higher than your IQ",
+                    discord.Color.red()
+                ),
+                ephemeral=True
+            )
             return
         amount_int = checking_balance
     else:
@@ -458,14 +478,24 @@ async def deposit(interaction: discord.Interaction, amount: str):
 
     if amount_int <= 0:
         await interaction.response.send_message(
-            "❌ Hey stupid, you can't deposit a negative amount LOL.",
-            ephemeral=True)
+            embed=embed_message(
+                "❌ Invalid Amount",
+                "Hey stupid, you can't deposit a negative amount LOL.",
+                discord.Color.red()
+            ),
+            ephemeral=True
+        )
         return
 
     if checking_balance < amount_int:
         await interaction.response.send_message(
-            "❌ LMAO - unless your also depositing your hopes and dreams, you don't have this much in your checking account to deposit.",
-            ephemeral=True)
+            embed=embed_message(
+                "❌ Insufficient Funds",
+                "LMAO - unless you're also depositing your hopes and dreams, you don't have this much in your checking account to deposit.",
+                discord.Color.red()
+            ),
+            ephemeral=True
+        )
         return
 
     user['checking_account'] -= amount_int
@@ -473,10 +503,13 @@ async def deposit(interaction: discord.Interaction, amount: str):
     await upsert_user(pool, user_id, user)
 
     await interaction.response.send_message(
-        f"✅ Successfully deposited ${amount_int:,} from 💰 checking to 🏦 savings.\n"
-        f"New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}"
+        embed=embed_message(
+            "✅ Deposit Successful",
+            f"Successfully deposited ${amount_int:,} from 💰 checking to 🏦 savings.\n"
+            f"New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}",
+            discord.Color.green()
+        )
     )
-
 
 @tree.command(name="withdraw", description="Withdraw money from savings to checking")
 @app_commands.describe(amount="Amount to withdraw from savings to checking")
@@ -484,8 +517,13 @@ async def withdraw(interaction: discord.Interaction, amount: str):
     parsed_amount = parse_amount(amount)
     if parsed_amount is None:
         await interaction.response.send_message(
-            "❌ Invalid amount format. Use numbers, commas, or suffixes like 'k' or 'm', or 'all'.",
-            ephemeral=True)
+            embed=embed_message(
+                "❌ Invalid Format",
+                "Use numbers, commas, or suffixes like 'k' or 'm', or 'all'.",
+                discord.Color.red()
+            ),
+            ephemeral=True
+        )
         return
 
     user_id = interaction.user.id
@@ -499,8 +537,13 @@ async def withdraw(interaction: discord.Interaction, amount: str):
         # 'all' means withdraw all savings funds
         if savings_balance == 0:
             await interaction.response.send_message(
-                "❌ LMAO - money don't grow on trees in real life and it doesn't here either. Try again after you do something with your life.",
-                ephemeral=True)
+                embed=embed_message(
+                    "❌ Insufficient Funds",
+                    "LMAO - money don't grow on trees in real life and it doesn't here either. Try again after you do something with your life.",
+                    discord.Color.red()
+                ),
+                ephemeral=True
+            )
             return
         amount_int = savings_balance
     else:
@@ -508,14 +551,24 @@ async def withdraw(interaction: discord.Interaction, amount: str):
 
     if amount_int <= 0:
         await interaction.response.send_message(
-            "❌ Hey stupid, you can't withdraw a negative amount LOL.",
-            ephemeral=True)
+            embed=embed_message(
+                "❌ Invalid Amount",
+                "Hey stupid, you can't withdraw a negative amount LOL.",
+                discord.Color.red()
+            ),
+            ephemeral=True
+        )
         return
 
     if savings_balance < amount_int:
         await interaction.response.send_message(
-            "❌ WOW! Wouldn't it be nice if we could all withdraw money we don't have. You don't have enough funds in your savings to do this. Stop spending it on stupid shit",
-            ephemeral=True)
+            embed=embed_message(
+                "❌ Insufficient Funds",
+                "WOW! Wouldn't it be nice if we could all withdraw money we don't have. You don't have enough funds in your savings to do this. Stop spending it on stupid shit.",
+                discord.Color.red()
+            ),
+            ephemeral=True
+        )
         return
 
     user['savings_account'] -= amount_int
@@ -523,15 +576,22 @@ async def withdraw(interaction: discord.Interaction, amount: str):
     await upsert_user(pool, user_id, user)
 
     await interaction.response.send_message(
-        f"✅ Successfully withdrew ${amount_int:,} from 🏦 savings to 💰 checking.\n"
-        f"New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}"
+        embed=embed_message(
+            "✅ Withdrawal Successful",
+            f"Successfully withdrew ${amount_int:,} from 🏦 savings to 💰 checking.\n"
+            f"New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}",
+            discord.Color.green()
+        )
     )
 
 @tree.command(name="commute", description="Commute to work using buttons (drive, bike, subway, bus)")
 async def commute(interaction: discord.Interaction):
     view = CommuteButtons()
     await interaction.response.send_message(
-        "Choose your method of commute:",
+        embed=embed_message(
+            "🚦 Commute",
+            "Choose your method of commute using the buttons below."
+        ),
         view=view,
         ephemeral=True
     )
@@ -548,7 +608,10 @@ async def paycheck(interaction: discord.Interaction):
         hours = int(remaining // 3600)
         minutes = int((remaining % 3600) // 60)
         await interaction.response.send_message(
-            f"⏳ You already claimed your paycheck. Try again in {hours}h {minutes}m.",
+            embed=embed_message(
+                "⏳ Paycheck Cooldown",
+                f"You already claimed your paycheck. Try again in {hours}h {minutes}m."
+            ),
             ephemeral=True
         )
         return
@@ -562,21 +625,39 @@ async def paycheck(interaction: discord.Interaction):
     last_paycheck_times[user_id] = now
 
     await interaction.response.send_message(
-        f"💵 {interaction.user.display_name}, you have received your paycheck of $10,000! Your new 💰 checking balance is ${user['checking_account']:,}.",
+        embed=embed_message(
+            "💵 Paycheck Received",
+            f"{interaction.user.display_name}, you have received your paycheck of $10,000!\nYour new 💰 checking balance is ${user['checking_account']:,}."
+        ),
         ephemeral=True
     )
+
 
 @tree.command(name="startcategories", description="Start a categories game round")
 @app_commands.describe(category="Choose the category to play")
 @app_commands.autocomplete(category=category_autocomplete)
 async def startcategories(interaction: discord.Interaction, category: str):
     if category not in categories:
-        await interaction.response.send_message(f"Category '{category}' does not exist.", ephemeral=True)
+        await interaction.response.send_message(
+            embed=embed_message(
+                "❌ Invalid Category",
+                f"Category '{category}' does not exist.",
+                discord.Color.red()
+            ),
+            ephemeral=True
+        )
         return
 
     letters = [l for l, words in categories[category].items() if words]
     if not letters:
-        await interaction.response.send_message(f"No words found in category '{category}'.", ephemeral=True)
+        await interaction.response.send_message(
+            embed=embed_message(
+                "❌ No Words Found",
+                f"No words found in category '{category}'.",
+                discord.Color.red()
+            ),
+            ephemeral=True
+        )
         return
 
     chosen_letter = random.choice(letters).upper()
@@ -584,7 +665,10 @@ async def startcategories(interaction: discord.Interaction, category: str):
     valid_words = {normalize(w): w for w in raw_words}
 
     await interaction.response.send_message(
-        f"Category: **{category}**\nLetter: **{chosen_letter}**\nKeep naming words that start with {chosen_letter}! Game ends when you mess up.",
+        embed=embed_message(
+            f"🎮 Categories Game Started!",
+            f"Category: **{category}**\nLetter: **{chosen_letter}**\nKeep naming words that start with **{chosen_letter}**! Game ends when you mess up."
+        ),
         ephemeral=False
     )
 
@@ -597,24 +681,40 @@ async def startcategories(interaction: discord.Interaction, category: str):
         try:
             msg = await client.wait_for('message', timeout=10.0, check=check)
         except asyncio.TimeoutError:
-            await interaction.followup.send("⏱️ Time's up! You took too long.")
+            await interaction.followup.send(
+                embed=embed_message(
+                    "⏱️ Time's Up!",
+                    "You took too long. Game over!"
+                )
+            )
             break
 
         word_raw = msg.content.strip()
         word_clean = normalize(word_raw)
 
         if not word_raw.lower().startswith(chosen_letter.lower()):
-            await interaction.followup.send(f"❌ **{word_raw}** doesn't start with **{chosen_letter}**. Game over!")
+            await interaction.followup.send(
+                embed=embed_message(
+                    "❌ Wrong Start Letter",
+                    f"**{word_raw}** doesn't start with **{chosen_letter}**. Game over!",
+                    discord.Color.red()
+                )
+            )
             break
 
         if word_clean in used_words:
-            await interaction.followup.send(f"⚠️ You've already used **{word_raw}**. Try something else!")
+            await interaction.followup.send(
+                embed=embed_message(
+                    "⚠️ Word Used",
+                    f"You've already used **{word_raw}**. Try something else!",
+                    discord.Color.orange()
+                )
+            )
             continue
 
         if word_clean in valid_words:
             used_words.add(word_clean)
 
-            # Award $10 for correct answer into checking account
             user_id = interaction.user.id
             user = await get_user(pool, user_id)
             if user is None:
@@ -623,13 +723,23 @@ async def startcategories(interaction: discord.Interaction, category: str):
             user['checking_account'] = user.get('checking_account', 0) + 10
             await upsert_user(pool, user_id, user)
 
-            await interaction.followup.send(f"✅ Correct! **{valid_words[word_clean]}** is valid. You earned $10! Keep going!")
+            await interaction.followup.send(
+                embed=embed_message(
+                    "✅ Correct!",
+                    f"**{valid_words[word_clean]}** is valid. You earned $10! Keep going!",
+                    discord.Color.green()
+                )
+            )
         else:
             await interaction.followup.send(
-                f"❌ **{word_raw}** is not in the list. Game over!\n\n"
-                f"*(Game is still in beta testing — many words are still missing)*"
+                embed=embed_message(
+                    "❌ Word Not Found",
+                    f"**{word_raw}** is not in the list. Game over!\n\n*(Game is still in beta testing — many words are still missing)*",
+                    discord.Color.red()
+                )
             )
             break
+
 
 # --- Bot events ---
 
