@@ -602,25 +602,6 @@ class ShopView(View):
         return callback
 
 
-@tree.command(name="shop", description="View and buy items from merchants")
-@app_commands.describe(category="Choose a merchant category")
-async def shop(interaction: discord.Interaction, category: str):
-    if category not in SHOP_ITEMS:
-        await interaction.response.send_message(f"❌ Category '{category}' does not exist.", ephemeral=True)
-        return
-
-    items = SHOP_ITEMS[category]
-
-    embed = discord.Embed(title=f"🛒 Shop - {category.capitalize()} Items", color=discord.Color.blue())
-    description_lines = []
-    for item in items:
-        description_lines.append(f"{item['emoji']} **{item['name']}** — ${item['price']:,}")
-    description_lines.append("\n> Click the buttons below to purchase an item.")
-    embed.description = "\n".join(description_lines)
-
-    view = ShopView(items, interaction.user.id)
-    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-
 @tree.command(name="deposit", description="Deposit money from checking to savings")
 @app_commands.describe(amount="Amount to deposit from checking to savings")
 async def deposit(interaction: discord.Interaction, amount: str):
