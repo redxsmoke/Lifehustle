@@ -470,7 +470,7 @@ async def handle_commute(interaction: discord.Interaction, method: str):
         f"New checking balance: ${user['checking_account']:,}."
     )
 
-    embed = embed_message(f"{emoji} Commute Summary", msg)
+    embed = embed_message(f"{emoji} Commute Summary", f"  {msg}")
     await interaction.response.send_message(embed=embed)
 
 
