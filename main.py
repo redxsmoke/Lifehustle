@@ -169,7 +169,8 @@ class GroceryCategoryView(View):
 
     async def send(self, interaction: Interaction):
         embed = self._get_embed()
-        await interaction.followup.send(embed=embed, view=self)
+        self.message = await interaction.followup.send(embed=embed, view=self)
+
 
     def _get_embed(self):
         title, description = self.pages[self.current_page]
