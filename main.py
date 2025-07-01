@@ -959,14 +959,16 @@ class SellFromStashView(View):
         super().__init__(timeout=60)
         self.user_id = user_id
         self.vehicles = vehicles
+        self.pending_confirmation = {}  # To track items awaiting confirmation keyed by custom_id
 
         for vehicle in vehicles:
+            custom_id = f"sell_{vehicle.get('tag', vehicle.get('plate', id(vehicle)))}"
             btn = Button(
                 label=self.make_button_label(vehicle),
                 style=discord.ButtonStyle.danger,
-                custom_id=f"sell_{vehicle.get('tag', vehicle.get('plate', id(vehicle)))}"
+                custom_id=custom_id
             )
-            btn.callback = self.make_callback(vehicle)
+            btn.callback = self.make_sell_request_callback(vehicle, custom_id)
             self.add_item(btn)
 
     def make_button_label(self, item):
@@ -979,51 +981,124 @@ class SellFromStashView(View):
         }.get(item["type"], "❓")
         desc = item.get("tag") or item.get("color", "Unknown")
         cond = item.get("condition", "Unknown")
-        return f"Sell {emoji} {desc} ({cond})"
 
-    def make_callback(self, item):
+        base_prices = {
+            "Bike": 2000,
+            "Beater Car": 10000,
+            "Sedan Car": 25000,
+            "Sports Car": 100000,
+            "Pickup Truck": 75000
+        }
+        resale_percent = {
+            "Pristine": 0.85,
+            "Lightly Used": 0.50,
+            "Heavily Used": 0.25,
+            "Rusted": 0.10
+        }
+        base_price = base_prices.get(item["type"], 0)
+        percent = resale_percent.get(cond, 0.10)
+        resale = int(base_price * percent)
+
+        return f"Sell {emoji} {desc} ({cond}) - ${resale:,}"
+
+    def make_sell_request_callback(self, item, custom_id):
         async def callback(interaction: discord.Interaction):
             if interaction.user.id != self.user_id:
                 await interaction.response.send_message("This isn't your stash.", ephemeral=True)
                 return
 
-            user = await get_user(pool, self.user_id)
-            if not user:
-                await interaction.response.send_message("You don’t have an account yet.", ephemeral=True)
-                return
+            # Save pending item to confirm keyed by custom_id
+            self.pending_confirmation[custom_id] = item
 
-            condition = item.get("condition", "Unknown")
-            cost_map = {
-                "Bike": 2000,
-                "Beater Car": 10000,
-                "Sedan Car": 25000,
-                "Sports Car": 100000,
-                "Pickup Truck": 75000
-            }
-            base_price = cost_map.get(item["type"], 0)
+            # Disable all buttons except the one clicked to avoid multiple requests
+            for child in self.children:
+                child.disabled = True
+            # Add Confirm and Cancel buttons
+            confirm_btn = Button(label="Confirm Sale", style=discord.ButtonStyle.success, custom_id=f"confirm_{custom_id}")
+            cancel_btn = Button(label="Cancel", style=discord.ButtonStyle.secondary, custom_id=f"cancel_{custom_id}")
 
-            resale_pct = {
-                "Pristine": 0.85,
-                "Lightly Used": 0.50,
-                "Heavily Used": 0.25,
-                "Rusted, Failling Apart": 0.10
-            }.get(condition, 0.10)
+            async def confirm_callback(i: discord.Interaction):
+                await self.confirm_sale(i, item, custom_id)
 
-            resale = int(base_price * resale_pct)
+            async def cancel_callback(i: discord.Interaction):
+                if i.user.id != self.user_id:
+                    await i.response.send_message("This isn't your stash.", ephemeral=True)
+                    return
+                # Remove confirmation buttons and restore original buttons
+                self.clear_items()
+                for vehicle in self.vehicles:
+                    cid = f"sell_{vehicle.get('tag', vehicle.get('plate', id(vehicle)))}"
+                    btn = Button(
+                        label=self.make_button_label(vehicle),
+                        style=discord.ButtonStyle.danger,
+                        custom_id=cid
+                    )
+                    btn.callback = self.make_sell_request_callback(vehicle, cid)
+                    self.add_item(btn)
+                await i.response.edit_message(content="Sale cancelled.", view=self)
 
+            confirm_btn.callback = confirm_callback
+            cancel_btn.callback = cancel_callback
+
+            # Clear existing buttons and add only confirm/cancel
+            self.clear_items()
+            self.add_item(confirm_btn)
+            self.add_item(cancel_btn)
+
+            await interaction.response.edit_message(
+                content=f"Are you sure you want to sell your {item['type']} ({item.get('color', 'Unknown')}, {item.get('condition', 'Unknown')})?",
+                view=self
+            )
+        return callback
+
+    async def confirm_sale(self, interaction: discord.Interaction, item, custom_id):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This isn't your stash.", ephemeral=True)
+            return
+
+        user = await get_user(pool, self.user_id)
+        if not user:
+            await interaction.response.send_message("You don’t have an account yet.", ephemeral=True)
+            return
+
+        condition = item.get("condition", "Unknown")
+        base_prices = {
+            "Bike": 2000,
+            "Beater Car": 10000,
+            "Sedan Car": 25000,
+            "Sports Car": 100000,
+            "Pickup Truck": 75000
+        }
+        resale_percent = {
+            "Pristine": 0.85,
+            "Lightly Used": 0.50,
+            "Heavily Used": 0.25,
+            "Rusted": 0.10
+        }
+
+        base_price = base_prices.get(item["type"], 0)
+        percent = resale_percent.get(condition, 0.10)
+        resale = int(base_price * percent)
+
+        inventory = user.get("inventory", [])
+        if item in inventory:
+            inventory.remove(item)
+            user["inventory"] = inventory
             user["checking_account"] += resale
-            user["inventory"].remove(item)
             await upsert_user(pool, self.user_id, user)
 
+            self.clear_items()  # Remove buttons after sale
+            await interaction.response.edit_message(
+                content=f"✅ You sold your {item['type']} for ${resale:,} ({condition}).",
+                view=None
+            )
+        else:
             await interaction.response.send_message(
-                embed=embed_message(
-                    "✅ Vehicle Sold",
-                    f"You sold your {item['type']} for ${resale:,} ({condition}).",
-                    discord.Color.green()
-                ),
+                "❌ That item is no longer in your stash.",
                 ephemeral=True
             )
         return callback
+
 
 
 class GroceryCategoryView(View):
@@ -1516,15 +1591,39 @@ async def stash(interaction: discord.Interaction, category: app_commands.Choice[
             await interaction.followup.send("You don’t own any transportation items yet.")
             return
 
+        desc_lines = []
+        for item in vehicles:
+            vehicle_type = item.get("type", "Unknown")
+            color = item.get("color", "Unknown")
+            condition = item.get("condition", "Unknown")
+            commute_count = item.get("commute_count", 0)
+            purchase_date_str = item.get("purchase_date")
+            purchase_date = datetime.date.fromisoformat(purchase_date_str) if purchase_date_str else datetime.date.today()
+
+            if vehicle_type == "Bike":
+                description = bike_description(purchase_date, condition)
+                desc_lines.append(f"🚴 **{vehicle_type}** — {color} — {description} ({condition})")
+
+            else:  # Cars/Trucks
+                tag = item.get("tag", "N/A")
+                emoji = {
+                    "Beater Car": "🚙",
+                    "Sedan Car": "🚗",
+                    "Sports Car": "🏎️",
+                    "Pickup Truck": "🛻"
+                }.get(vehicle_type, "🚗")
+                desc_lines.append(f"{emoji} **{vehicle_type}** — {color} — Tag: {tag} — {condition}")
+
         embed = discord.Embed(
             title="🚗 Your Vehicles",
-            description="Click a button to sell a vehicle.",
+            description="\n".join(desc_lines),
             color=discord.Color.teal()
         )
+
         view = SellFromStashView(user_id, vehicles)
         await interaction.followup.send(embed=embed, view=view)
         return
-
+   
     elif category.value == "groceries":
         from collections import Counter, defaultdict
 
