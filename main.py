@@ -62,6 +62,17 @@ if not DATABASE_URL:
     exit(1)  # This only stops the app if the URL isn't found
 
 #HELPER FUNCTIONS
+
+def condition_from_usage(usage_count: int) -> str:
+    if usage_count < 1:
+        return "Pristine"
+    elif usage_count < 2:
+        return "Lightly Used"
+    elif usage_count < 3:
+        return "Heavily Used"
+    else:
+        return "Rusted"
+
 async def plate_exists_in_any_inventory(plate: str) -> bool:
     users = await get_all_users(pool)  # You must implement this function to fetch all users
     for user in users:
@@ -480,6 +491,16 @@ async def handle_commute(interaction: discord.Interaction, method: str):
         await interaction.response.send_message("❌ You don't own a bike to ride.", ephemeral=True)
         return
 
+    # ✅ Update bike commute count and condition
+    if method == 'bike':
+        inventory = user.get("inventory", [])
+        for item in inventory:
+            if isinstance(item, dict) and item.get("type") == "Bike":
+                item["commute_count"] = item.get("commute_count", 0) + 1
+                item["condition"] = condition_from_usage(item["commute_count"])
+                break
+        user["inventory"] = inventory
+
     checking_balance = user.get('checking_account', 0)
 
     # Calculate new balance and action text
@@ -489,7 +510,6 @@ async def handle_commute(interaction: discord.Interaction, method: str):
         action = f"spent ${cost}"
     elif method in rewards:
         reward = rewards[method]
-        # If negative balance (debt), reward pays off debt first
         if checking_balance < 0:
             debt = abs(checking_balance)
             payment = min(debt, reward)
@@ -505,7 +525,7 @@ async def handle_commute(interaction: discord.Interaction, method: str):
         await interaction.response.send_message("❌ Invalid commute method.", ephemeral=True)
         return
 
-    # Check bankruptcy (debt >= 500,000)
+    # Check bankruptcy
     if new_balance <= -500_000:
         user['checking_account'] = 0
         await upsert_user(pool, user_id, user)
@@ -518,7 +538,7 @@ async def handle_commute(interaction: discord.Interaction, method: str):
         user['checking_account'] = new_balance
         await upsert_user(pool, user_id, user)
 
-    # Select a random outcome from commute outcomes JSON with day/night adjustments
+    # Select random commute outcome
     outcome = choose_outcome(method)
 
     # Apply money changes from outcome if any
@@ -528,8 +548,7 @@ async def handle_commute(interaction: discord.Interaction, method: str):
         user['checking_account'] = new_balance
         await upsert_user(pool, user_id, user)
 
-    # Compose response message with emoji, action, and outcome description
-    verb = "commuted"
+    # Compose response message
     emoji_map = {
         "drive": "🚗",
         "bike": "🚴",
@@ -538,7 +557,7 @@ async def handle_commute(interaction: discord.Interaction, method: str):
     }
     emoji = emoji_map.get(method, "")
     msg = (
-        f"{emoji} You {verb} to work by {method} and {action}.\n"
+        f"{emoji} You commuted to work by {method} and {action}.\n"
         f"{outcome['description']}\n"
         f"New checking balance: ${user['checking_account']:,}."
     )
