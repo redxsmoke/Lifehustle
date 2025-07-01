@@ -32,7 +32,7 @@ async def drop_old_tables(pool):
         await conn.execute("""
         DROP TABLE IF EXISTS cd_groceries CASCADE;
         DROP TABLE IF EXISTS cd_transporation_methods CASCADE;
-        DROP TABLE IF EXISTS cd_vehicle_type CASCADE;
+        DROP TABLE IF EXISTS cd_vehcile_type CASCADE;
         """)
 
 
