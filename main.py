@@ -35,7 +35,6 @@ async def drop_old_tables(pool):
         DROP TABLE IF EXISTS cd_vehicle_type CASCADE;
         """)
 
-await drop_old_tables(pool)
 
 def embed_message(title: str, description: str, color: discord.Color = discord.Color.blue()) -> discord.Embed:
     return discord.Embed(title=title, description=description, color=color)
@@ -1665,6 +1664,10 @@ async def on_ready():
     if pool is None:
         pool = await create_pool()
         await init_db(pool)
+
+    # ⚠️ TEMPORARY: Drop old tables (delete after initial test)
+    await drop_old_tables(pool)
+
     print(f'Logged in as {client.user} (ID: {client.user.id})')
     await tree.sync()
     print("Commands synced.")
