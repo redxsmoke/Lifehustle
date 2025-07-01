@@ -263,6 +263,54 @@ class GroceryCategoryView(View):
             embed = self._get_embed()
             await interaction.response.edit_message(embed=embed, view=self)
 
+from discord.ui import View, Button
+import discord
+
+class GroceryStashPaginationView(View):
+    def __init__(self, user_id, embeds, timeout=120):
+        super().__init__(timeout=timeout)
+        self.user_id = user_id
+        self.embeds = embeds
+        self.current_page = 0
+        self.message = None
+
+        # Disable prev button on first page
+        self.previous_button.disabled = True
+        if len(embeds) <= 1:
+            self.next_button.disabled = True
+
+    async def send(self, interaction: discord.Interaction):
+        # Send first embed with buttons
+        self.message = await interaction.followup.send(embed=self.embeds[self.current_page], view=self)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This is not your inventory view.", ephemeral=True)
+            return False
+        return True
+
+    async def on_timeout(self):
+        # Disable all buttons when view times out
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            await self.message.edit(view=self)
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary, custom_id="stash_previous")
+    async def previous_button(self, interaction: discord.Interaction, button: Button):
+        if self.current_page > 0:
+            self.current_page -= 1
+            button.disabled = self.current_page == 0
+            self.next_button.disabled = False
+            await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary, custom_id="stash_next")
+    async def next_button(self, interaction: discord.Interaction, button: Button):
+        if self.current_page < len(self.embeds) - 1:
+            self.current_page += 1
+            button.disabled = self.current_page == len(self.embeds) - 1
+            self.previous_button.disabled = False
+            await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
 
 
 class CommuteButtons(discord.ui.View):
