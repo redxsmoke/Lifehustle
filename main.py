@@ -58,7 +58,7 @@ import datetime
 import random
 
 def is_night_utc():
-    hour = datetime.datetime.utcnow().hour
+    hour = datetime.datetime.now(datetime.timezone.utc).hour
     # Define night as 19:00 - 06:00 UTC, adjust if needed
     return hour >= 19 or hour < 6
 
