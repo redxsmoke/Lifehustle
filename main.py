@@ -367,7 +367,7 @@ async def deposit(interaction: discord.Interaction, amount: str):
 
     if amount_int <= 0:
         await interaction.response.send_message(
-            "❌ Hey stupid, you can't deposit a negative amount LOL."",
+            "❌ Hey stupid, you can't deposit a negative amount LOL.",
             ephemeral=True)
         return
 
