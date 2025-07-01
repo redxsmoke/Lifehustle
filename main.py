@@ -436,86 +436,13 @@ async def withdraw(interaction: discord.Interaction, amount: str):
         f"New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}"
     )
 
-@tree.command(
-    name="commute", 
-    description="Commute to or from work. Methods: drive (-$10), bike (+$10), subway (-$10), bus (-$5)"
-)
-@app_commands.describe(method="Method of commute", direction="Direction of commute (to or from work)")
-@app_commands.autocomplete(method=commute_method_autocomplete, direction=commute_direction_autocomplete)
-async def commute(interaction: discord.Interaction, method: str, direction: str):
-    method = method.lower()
-    direction = direction.lower()
-
-    if method not in COMMUTE_METHODS:
-        await interaction.response.send_message(
-            f"❌ Invalid commute method '{method}'. Choose from: drive, bike, subway, bus.",
-            ephemeral=True)
-        return
-
-    if direction not in COMMUTE_DIRECTIONS:
-        await interaction.response.send_message(
-            f"❌ Invalid direction '{direction}'. Choose 'to' or 'from'.",
-            ephemeral=True)
-        return
-
-    user_id = interaction.user.id
-    user = await get_user(pool, user_id)
-    if user is None:
-        user = DEFAULT_USER.copy()
-        await upsert_user(pool, user_id, user)
-
-    cost = 0
-    reward = 0
-    error_msg = None
-
-    if method == 'drive':
-        if not user.get('car'):
-            error_msg = "❌ You don't own a car to drive."
-        else:
-            cost = 10
-
-    elif method == 'bike':
-        if not user.get('bike'):
-            error_msg = "❌ You don't own a bike to ride."
-        else:
-            reward = 10  # reward for being green
-
-    elif method == 'subway':
-        cost = 10
-
-    elif method == 'bus':
-        cost = 5
-
-    if error_msg:
-        await interaction.response.send_message(error_msg, ephemeral=True)
-        return
-
-    if cost > 0 and user['checking_account'] < cost:
-        await interaction.response.send_message(
-            f"❌ You don't have enough money (${cost}) in your checking account to pay for {method} {direction} work.",
-            ephemeral=True)
-        return
-
-    if cost > 0:
-        user['checking_account'] -= cost
-    if reward > 0:
-        user['checking_account'] += reward
-
-    await upsert_user(pool, user_id, user)
-
-    if cost > 0 and reward == 0:
-        await interaction.response.send_message(
-            f"🚗 You commuted {direction} work by {method} and spent ${cost}.\n"
-            f"New checking balance: ${user['checking_account']:,}."
-        )
-    elif reward > 0:
-        await interaction.response.send_message(
-            f"🚴 You commuted {direction} work by bike and earned $10 for being green!\n"
-            f"New checking balance: ${user['checking_account']:,}."
-        )
-    else:
-        await interaction.response.send_message("Something unexpected happened.", ephemeral=True)
-
+@tree.command(name="commute", description="Commute to work using buttons (drive, bike, subway, bus)")
+async def commute(interaction: discord.Interaction):
+    await interaction.response.send_message(
+        "Choose your method of commute:",
+        view=CommuteButtons(),
+        ephemeral=True
+    )
 
 @tree.command(name="paycheck", description="Claim your paycheck ($10,000 every 12 hours)")
 async def paycheck(interaction: discord.Interaction):
