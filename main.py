@@ -1139,6 +1139,97 @@ async def purge(interaction: discord.Interaction):
         ephemeral=True
     )
 
+@tree.command(name="stash", description="View your inventory by category.")
+@app_commands.describe(category="Which category do you want to check?")
+@app_commands.choices(category=[
+    app_commands.Choice(name="Transportation", value="transportation"),
+    app_commands.Choice(name="Groceries", value="groceries")
+])
+async def stash(interaction: discord.Interaction, category: app_commands.Choice[str]):
+    await interaction.response.defer()
+
+    user_id = interaction.user.id
+    user = await get_user(pool, user_id)
+
+    if not user:
+        await interaction.followup.send("❌ You don’t have an account yet. Use `/start` first.")
+        return
+
+    inventory = user.get("inventory", [])
+
+    if category.value == "transportation":
+        vehicles = {
+            "🚴": "Bike",
+            "🚙": "Blue Car",
+            "🚗": "Red Car",
+            "🏎️": "Sports Car",
+            "🛻": "Pickup Truck"
+        }
+
+        owned = [f"{emoji} {name}" for emoji, name in vehicles.items() if f"{emoji} {name}" in inventory]
+
+        embed = discord.Embed(
+            title="🚗 Your Vehicles",
+            description="\n".join(owned) if owned else "You don’t own any transportation items yet.",
+            color=discord.Color.teal()
+        )
+        await interaction.followup.send(embed=embed)
+
+    elif category.value == "groceries":
+        from collections import Counter, defaultdict
+
+        with open("shop_items.json", "r", encoding="utf-8") as f:
+            item_data = json.load(f)
+
+        # Build name-to-category map
+        name_to_category = {
+            f"{item['emoji']} {item['name']}": item.get("category", "Misc") for item in item_data
+        }
+
+        # Count grocery items (exclude vehicles)
+        vehicle_names = {"🚴 Bike", "🚙 Blue Car", "🚗 Red Car", "🏎️ Sports Car", "🛻 Pickup Truck"}
+        groceries = [item for item in inventory if item not in vehicle_names]
+        counts = Counter(groceries)
+
+        if not counts:
+            embed = discord.Embed(
+                title="🛒 Your Groceries",
+                description="You don’t have any groceries yet.",
+                color=discord.Color.green()
+            )
+            await interaction.followup.send(embed=embed)
+            return
+
+        categorized = defaultdict(list)
+        for item, count in counts.items():
+            category = name_to_category.get(item, "Misc").capitalize()
+            categorized[category].append(f"{item} x{count}")
+
+        # Build embeds per category
+        embeds = []
+        for cat, items in sorted(categorized.items()):
+            emoji = {
+                "Produce": "🥬",
+                "Dairy": "🧀",
+                "Protein": "🍖",
+                "Snacks": "🍪",
+                "Baked": "🍞",
+                "Misc": "📦"
+            }.get(cat, "📦")
+            embeds.append(discord.Embed(
+                title=f"{emoji} {cat}",
+                description="\n".join(items),
+                color=discord.Color.green()
+            ))
+
+        # If multiple categories, paginate
+        if len(embeds) == 1:
+            await interaction.followup.send(embed=embeds[0])
+        else:
+            view = GroceryStashPaginationView(interaction.user.id, embeds)
+            await view.send(interaction)
+
+
 from discord import app_commands
 from discord.ui import View, Button
 import json
