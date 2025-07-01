@@ -319,10 +319,19 @@ async def get_user(pool, user_id: int):
                 'bike': row['bike'],
                 'fridge': json.loads(row['fridge']),
                 'debt': row['debt'],
-                'inventory': json.loads(row['inventory']) if row['inventory'] else []
+                'inventory': safe_load_inventory(row['inventory'])
+
             }
         else:
             return None
+
+def safe_load_inventory(inv):
+    if not inv or inv.strip() == '':
+        return []
+    try:
+        return json.loads(inv)
+    except json.JSONDecodeError:
+        return []
 
 async def upsert_user(pool, user_id: int, data: dict):
     async with pool.acquire() as conn:
@@ -927,6 +936,82 @@ async def purge(interaction: discord.Interaction):
         ),
         ephemeral=True
     )
+
+@tree.command(name="stash", description="View items you own")
+@app_commands.describe(category="Category of items to view")
+@app_commands.choices(category=[
+    app_commands.Choice(name="Transportation", value="transportation"),
+    app_commands.Choice(name="Groceries", value="groceries")
+])
+async def stash(interaction: discord.Interaction, category: app_commands.Choice[str]):
+    await interaction.response.defer()
+    user_id = interaction.user.id
+    user = await get_user(pool, user_id)
+
+    if not user:
+        await interaction.followup.send("You don’t have an account yet. Try using `/start` first.")
+        return
+
+    inventory = user.get("inventory", [])
+
+    if category.value == "transportation":
+        vehicles = {
+            "🚴": "Bike",
+            "🚙": "Blue Car",
+            "🚗": "Red Car",
+            "🏎️": "Sports Car",
+            "🛻": "Pickup Truck"
+        }
+        owned = [f"{emoji} {label}" for emoji, label in vehicles.items() if f"{emoji} {label}" in inventory]
+        description = "\n".join(owned) if owned else "You don’t own any transportation items yet."
+
+        embed = discord.Embed(
+            title="🚗 Your Vehicles",
+            description=description,
+            color=discord.Color.teal()
+        )
+        await interaction.followup.send(embed=embed)
+
+    elif category.value == "groceries":
+        from collections import Counter, defaultdict
+        with open("shop_items.json", "r", encoding="utf-8") as f:
+            items_data = json.load(f)
+
+        # Map item to category
+        item_category_map = {item["name"]: item.get("category", "misc") for item in items_data}
+
+        counts = Counter(item for item in inventory if item not in [
+            "🚴 Bike", "🚙 Blue Car", "🚗 Red Car", "🏎️ Sports Car", "🛻 Pickup Truck"
+        ])
+        if not counts:
+            embed = discord.Embed(
+                title="🛒 Your Groceries",
+                description="You don’t have any groceries yet.",
+                color=discord.Color.green()
+            )
+            await interaction.followup.send(embed=embed)
+            return
+
+        categorized = defaultdict(list)
+        for item, count in counts.items():
+            category = item_category_map.get(item, "misc").capitalize()
+            categorized[category].append(f"{item} x{count}")
+
+        category_pages = []
+        for cat, items in sorted(categorized.items()):
+            emoji_title = {
+                "Produce": "🥬 Produce",
+                "Dairy": "🧀 Dairy",
+                "Protein": "🍖 Protein",
+                "Snacks": "🍪 Snacks",
+                "Baked": "🍞 Baked",
+                "Misc": "📦 Misc"
+            }.get(cat, f"📦 {cat}")
+            category_pages.append((emoji_title, "\n".join(items)))
+
+        view = GroceryCategoryView(category_pages, user_id)
+        await view.send(interaction)
+
 
 
 # --- Bot events ---
