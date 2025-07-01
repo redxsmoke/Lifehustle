@@ -9,6 +9,17 @@ import time
 import asyncpg
 import ssl
 
+DEFAULT_USER = {
+    'checking_account': 0,
+    'savings_account': 0,
+    'hunger_level': 100,
+    'relationship_status': 'single',
+    'car': None,
+    'bike': None,
+    'fridge': [],
+    'debt': 0
+}
+
 # Load categories JSON.
 with open('categories.json', 'r') as f:
     categories = json.load(f)
@@ -33,37 +44,140 @@ if not DATABASE_URL:
     print("ERROR: DATABASE_URL environment variable is missing.")
     exit(1)  # This only stops the app if the URL isn't found
 
+
+def parse_amount(amount_str: str) -> int | None:
+    """
+    Parse amount strings like '1000', '1k', '2.5m', or 'all'.
+    Returns:
+      - int amount if valid
+      - -1 if 'all' (special flag)
+      - None if invalid input
+    """
+    s = amount_str.strip().lower()
+    if s == "all":
+        return -1  # special flag meaning "all funds"
+
+    # Remove commas
+    s = s.replace(',', '')
+
+    try:
+        # Check for suffixes
+        if s.endswith('k'):
+            return int(float(s[:-1]) * 1_000)
+        elif s.endswith('m'):
+            return int(float(s[:-1]) * 1_000_000)
+        else:
+            # Just a plain integer number
+            return int(float(s))
+    except ValueError:
+        return None
+
 # Globals
 pool = None
 last_paycheck_times = {}
 
-# Helpers
-def normalize(text):
-    return re.sub(r'[\s\-]', '', text.lower())
+class CommuteButtons(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=60)
 
-def parse_amount(amount_str: str) -> int | None:
-    """
-    Parse a string amount that can contain commas and suffixes like 'k' or 'm'.
-    Returns integer value or None if invalid.
-    Examples:
-      "10k" -> 10000
-      "1,000,000" -> 1000000
-      "5m" -> 5000000
-    """
-    amount_str = amount_str.lower().replace(',', '').strip()
-    match = re.fullmatch(r'(\d+)([km]?)', amount_str)
-    if not match:
-        return None
+    @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="commute_drive")
+    async def drive_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await handle_commute(interaction, "drive")
 
-    number = int(match.group(1))
-    suffix = match.group(2)
+    @discord.ui.button(label="Bike 🚴 (+$10)", style=discord.ButtonStyle.success, custom_id="commute_bike")
+    async def bike_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await handle_commute(interaction, "bike")
 
-    if suffix == 'k':
-        number *= 1_000
-    elif suffix == 'm':
-        number *= 1_000_000
+    @discord.ui.button(label="Subway 🚇 ($10)", style=discord.ButtonStyle.primary, custom_id="commute_subway")
+    async def subway_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await handle_commute(interaction, "subway")
 
-    return number if number > 0 else None
+    @discord.ui.button(label="Bus 🚌 ($5)", style=discord.ButtonStyle.secondary, custom_id="commute_bus")
+    async def bus_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await handle_commute(interaction, "bus")
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+
+# Make sure this is a top-level async function — NOT nested inside another function!
+
+async def handle_commute(interaction: discord.Interaction, method: str):
+    user_id = interaction.user.id
+    user = await get_user(pool, user_id)
+    if user is None:
+        user = DEFAULT_USER.copy()
+        await upsert_user(pool, user_id, user)
+
+    # Define costs and rewards per method
+    costs = {
+        'drive': 10,
+        'subway': 10,
+        'bus': 5,
+    }
+    rewards = {
+        'bike': 10
+    }
+
+    # Check ownership requirements
+    if method == 'drive' and not user.get('car'):
+        await interaction.response.send_message("❌ You don't own a car to drive.", ephemeral=True)
+        return
+    if method == 'bike' and not user.get('bike'):
+        await interaction.response.send_message("❌ You don't own a bike to ride.", ephemeral=True)
+        return
+
+    checking_balance = user.get('checking_account', 0)
+
+    # Calculate new balance
+    if method in costs:
+        cost = costs[method]
+        new_balance = checking_balance - cost
+        action = f"spent ${cost}"
+    elif method in rewards:
+        reward = rewards[method]
+        # If negative balance (debt), reward pays off debt first
+        if checking_balance < 0:
+            debt = abs(checking_balance)
+            payment = min(debt, reward)
+            new_balance = checking_balance + payment
+            remainder = reward - payment
+            if remainder > 0:
+                new_balance += remainder
+            action = f"earned ${reward} (paid off ${payment} of your debt)"
+        else:
+            new_balance = checking_balance + reward
+            action = f"earned ${reward}"
+    else:
+        await interaction.response.send_message("❌ Invalid commute method.", ephemeral=True)
+        return
+
+    # Check bankruptcy (debt >= 500,000)
+    if new_balance <= -500_000:
+        user['checking_account'] = 0
+        await upsert_user(pool, user_id, user)
+        await interaction.response.send_message(
+            "💥 Your debt exceeded $500,000! You have declared bankruptcy. Your balance has been reset to $0.",
+            ephemeral=True
+        )
+        return
+    else:
+        user['checking_account'] = new_balance
+        await upsert_user(pool, user_id, user)
+
+    # Compose response message
+    verb = "commuted"
+    emoji_map = {
+        "drive": "🚗",
+        "bike": "🚴",
+        "subway": "🚇",
+        "bus": "🚌"
+    }
+    emoji = emoji_map.get(method, "")
+    msg = f"{emoji} You {verb} to work by {method} and {action}.\nNew checking balance: ${new_balance:,}."
+
+    await interaction.response.send_message(msg)
 
 # --- Database functions ---
 
@@ -84,7 +198,8 @@ async def init_db(pool):
                 relationship_status TEXT DEFAULT 'single',
                 car TEXT,
                 bike TEXT,
-                fridge TEXT DEFAULT '[]'
+                fridge TEXT DEFAULT '[]',
+                debt BIGINT DEFAULT 0
             );
         ''')
 
@@ -100,7 +215,8 @@ async def get_user(pool, user_id: int):
                 'relationship_status': row['relationship_status'],
                 'car': row['car'],
                 'bike': row['bike'],
-                'fridge': json.loads(row['fridge'])
+                'fridge': json.loads(row['fridge']),
+                'debt': row['debt']
             }
         else:
             return None
@@ -109,8 +225,8 @@ async def upsert_user(pool, user_id: int, data: dict):
     async with pool.acquire() as conn:
         fridge_json = json.dumps(data.get('fridge', []))
         await conn.execute('''
-            INSERT INTO users (user_id, checking_account, savings_account, hunger_level, relationship_status, car, bike, fridge)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO users (user_id, checking_account, savings_account, hunger_level, relationship_status, car, bike, fridge, debt)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             ON CONFLICT (user_id) DO UPDATE SET
                 checking_account = EXCLUDED.checking_account,
                 savings_account = EXCLUDED.savings_account,
@@ -118,7 +234,8 @@ async def upsert_user(pool, user_id: int, data: dict):
                 relationship_status = EXCLUDED.relationship_status,
                 car = EXCLUDED.car,
                 bike = EXCLUDED.bike,
-                fridge = EXCLUDED.fridge
+                fridge = EXCLUDED.fridge,
+                debt = EXCLUDED.debt
         ''', user_id,
              data.get('checking_account', 0),
              data.get('savings_account', 0),
@@ -126,7 +243,8 @@ async def upsert_user(pool, user_id: int, data: dict):
              data.get('relationship_status', 'single'),
              data.get('car'),
              data.get('bike'),
-             fridge_json)
+             fridge_json,
+             data.get('debt', 0))
 
 # --- Modal for word submission ---
 
@@ -210,15 +328,7 @@ async def bank(interaction: discord.Interaction):
     user_id = interaction.user.id
     user = await get_user(pool, user_id)
     if user is None:
-        user = {
-            'checking_account': 0,
-            'savings_account': 0,
-            'hunger_level': 100,
-            'relationship_status': 'single',
-            'car': None,
-            'bike': None,
-            'fridge': []
-        }
+        user = DEFAULT_USER.copy()
         await upsert_user(pool, user_id, user)
 
     await interaction.response.send_message(
@@ -232,29 +342,39 @@ async def bank(interaction: discord.Interaction):
 async def deposit(interaction: discord.Interaction, amount: str):
     parsed_amount = parse_amount(amount)
     if parsed_amount is None:
-        await interaction.response.send_message("❌ Invalid amount format. Use numbers, commas, or suffixes like 'k' or 'm'.", ephemeral=True)
-        return
-
-    amount_int = parsed_amount
-    if amount_int <= 0:
-        await interaction.response.send_message("❌ Please enter a positive amount to deposit.", ephemeral=True)
+        await interaction.response.send_message(
+            "❌ Invalid amount format. Use numbers, commas, or suffixes like 'k' or 'm', or 'all'.",
+            ephemeral=True)
         return
 
     user_id = interaction.user.id
     user = await get_user(pool, user_id)
     if user is None:
-        user = {
-            'checking_account': 0,
-            'savings_account': 0,
-            'hunger_level': 100,
-            'relationship_status': 'single',
-            'car': None,
-            'bike': None,
-            'fridge': []
-        }
+        user = DEFAULT_USER.copy()
 
-    if user['checking_account'] < amount_int:
-        await interaction.response.send_message("❌ You don't have enough money in your checking account.", ephemeral=True)
+    checking_balance = user.get('checking_account', 0)
+
+    if parsed_amount == -1:
+        # 'all' means deposit all checking funds
+        if checking_balance == 0:
+            await interaction.response.send_message(
+                "❌ Aww man - if only you didn't spend it all on booze and OnlyFans LOL - Try depositing when your balance is higher than your IQ",
+                ephemeral=True)
+            return
+        amount_int = checking_balance
+    else:
+        amount_int = parsed_amount
+
+    if amount_int <= 0:
+        await interaction.response.send_message(
+            "❌ Hey stupid, you can't deposit a negative amount LOL."",
+            ephemeral=True)
+        return
+
+    if checking_balance < amount_int:
+        await interaction.response.send_message(
+            "❌ LMAO - unless your also depositing your hopes and dreams, you don't have this much in your checking account to deposit.",
+            ephemeral=True)
         return
 
     user['checking_account'] -= amount_int
@@ -266,34 +386,45 @@ async def deposit(interaction: discord.Interaction, amount: str):
         f"New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}"
     )
 
+
 @tree.command(name="withdraw", description="Withdraw money from savings to checking")
 @app_commands.describe(amount="Amount to withdraw from savings to checking")
 async def withdraw(interaction: discord.Interaction, amount: str):
     parsed_amount = parse_amount(amount)
     if parsed_amount is None:
-        await interaction.response.send_message("❌ Invalid amount format. Use numbers, commas, or suffixes like 'k' or 'm'.", ephemeral=True)
-        return
-
-    amount_int = parsed_amount
-    if amount_int <= 0:
-        await interaction.response.send_message("❌ Please enter a positive amount to withdraw.", ephemeral=True)
+        await interaction.response.send_message(
+            "❌ Invalid amount format. Use numbers, commas, or suffixes like 'k' or 'm', or 'all'.",
+            ephemeral=True)
         return
 
     user_id = interaction.user.id
     user = await get_user(pool, user_id)
     if user is None:
-        user = {
-            'checking_account': 0,
-            'savings_account': 0,
-            'hunger_level': 100,
-            'relationship_status': 'single',
-            'car': None,
-            'bike': None,
-            'fridge': []
-        }
+        user = DEFAULT_USER.copy()
 
-    if user['savings_account'] < amount_int:
-        await interaction.response.send_message("❌ You don't have enough money in your savings account.", ephemeral=True)
+    savings_balance = user.get('savings_account', 0)
+
+    if parsed_amount == -1:
+        # 'all' means withdraw all savings funds
+        if savings_balance == 0:
+            await interaction.response.send_message(
+                "❌ LMAO - money don't grow on trees in real life and it doesn't here either. Try again after you do something with your life.",
+                ephemeral=True)
+            return
+        amount_int = savings_balance
+    else:
+        amount_int = parsed_amount
+
+    if amount_int <= 0:
+        await interaction.response.send_message(
+            "❌ Hey stupid, you can't withdraw a negative amount LOL.",
+            ephemeral=True)
+        return
+
+    if savings_balance < amount_int:
+        await interaction.response.send_message(
+            "❌ WOW! Wouldn't it be nice if we could all withdraw money we don't have. You don't have enough funds in your savings to do this. Stop spending it on stupid shit",
+            ephemeral=True)
         return
 
     user['savings_account'] -= amount_int
@@ -330,15 +461,7 @@ async def commute(interaction: discord.Interaction, method: str, direction: str)
     user_id = interaction.user.id
     user = await get_user(pool, user_id)
     if user is None:
-        user = {
-            'checking_account': 0,
-            'savings_account': 0,
-            'hunger_level': 100,
-            'relationship_status': 'single',
-            'car': None,
-            'bike': None,
-            'fridge': []
-        }
+        user = DEFAULT_USER.copy()
         await upsert_user(pool, user_id, user)
 
     cost = 0
@@ -413,15 +536,7 @@ async def paycheck(interaction: discord.Interaction):
 
     user = await get_user(pool, user_id)
     if user is None:
-        user = {
-            'checking_account': 0,
-            'savings_account': 0,
-            'hunger_level': 100,
-            'relationship_status': 'single',
-            'car': None,
-            'bike': None,
-            'fridge': []
-        }
+        user = DEFAULT_USER.copy()
 
     user['checking_account'] = user.get('checking_account', 0) + 10000
     await upsert_user(pool, user_id, user)
@@ -484,15 +599,7 @@ async def startcategories(interaction: discord.Interaction, category: str):
             user_id = interaction.user.id
             user = await get_user(pool, user_id)
             if user is None:
-                user = {
-                    'checking_account': 0,
-                    'savings_account': 0,
-                    'hunger_level': 100,
-                    'relationship_status': 'single',
-                    'car': None,
-                    'bike': None,
-                    'fridge': []
-                }
+                user = DEFAULT_USER.copy()
 
             user['checking_account'] = user.get('checking_account', 0) + 10
             await upsert_user(pool, user_id, user)
