@@ -1,40 +1,29 @@
 [
-  // 🚗 Transportation
   {"id": 1, "emoji": "🚴", "name": "Bike", "price": 2000, "category": "transportation"},
   {"id": 2, "emoji": "🚙", "name": "Blue Car", "price": 10000, "category": "transportation"},
   {"id": 3, "emoji": "🚗", "name": "Red Car", "price": 25000, "category": "transportation"},
   {"id": 4, "emoji": "🏎️", "name": "Sports Car", "price": 100000, "category": "transportation"},
   {"id": 5, "emoji": "🛻", "name": "Pickup Truck", "price": 30000, "category": "transportation"},
-
-  // 🥬 Produce
   {"id": 6, "emoji": "🍎", "name": "Apple", "price": 3, "category": "produce"},
   {"id": 7, "emoji": "🍌", "name": "Banana", "price": 2, "category": "produce"},
   {"id": 8, "emoji": "🥕", "name": "Carrot", "price": 4, "category": "produce"},
   {"id": 9, "emoji": "🍅", "name": "Tomato", "price": 3, "category": "produce"},
   {"id": 10, "emoji": "🥔", "name": "Potato", "price": 2, "category": "produce"},
   {"id": 11, "emoji": "🌽", "name": "Corn", "price": 3, "category": "produce"},
-
-  // 🧀 Dairy
   {"id": 12, "emoji": "🧀", "name": "Cheese", "price": 6, "category": "dairy"},
   {"id": 13, "emoji": "🥛", "name": "Milk", "price": 4, "category": "dairy"},
   {"id": 14, "emoji": "🍦", "name": "Ice Cream", "price": 5, "category": "dairy"},
   {"id": 15, "emoji": "🍨", "name": "Frozen Yogurt", "price": 5, "category": "dairy"},
-
-  // 🍖 Protein
   {"id": 16, "emoji": "🍗", "name": "Chicken Leg", "price": 10, "category": "protein"},
   {"id": 17, "emoji": "🥩", "name": "Steak", "price": 15, "category": "protein"},
   {"id": 18, "emoji": "🍖", "name": "Ribs", "price": 12, "category": "protein"},
   {"id": 19, "emoji": "🍤", "name": "Shrimp", "price": 14, "category": "protein"},
   {"id": 20, "emoji": "🥚", "name": "Eggs (dozen)", "price": 4, "category": "protein"},
-
-  // 🍪 Snacks
   {"id": 21, "emoji": "🍿", "name": "Popcorn", "price": 3, "category": "snacks"},
   {"id": 22, "emoji": "🍫", "name": "Chocolate Bar", "price": 4, "category": "snacks"},
   {"id": 23, "emoji": "🍪", "name": "Cookie", "price": 2, "category": "snacks"},
   {"id": 24, "emoji": "🍩", "name": "Donut", "price": 3, "category": "snacks"},
   {"id": 25, "emoji": "🍟", "name": "French Fries", "price": 5, "category": "snacks"},
-
-  // 🍷 Beverages
   {"id": 26, "emoji": "☕", "name": "Coffee", "price": 4, "category": "beverages"},
   {"id": 27, "emoji": "🍵", "name": "Tea", "price": 3, "category": "beverages"},
   {"id": 28, "emoji": "🥤", "name": "Soda", "price": 3, "category": "beverages"},

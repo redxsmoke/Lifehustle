@@ -31,7 +31,6 @@ with open("commute_outcomes.json", "r") as f:
 #LOAD SHOP ITEMS JSON
 with open("shop_items.json", "r", encoding="utf-8") as f:
     SHOP_ITEMS = json.load(f)
-
 #LOAD CATEGORIES JSON.
 with open('categories.json', 'r') as f:
     categories = json.load(f)
@@ -638,13 +637,10 @@ async def shop(interaction: discord.Interaction, category: app_commands.Choice[s
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     elif category.value == "groceries":
-        with open("shop_items.json", "r", encoding="utf-8") as f:
-            items_data = json.load(f)
-
         grouped = defaultdict(list)
-        for item in items_data:
+        for item in SHOP_ITEMS:  # Use pre-loaded global variable
             grouped[item.get("category", "Misc")].append(item)
-
+        
         pages = []
         for cat in sorted(grouped):
             pages.append((cat.capitalize(), grouped[cat]))
@@ -777,16 +773,22 @@ class GroceryCategoryView(View):
                 await interaction.response.send_message(f"🚫 Not enough money to buy {item['name']}.", ephemeral=True)
                 return
 
+            inventory = user.get("inventory") or []
+            item_full_name = f"{item['emoji']} {item['name']}"
+
+            if item_full_name in inventory:
+                await interaction.response.send_message(f"🚫 You already own {item_full_name}.", ephemeral=True)
+                return
+
             # Deduct cost, add to inventory
             user["checking_account"] -= item["price"]
-            inventory = user.get("inventory", [])
-            inventory.append(f"{item['emoji']} {item['name']}")
+            inventory.append(item_full_name)
             user["inventory"] = inventory
 
             await upsert_user(pool, self.user_id, user)
 
             await interaction.response.send_message(
-                f"✅ You bought {item['emoji']} {item['name']} for ${item['price']:,}!",
+                f"✅ You bought {item_full_name} for ${item['price']:,}!",
                 ephemeral=True
             )
         return callback
