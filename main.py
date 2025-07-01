@@ -20,6 +20,9 @@ DEFAULT_USER = {
     'debt': 0
 }
 
+with open("commute_outcomes.json", "r") as f:
+    COMMUTE_OUTCOMES = json.load(f)
+
 # Load categories JSON.
 with open('categories.json', 'r') as f:
     categories = json.load(f)
@@ -43,6 +46,68 @@ print(f"DATABASE_URL = {DATABASE_URL}")  # This prints the value, whether it's v
 if not DATABASE_URL:
     print("ERROR: DATABASE_URL environment variable is missing.")
     exit(1)  # This only stops the app if the URL isn't found
+
+#HELPER FUNCTIONS
+
+import datetime
+import random
+
+def is_night_utc():
+    hour = datetime.datetime.utcnow().hour
+    # Define night as 19:00 - 06:00 UTC, adjust if needed
+    return hour >= 19 or hour < 6
+
+def get_probability_multiplier(commute_type, outcome_type, is_night):
+    if outcome_type == "negative":
+        base = 0.10
+        if commute_type == "drive":
+            base = 0.03
+        if is_night:
+            if commute_type == "subway":
+                base = 0.20
+            elif commute_type == "drive":
+                base = 0.10
+            elif commute_type == "bus":
+                base = 0.25
+            elif commute_type == "bike":
+                base = 0.35
+    elif outcome_type == "positive":
+        base = 0.10
+        if commute_type == "drive":
+            base = 0.18
+        if not is_night:  # day
+            if commute_type == "bus":
+                base = 0.20
+            elif commute_type == "subway":
+                base = 0.15
+            elif commute_type == "bike":
+                base = 0.35
+            elif commute_type == "drive":
+                base = 0.40
+    else:  # neutral outcomes
+        base = 1.0  # treat neutral as default 100% base for weighting
+    return base
+
+def choose_outcome(commute_type):
+    is_night = is_night_utc()
+    outcomes = []
+    weights = []
+
+    for category in ["negative", "neutral", "positive"]:
+        for outcome in COMMUTE_OUTCOMES[commute_type][category]:
+            base_prob = outcome["base_probability"]
+            multiplier = get_probability_multiplier(commute_type, category, is_night)
+            adjusted_prob = base_prob * multiplier
+            outcomes.append(outcome)
+            weights.append(adjusted_prob)
+
+    # Normalize weights so they sum to 1
+    total = sum(weights)
+    normalized_weights = [w / total for w in weights]
+
+    chosen = random.choices(outcomes, weights=normalized_weights, k=1)[0]
+    return chosen
+
 
 
 def parse_amount(amount_str: str) -> int | None:
@@ -79,6 +144,7 @@ last_paycheck_times = {}
 class CommuteButtons(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=60)
+        self.message = None  # Will hold the message with buttons
 
     @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="commute_drive")
     async def drive_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -97,8 +163,19 @@ class CommuteButtons(discord.ui.View):
         await handle_commute(interaction, "bus")
 
     async def on_timeout(self):
-        for item in self.children:
-            item.disabled = True
+        # Disable all buttons
+        for child in self.children:
+            child.disabled = True
+        
+        if self.message:
+            try:
+                await self.message.edit(
+                    content="⌛ Commute selection timed out. Please try again.",
+                    view=self
+                )
+            except Exception as e:
+                print(f"[ERROR] Failed to edit message on timeout: {e}")
+
 
 
 # Make sure this is a top-level async function — NOT nested inside another function!
@@ -130,7 +207,7 @@ async def handle_commute(interaction: discord.Interaction, method: str):
 
     checking_balance = user.get('checking_account', 0)
 
-    # Calculate new balance
+    # Calculate new balance and action text
     if method in costs:
         cost = costs[method]
         new_balance = checking_balance - cost
@@ -166,7 +243,17 @@ async def handle_commute(interaction: discord.Interaction, method: str):
         user['checking_account'] = new_balance
         await upsert_user(pool, user_id, user)
 
-    # Compose response message
+    # Select a random outcome from commute outcomes JSON with day/night adjustments
+    outcome = choose_outcome(method)
+
+    # Apply money changes from outcome if any
+    money_change = outcome.get("money_change", 0)
+    if money_change != 0:
+        new_balance += money_change
+        user['checking_account'] = new_balance
+        await upsert_user(pool, user_id, user)
+
+    # Compose response message with emoji, action, and outcome description
     verb = "commuted"
     emoji_map = {
         "drive": "🚗",
@@ -175,7 +262,11 @@ async def handle_commute(interaction: discord.Interaction, method: str):
         "bus": "🚌"
     }
     emoji = emoji_map.get(method, "")
-    msg = f"{emoji} You {verb} to work by {method} and {action}.\nNew checking balance: ${new_balance:,}."
+    msg = (
+        f"{emoji} You {verb} to work by {method} and {action}.\n"
+        f"{outcome['description']}\n"
+        f"New checking balance: ${user['checking_account']:,}."
+    )
 
     await interaction.response.send_message(msg)
 
@@ -438,9 +529,10 @@ async def withdraw(interaction: discord.Interaction, amount: str):
 
 @tree.command(name="commute", description="Commute to work using buttons (drive, bike, subway, bus)")
 async def commute(interaction: discord.Interaction):
+    view = CommuteButtons()
     await interaction.response.send_message(
         "Choose your method of commute:",
-        view=CommuteButtons(),
+        view=view,
         ephemeral=True
     )
 
