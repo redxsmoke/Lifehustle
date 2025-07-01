@@ -71,15 +71,9 @@ async def plate_exists_in_any_inventory(plate: str) -> bool:
                 return True
     return False
 
-async def generate_unique_license_plate(length=6):
-    while True:
-        # Example format: 3 letters + 3 digits, e.g. ABC123
-        letters = ''.join(random.choices(string.ascii_uppercase, k=3))
-        digits = ''.join(random.choices(string.digits, k=3))
-        plate = letters + digits
-        if not await plate_exists_in_any_inventory(plate):
-            return plate
-
+def generate_random_plate(length=8):
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(random.choices(chars, k=length))
 
 BIKE_COLORS = [
     "Neon Green",
@@ -778,7 +772,7 @@ class TransportationShopButtons(View):
     @discord.ui.button(label="Buy Beater Car 🚙", style=discord.ButtonStyle.primary, custom_id="buy_blue_car")
     async def buy_blue_car(self, interaction: discord.Interaction, button: Button):
         try:
-            plate = await generate_unique_license_plate()
+            plate = generate_random_plate()
             car_item = {
                 "type": "Blue Car",
                 "plate": plate
@@ -790,7 +784,7 @@ class TransportationShopButtons(View):
     @discord.ui.button(label="Buy Sedan Car 🚗", style=discord.ButtonStyle.primary, custom_id="buy_red_car")
     async def buy_red_car(self, interaction: discord.Interaction, button: Button):
         try:
-            plate = await generate_unique_license_plate()
+            plate = generate_random_plate()
             car_item = {
                 "type": "Red Car",
                 "plate": plate
@@ -802,7 +796,7 @@ class TransportationShopButtons(View):
     @discord.ui.button(label="Buy Sports Car 🏎️", style=discord.ButtonStyle.primary, custom_id="buy_sports_car")
     async def buy_sports_car(self, interaction: discord.Interaction, button: Button):
         try:
-            plate = await generate_unique_license_plate()
+            plate = generate_random_plate()
             car_item = {
                 "type": "Sports Car",
                 "plate": plate
@@ -814,7 +808,7 @@ class TransportationShopButtons(View):
     @discord.ui.button(label="Buy Pickup Truck 🛻", style=discord.ButtonStyle.primary, custom_id="buy_truck")
     async def buy_truck(self, interaction: discord.Interaction, button: Button):
         try:
-            plate = await generate_unique_license_plate()
+            plate = generate_random_plate()
             car_item = {
                 "type": "Pickup Truck",
                 "plate": plate
