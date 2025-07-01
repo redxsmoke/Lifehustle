@@ -541,6 +541,11 @@ async def handle_commute(interaction: discord.Interaction, method: str):
 
 async def migrate_inventory_column():
     async with pool.acquire() as conn:
+        # Drop default first
+        await conn.execute("""
+            ALTER TABLE users ALTER COLUMN inventory DROP DEFAULT;
+        """)
+        # Then alter type
         await conn.execute("""
             ALTER TABLE users
             ALTER COLUMN inventory TYPE jsonb USING inventory::jsonb;
