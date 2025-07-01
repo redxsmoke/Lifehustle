@@ -27,15 +27,6 @@ DEFAULT_USER = {
     'debt': 0
 }
 
-async def drop_old_tables(pool):
-    async with pool.acquire() as conn:
-        await conn.execute("""
-        DROP TABLE IF EXISTS cd_groceries CASCADE;
-        DROP TABLE IF EXISTS cd_transporation_methods CASCADE;
-        DROP TABLE IF EXISTS cd_vehcile_type CASCADE;
-        """)
-
-
 def embed_message(title: str, description: str, color: discord.Color = discord.Color.blue()) -> discord.Embed:
     return discord.Embed(title=title, description=description, color=color)
 
@@ -1664,9 +1655,6 @@ async def on_ready():
     if pool is None:
         pool = await create_pool()
         await init_db(pool)
-
-    # ⚠️ TEMPORARY: Drop old tables (delete after initial test)
-    await drop_old_tables(pool)
 
     print(f'Logged in as {client.user} (ID: {client.user.id})')
     await tree.sync()
