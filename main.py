@@ -602,151 +602,186 @@ async def bank(interaction: discord.Interaction):
         )
     )
 
+import discord
+from discord import app_commands
+from discord.ui import View, Button
+from collections import defaultdict
+import json
+
+# Use your existing DB pool variable
+# e.g. pool = asyncpg.create_pool(...) elsewhere in your code
+
 @tree.command(name="shop", description="Shop for items by category")
-@app_commands.describe(category="Which category of items do you want to browse?")
+@app_commands.describe(category="Which category to browse?")
 @app_commands.choices(category=[
     app_commands.Choice(name="Transportation", value="transportation"),
     app_commands.Choice(name="Groceries", value="groceries")
 ])
 async def shop(interaction: discord.Interaction, category: app_commands.Choice[str]):
+    await interaction.response.defer(ephemeral=True)
+
     if category.value == "transportation":
-        embed = embed_message(
-            "🛒 Transportation Shop",
-            (
-                "> Choose a vehicle to purchase:\n\n"
-                "> 🚴 **Bike** — $2,000\n"
-                "> 🚙 **Blue Car** — $10,000\n"
-                "> 🚗 **Red Car** — $25,000\n"
-                "> 🏎️ **Sports Car** — $100,000\n"
-                "> 🛻 **Pickup Truck** — $30,000\n\n"
-                "> Each vehicle comes with unique stats and perks!"
-            )
+        embed = discord.Embed(
+            title="🛒 Transportation Shop",
+            description=(
+                "Choose a vehicle to purchase:\n\n"
+                "🚴 **Bike** — $2,000\n"
+                "🚙 **Blue Car** — $10,000\n"
+                "🚗 **Red Car** — $25,000\n"
+                "🏎️ **Sports Car** — $100,000\n"
+                "🛻 **Pickup Truck** — $75,000\n\n"
+                "Each vehicle has unique perks!"
+            ),
+            color=discord.Color.blue()
         )
         view = TransportationShopButtons()
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
-class TransportationShopButtons(discord.ui.View):
+    elif category.value == "groceries":
+        with open("shop_items.json", "r", encoding="utf-8") as f:
+            items_data = json.load(f)
+
+        grouped = defaultdict(list)
+        for item in items_data:
+            grouped[item.get("category", "Misc")].append(item)
+
+        pages = []
+        for cat in sorted(grouped):
+            pages.append((cat.capitalize(), grouped[cat]))
+
+        view = GroceryCategoryView(pages, interaction.user.id)
+        await view.send(interaction)
+
+
+class TransportationShopButtons(View):
     def __init__(self):
         super().__init__(timeout=60)
 
     @discord.ui.button(label="Buy Bike 🚴", style=discord.ButtonStyle.success, custom_id="buy_bike")
-    async def buy_bike(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await handle_purchase(interaction, item="🚴 Bike", cost=2000)
+    async def buy_bike(self, interaction: discord.Interaction, button: Button):
+        await handle_vehicle_purchase(interaction, item="🚴 Bike", cost=2000)
 
-    @discord.ui.button(label="Buy Beater Car 🚙", style=discord.ButtonStyle.primary, custom_id="buy_blue_car")
-    async def buy_blue_car(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await handle_purchase(interaction, item="🚙 Beater Car", cost=10000)
+    @discord.ui.button(label="Buy Blue Car 🚙", style=discord.ButtonStyle.primary, custom_id="buy_blue_car")
+    async def buy_blue_car(self, interaction: discord.Interaction, button: Button):
+        await handle_vehicle_purchase(interaction, item="🚙 Blue Car", cost=10000)
 
-    @discord.ui.button(label="Buy Sedan Car 🚗", style=discord.ButtonStyle.primary, custom_id="buy_red_car")
-    async def buy_red_car(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await handle_purchase(interaction, item="🚗 Sedan Car", cost=25000)
+    @discord.ui.button(label="Buy Red Car 🚗", style=discord.ButtonStyle.primary, custom_id="buy_red_car")
+    async def buy_red_car(self, interaction: discord.Interaction, button: Button):
+        await handle_vehicle_purchase(interaction, item="🚗 Red Car", cost=25000)
 
     @discord.ui.button(label="Buy Sports Car 🏎️", style=discord.ButtonStyle.danger, custom_id="buy_sports_car")
-    async def buy_sports_car(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await handle_purchase(interaction, item="🏎️ Sports Car", cost=100000)
+    async def buy_sports_car(self, interaction: discord.Interaction, button: Button):
+        await handle_vehicle_purchase(interaction, item="🏎️ Sports Car", cost=100000)
 
     @discord.ui.button(label="Buy Pickup Truck 🛻", style=discord.ButtonStyle.secondary, custom_id="buy_truck")
-    async def buy_truck(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await handle_purchase(interaction, item="🛻 Pickup Truck", cost=75000)
+    async def buy_truck(self, interaction: discord.Interaction, button: Button):
+        await handle_vehicle_purchase(interaction, item="🛻 Pickup Truck", cost=75000)
 
 
-
-async def handle_transportation_purchase(interaction: discord.Interaction, item: str, cost: int, emoji: str, value: str = None):
+async def handle_vehicle_purchase(interaction: discord.Interaction, item: str, cost: int):
     user_id = interaction.user.id
     user = await get_user(pool, user_id)
     if user is None:
-        user = DEFAULT_USER.copy()
-
-    balance = user.get('checking_account', 0)
-    if balance < cost:
-        await interaction.response.send_message(
-            embed=embed_message(
-                "❌ Insufficient Funds",
-                f"> You need ${cost:,} to buy this item, but you only have ${balance:,}.",
-                discord.Color.red()
-            ),
-            ephemeral=True
-        )
+        await interaction.response.send_message("You don't have an account yet. Use `/start`.", ephemeral=True)
         return
 
-    if item == "bike" and user.get("bike"):
-        await interaction.response.send_message(
-            embed=embed_message(
-                "🚴 Already Owned",
-                "> You already own a bike!"
-            ),
-            ephemeral=True
-        )
-        return
-    elif item == "car" and user.get("car"):
-        await interaction.response.send_message(
-            embed=embed_message(
-                "🚗 Already Own a Car",
-                f"> You already own a car (**{user['car']}**). Sell or remove it before buying a new one."
-            ),
-            ephemeral=True
-        )
+    if user["checking_account"] < cost:
+        await interaction.response.send_message(f"🚫 Not enough money to buy {item}.", ephemeral=True)
         return
 
-    user['checking_account'] -= cost
-    if item == "bike":
-        user['bike'] = "basic"
-    elif item == "car":
-        user['car'] = value
+    if item in user.get("inventory", []):
+        await interaction.response.send_message(f"🚗 You already own {item}.", ephemeral=True)
+        return
+
+    # Deduct cost and add to inventory
+    user["checking_account"] -= cost
+    inventory = user.get("inventory", [])
+    inventory.append(item)
+    user["inventory"] = inventory
 
     await upsert_user(pool, user_id, user)
 
-    await interaction.response.send_message(
-        embed=embed_message(
-            f"✅ Purchase Successful",
-            f"> You bought a {emoji} **{value or 'bike'}** for ${cost:,}.",
-            discord.Color.green()
-        ),
-        ephemeral=True
-    )
+    await interaction.response.send_message(f"✅ You purchased {item} for ${cost:,}!", ephemeral=True)
 
-from discord.ui import View, Button
 
-class ShopView(View):
-    def __init__(self, items, user_id):
-        super().__init__(timeout=60)
-        self.items = items
+class GroceryCategoryView(View):
+    def __init__(self, pages, user_id, timeout=60):
+        super().__init__(timeout=timeout)
+        self.pages = pages  # list of tuples (category_name, [items])
         self.user_id = user_id
+        self.current_page = 0
+        self.message = None
+        self.load_page_buttons()
 
+        # Disable prev button on first page
+        self.previous_button.disabled = True
+        if len(pages) <= 1:
+            self.next_button.disabled = True
+
+    def load_page_buttons(self):
+        # Remove existing purchase buttons except prev/next
+        for child in list(self.children):
+            if hasattr(child, "custom_id") and child.custom_id not in ("previous", "next"):
+                self.remove_item(child)
+
+        # Add purchase buttons for current page items
+        _, items = self.pages[self.current_page]
         for item in items:
-            button = Button(label=f"{item['emoji']} {item['name']} - ${item['price']}", style=discord.ButtonStyle.primary, custom_id=item['id'])
-            button.callback = self.make_callback(item)
-            self.add_item(button)
+            btn = Button(
+                label=f"{item['emoji']} {item['name']} - ${item['price']}",
+                style=discord.ButtonStyle.primary,
+                custom_id=f"buy_{item['id']}"
+            )
+            btn.callback = self.make_purchase_callback(item)
+            self.add_item(btn)
 
-    def make_callback(self, item):
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This is not your shop.", ephemeral=True)
+            return False
+        return True
+
+    async def send(self, interaction: discord.Interaction):
+        embed = self._get_embed()
+        self.message = await interaction.followup.send(embed=embed, view=self)
+
+    def _get_embed(self):
+        title, items = self.pages[self.current_page]
+        desc = "\n".join(f"{item['emoji']} {item['name']} — ${item['price']}" for item in items)
+        embed = discord.Embed(
+            title=f"🛒 Groceries: {title}",
+            description=desc,
+            color=discord.Color.green()
+        )
+        embed.set_footer(text=f"Page {self.current_page + 1} of {len(self.pages)}")
+        return embed
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            await self.message.edit(view=self)
+
+    def make_purchase_callback(self, item):
         async def callback(interaction: discord.Interaction):
             if interaction.user.id != self.user_id:
-                await interaction.response.send_message("❌ You can't use this button.", ephemeral=True)
+                await interaction.response.send_message("You cannot use this button.", ephemeral=True)
                 return
-            
+
             user = await get_user(pool, self.user_id)
             if user is None:
-                user = DEFAULT_USER.copy()
-            
-            if user['checking_account'] < item['price']:
-                await interaction.response.send_message(
-                    f"❌ You don't have enough money to buy {item['emoji']} {item['name']}.",
-                    ephemeral=True
-                )
+                await interaction.response.send_message("You don't have an account yet.", ephemeral=True)
                 return
-            
-            user['checking_account'] -= item['price']
 
-            # Add item id to inventory
-            inventory = user.get('inventory', [])
-            inventory.append(item['id'])
-            user['inventory'] = inventory
+            if user["checking_account"] < item["price"]:
+                await interaction.response.send_message(f"🚫 Not enough money to buy {item['name']}.", ephemeral=True)
+                return
 
-            # If the item is a vehicle, assign ownership (special logic)
-            if item['id'] == "bike":
-                user['bike'] = item['id']
-            elif item['id'] in ["blue_car", "red_car", "sports_car", "pickup_truck"]:
-                user['car'] = item['id']
+            # Deduct cost, add to inventory
+            user["checking_account"] -= item["price"]
+            inventory = user.get("inventory", [])
+            inventory.append(f"{item['emoji']} {item['name']}")
+            user["inventory"] = inventory
 
             await upsert_user(pool, self.user_id, user)
 
@@ -754,8 +789,28 @@ class ShopView(View):
                 f"✅ You bought {item['emoji']} {item['name']} for ${item['price']:,}!",
                 ephemeral=True
             )
-            self.stop()  # optional, disables buttons after purchase
         return callback
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary, custom_id="previous")
+    async def previous_button(self, interaction: discord.Interaction, button: Button):
+        if self.current_page > 0:
+            self.current_page -= 1
+            button.disabled = self.current_page == 0
+            self.next_button.disabled = False
+            self.load_page_buttons()
+            embed = self._get_embed()
+            await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary, custom_id="next")
+    async def next_button(self, interaction: discord.Interaction, button: Button):
+        if self.current_page < len(self.pages) - 1:
+            self.current_page += 1
+            button.disabled = self.current_page == len(self.pages) - 1
+            self.previous_button.disabled = False
+            self.load_page_buttons()
+            embed = self._get_embed()
+            await interaction.response.edit_message(embed=embed, view=self)
+
 
 
 @tree.command(name="deposit", description="Deposit money from checking to savings")
@@ -1087,53 +1142,6 @@ async def purge(interaction: discord.Interaction):
 from discord import app_commands
 from discord.ui import View, Button
 import json
-
-@tree.command(name="shop", description="Shop for items by category")
-@app_commands.describe(category="Which category of items do you want to browse?")
-@app_commands.choices(category=[
-    app_commands.Choice(name="Transportation", value="transportation"),
-    app_commands.Choice(name="Groceries", value="groceries")
-])
-async def shop(interaction: discord.Interaction, category: app_commands.Choice[str]):
-    if category.value == "transportation":
-        embed = embed_message(
-            "🛒 Transportation Shop",
-            (
-                "> Choose a vehicle to purchase:\n\n"
-                "> 🚴 **Bike** — $2,000\n"
-                "> 🚙 **Blue Car** — $10,000\n"
-                "> 🚗 **Red Car** — $25,000\n"
-                "> 🏎️ **Sports Car** — $100,000\n"
-                "> 🛻 **Pickup Truck** — $30,000\n\n"
-                "> Each vehicle comes with unique stats and perks!"
-            )
-        )
-        view = TransportationShopButtons()
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-
-    elif category.value == "groceries":
-        # Load grocery items from JSON
-        with open("shop_items.json", "r", encoding="utf-8") as f:
-            grocery_items = json.load(f)
-
-        # Filter grocery items by category (assumed all groceries here)
-        grocery_list = [item for item in grocery_items if item.get("category") in ["produce", "dairy", "protein", "snacks", "baked", "misc"]]
-
-        if not grocery_list:
-            await interaction.response.send_message("No groceries available right now.", ephemeral=True)
-            return
-
-        # Create ShopView with grocery items
-        view = ShopView(grocery_list, interaction.user.id)
-
-        embed = embed_message(
-            "🛒 Grocery Shop",
-            "Browse and buy groceries by clicking buttons below:"
-        )
-
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-
-
 
 
 # --- Bot events ---
