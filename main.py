@@ -157,67 +157,113 @@ from discord import Interaction
 class GroceryCategoryView(View):
     def __init__(self, pages, user_id, timeout=60):
         super().__init__(timeout=timeout)
-        self.pages = pages  # List of tuples (category_title, description_text)
+        self.pages = pages  # List of tuples: (category_title, items_list)
         self.user_id = user_id
         self.current_page = 0
+        self.message = None
 
-        # Disable previous button on first page initially
+        # Pagination buttons
         self.previous_button.disabled = True
-        # Disable next button if only one page
         if len(pages) <= 1:
             self.next_button.disabled = True
+
+        # Load buttons for the first page
+        self.load_page_buttons()
+
+    def load_page_buttons(self):
+        # Remove all existing item buttons first (except prev/next)
+        for child in list(self.children):
+            if getattr(child, "custom_id", None) and child.custom_id not in ("previous", "next"):
+                self.remove_item(child)
+
+        # Add buttons for current page items
+        _, items = self.pages[self.current_page]
+        for item in items:
+            btn = Button(
+                label=f"{item['emoji']} {item['name']} - ${item['price']}",
+                style=discord.ButtonStyle.primary,
+                custom_id=f"buy_{item['id']}"
+            )
+            btn.callback = self.make_purchase_callback(item)
+            self.add_item(btn)
+
+    async def interaction_check(self, interaction: Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This is not your shop to use.", ephemeral=True)
+            return False
+        return True
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            await self.message.edit(view=self)
+
+    def _get_embed(self):
+        title, items = self.pages[self.current_page]
+        desc = "\n".join(f"{item['emoji']} {item['name']} - ${item['price']}" for item in items)
+        embed = discord.Embed(title=title, description=desc, color=discord.Color.green())
+        embed.set_footer(text=f"Page {self.current_page + 1} of {len(self.pages)}")
+        return embed
 
     async def send(self, interaction: Interaction):
         embed = self._get_embed()
         self.message = await interaction.followup.send(embed=embed, view=self)
 
+    def make_purchase_callback(self, item):
+        async def callback(interaction: Interaction):
+            if interaction.user.id != self.user_id:
+                await interaction.response.send_message("You cannot use this button.", ephemeral=True)
+                return
 
-    def _get_embed(self):
-        title, description = self.pages[self.current_page]
-        embed = discord.Embed(title=title, description=description, color=discord.Color.green())
-        embed.set_footer(text=f"Page {self.current_page + 1} of {len(self.pages)}")
-        return embed
+            # Fetch user data
+            user = await get_user(pool, self.user_id)
+            if user is None:
+                await interaction.response.send_message("You don't have an account yet.", ephemeral=True)
+                return
 
-    async def interaction_check(self, interaction: Interaction) -> bool:
-        # Only allow original user to interact
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("This is not your stash to browse.", ephemeral=True)
-            return False
-        return True
+            balance = user.get("checking_account", 0)
+            if balance < item["price"]:
+                await interaction.response.send_message(
+                    f"🚫 You don't have enough money to buy {item['emoji']} {item['name']}.",
+                    ephemeral=True
+                )
+                return
 
-    async def on_timeout(self):
-        # Disable buttons when timed out
-        for child in self.children:
-            child.disabled = True
-        # Edit the original message to disable buttons
-        try:
-            await self.message.edit(view=self)
-        except Exception:
-            pass  # message could be deleted or unavailable
+            # Deduct price and add to inventory
+            user["checking_account"] -= item["price"]
+            inventory = user.get("inventory", [])
+            inventory.append(f"{item['emoji']} {item['name']}")
+            user["inventory"] = inventory
 
-    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary)
+            await upsert_user(pool, self.user_id, user)
+
+            await interaction.response.send_message(
+                f"✅ You bought {item['emoji']} {item['name']} for ${item['price']:,}!",
+                ephemeral=True
+            )
+        return callback
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary, custom_id="previous")
     async def previous_button(self, interaction: Interaction, button: Button):
-        self.current_page -= 1
-        if self.current_page == 0:
-            button.disabled = True
-        self.next_button.disabled = False
+        if self.current_page > 0:
+            self.current_page -= 1
+            button.disabled = self.current_page == 0
+            self.next_button.disabled = False
+            self.load_page_buttons()
+            embed = self._get_embed()
+            await interaction.response.edit_message(embed=embed, view=self)
 
-        embed = self._get_embed()
-        await interaction.response.edit_message(embed=embed, view=self)
-
-    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary, custom_id="next")
     async def next_button(self, interaction: Interaction, button: Button):
-        self.current_page += 1
-        if self.current_page == len(self.pages) - 1:
-            button.disabled = True
-        self.previous_button.disabled = False
+        if self.current_page < len(self.pages) - 1:
+            self.current_page += 1
+            button.disabled = self.current_page == len(self.pages) - 1
+            self.previous_button.disabled = False
+            self.load_page_buttons()
+            embed = self._get_embed()
+            await interaction.response.edit_message(embed=embed, view=self)
 
-        embed = self._get_embed()
-        await interaction.response.edit_message(embed=embed, view=self)
-
-    async def on_send(self, message):
-        # Store the message object to edit later (timeout etc)
-        self.message = message
 
 
 class CommuteButtons(discord.ui.View):
@@ -1038,80 +1084,55 @@ async def purge(interaction: discord.Interaction):
         ephemeral=True
     )
 
-@tree.command(name="stash", description="View items you own")
-@app_commands.describe(category="Category of items to view")
+from discord import app_commands
+from discord.ui import View, Button
+import json
+
+@tree.command(name="shop", description="Shop for items by category")
+@app_commands.describe(category="Which category of items do you want to browse?")
 @app_commands.choices(category=[
     app_commands.Choice(name="Transportation", value="transportation"),
     app_commands.Choice(name="Groceries", value="groceries")
 ])
-async def stash(interaction: discord.Interaction, category: app_commands.Choice[str]):
-    await interaction.response.defer()
-    user_id = interaction.user.id
-    user = await get_user(pool, user_id)
-
-    if not user:
-        await interaction.followup.send("You don’t have an account yet. Try using `/start` first.")
-        return
-
-    inventory = user.get("inventory", [])
-
+async def shop(interaction: discord.Interaction, category: app_commands.Choice[str]):
     if category.value == "transportation":
-        vehicles = {
-            "🚴": "Bike",
-            "🚙": "Beater Car",
-            "🚗": "Sedan Car",
-            "🏎️": "Sports Car",
-            "🛻": "Pickup Truck"
-        }
-        owned = [f"{emoji} {label}" for emoji, label in vehicles.items() if f"{emoji} {label}" in inventory]
-        description = "\n".join(owned) if owned else "You don’t own any transportation items yet."
-
-        embed = discord.Embed(
-            title="🚗 Your Vehicles",
-            description=description,
-            color=discord.Color.teal()
+        embed = embed_message(
+            "🛒 Transportation Shop",
+            (
+                "> Choose a vehicle to purchase:\n\n"
+                "> 🚴 **Bike** — $2,000\n"
+                "> 🚙 **Blue Car** — $10,000\n"
+                "> 🚗 **Red Car** — $25,000\n"
+                "> 🏎️ **Sports Car** — $100,000\n"
+                "> 🛻 **Pickup Truck** — $30,000\n\n"
+                "> Each vehicle comes with unique stats and perks!"
+            )
         )
-        await interaction.followup.send(embed=embed)
+        view = TransportationShopButtons()
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     elif category.value == "groceries":
-        from collections import Counter, defaultdict
+        # Load grocery items from JSON
         with open("shop_items.json", "r", encoding="utf-8") as f:
-            items_data = json.load(f)
+            grocery_items = json.load(f)
 
-        # Map item to category
-        item_category_map = {item["name"]: item.get("category", "misc") for item in items_data}
+        # Filter grocery items by category (assumed all groceries here)
+        grocery_list = [item for item in grocery_items if item.get("category") in ["produce", "dairy", "protein", "snacks", "baked", "misc"]]
 
-        counts = Counter(item for item in inventory if item not in [
-            "🚴 Bike", "🚙 Blue Car", "🚗 Red Car", "🏎️ Sports Car", "🛻 Pickup Truck"
-        ])
-        if not counts:
-            embed = discord.Embed(
-                title="🛒 Your Groceries",
-                description="You don’t have any groceries yet.",
-                color=discord.Color.green()
-            )
-            await interaction.followup.send(embed=embed)
+        if not grocery_list:
+            await interaction.response.send_message("No groceries available right now.", ephemeral=True)
             return
 
-        categorized = defaultdict(list)
-        for item, count in counts.items():
-            category = item_category_map.get(item, "misc").capitalize()
-            categorized[category].append(f"{item} x{count}")
+        # Create ShopView with grocery items
+        view = ShopView(grocery_list, interaction.user.id)
 
-        category_pages = []
-        for cat, items in sorted(categorized.items()):
-            emoji_title = {
-                "Produce": "🥬 Produce",
-                "Dairy": "🧀 Dairy",
-                "Protein": "🍖 Protein",
-                "Snacks": "🍪 Snacks",
-                "Baked": "🍞 Baked",
-                "Misc": "📦 Misc"
-            }.get(cat, f"📦 {cat}")
-            category_pages.append((emoji_title, "\n".join(items)))
+        embed = embed_message(
+            "🛒 Grocery Shop",
+            "Browse and buy groceries by clicking buttons below:"
+        )
 
-        view = GroceryCategoryView(category_pages, user_id)
-        await view.send(interaction)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
 
 
 
