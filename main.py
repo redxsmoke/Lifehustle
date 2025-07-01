@@ -672,11 +672,11 @@ async def shop(interaction: discord.Interaction, category: app_commands.Choice[s
             title="🛒 Transportation Shop",
             description=(
                 "Choose a vehicle to purchase:\n\n"
-                "🚴 **Bike** — $2,000\n"
-                "🚙 **Blue Car** — $10,000\n"
-                "🚗 **Red Car** — $25,000\n"
-                "🏎️ **Sports Car** — $100,000\n"
-                "🛻 **Pickup Truck** — $75,000\n\n"
+                "> 🚴 **Bike** — $2,000\n"
+                "> 🚙 **Blue Car** — $10,000\n"
+                "> 🚗 **Red Car** — $25,000\n"
+                "> 🏎️ **Sports Car** — $100,000\n"
+                "> 🛻 **Pickup Truck** — $75,000\n\n"
                 "Each vehicle has unique perks!"
             ),
             color=discord.Color.blue()
@@ -1216,7 +1216,7 @@ async def stash(interaction: discord.Interaction, category: app_commands.Choice[
             "🛻": "Pickup Truck"
         }
 
-        owned = [f"{emoji} {name}" for emoji, name in vehicles.items() if f"{emoji} {name}" in inventory]
+        owned = [f"> {emoji} {name}" for emoji, name in vehicles.items() if f"{emoji} {name}" in inventory]
 
         embed = discord.Embed(
             title="🚗 Your Vehicles",
