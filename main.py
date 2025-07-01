@@ -63,7 +63,7 @@ if not DATABASE_URL:
 
 #HELPER FUNCTIONS
 
-def condition_from_usage(usage_count: int) -> str:
+def bike_condition_from_usage(usage_count: int) -> str:
     if usage_count < 1:
         return "Pristine"
     elif usage_count < 2:
@@ -71,7 +71,28 @@ def condition_from_usage(usage_count: int) -> str:
     elif usage_count < 3:
         return "Heavily Used"
     else:
-        return "Rusted"
+        return "Rusted, Falling Apart"
+
+def car_condition_from_usage(commute_count: int) -> str:
+    if commute_count < 1:
+        return "Pristine"
+    elif commute_count < 2:
+        return "Lightly Used"
+    elif commute_count < 3:
+        return "Heavily Used"
+    else:
+        return "Rusted, Failling Apart"
+
+
+async def can_user_buy_vehicle(user_inventory, item):
+    vehicle_types = ["bike", "car"]
+    item_type = item.get("type")  # assume you define this in item data
+
+    for inv_item in user_inventory:
+        if inv_item.get("type") == item_type:
+            return False
+    return True
+
 
 async def plate_exists_in_any_inventory(plate: str) -> bool:
     users = await get_all_users(pool)  # You must implement this function to fetch all users
@@ -114,6 +135,25 @@ BIKE_COLORS = [
     "Deep Purple",
     "Metallic Silver"
 ]
+
+CAR_COLORS = [
+    "Crimson Red",
+    "Electric Blue",
+    "Midnight Black",
+    "Pearl White",
+    "Gunmetal Gray",
+    "Emerald Green",
+    "Sunburst Yellow",
+    "Tangerine Orange",
+    "Royal Purple",
+    "Ocean Teal",
+    "Candy Apple Red",
+    "Sunset Bronze",
+    "Ice Silver",
+    "Lime Zest",
+    "Deep Maroon"
+]
+
 
 def bike_description(purchase_date: datetime.date, condition: str) -> str:
     days_since = (datetime.date.today() - purchase_date).days
@@ -799,7 +839,7 @@ class TransportationShopButtons(View):
                 "color": color,
                 "condition": condition,
                 "purchase_date": datetime.date.today().isoformat(),
-                "commute_count":0
+                "commute_count": 0
             }
             await handle_vehicle_purchase(interaction, item=bike_item, cost=2000)
         except Exception:
@@ -809,9 +849,14 @@ class TransportationShopButtons(View):
     async def buy_blue_car(self, interaction: discord.Interaction, button: Button):
         try:
             plate = generate_random_plate()
+            color = random.choice(CAR_COLORS)
             car_item = {
                 "type": "Beater Car",
-                "plate": plate
+                "plate": plate,
+                "color": color,
+                "condition": "Heavily Used",
+                "commute_count": 0,
+                "purchase_date": datetime.date.today().isoformat()
             }
             await handle_vehicle_purchase(interaction, item=car_item, cost=10000)
         except Exception:
@@ -821,21 +866,31 @@ class TransportationShopButtons(View):
     async def buy_red_car(self, interaction: discord.Interaction, button: Button):
         try:
             plate = generate_random_plate()
+            color = random.choice(CAR_COLORS)
             car_item = {
                 "type": "Sedan Car",
-                "plate": plate
+                "plate": plate,
+                "color": color,
+                "condition": "Pristine",
+                "commute_count": 0,
+                "purchase_date": datetime.date.today().isoformat()
             }
             await handle_vehicle_purchase(interaction, item=car_item, cost=25000)
         except Exception:
-            await interaction.response.send_message("🚫 Failed to buy Red Car. Try again later.", ephemeral=True)
+            await interaction.response.send_message("🚫 Failed to buy Sedan Car. Try again later.", ephemeral=True)
 
     @discord.ui.button(label="Buy Sports Car 🏎️", style=discord.ButtonStyle.primary, custom_id="buy_sports_car")
     async def buy_sports_car(self, interaction: discord.Interaction, button: Button):
         try:
             plate = generate_random_plate()
+            color = random.choice(CAR_COLORS)
             car_item = {
                 "type": "Sports Car",
-                "plate": plate
+                "plate": plate,
+                "color": color,
+                "condition": "Pristine",
+                "commute_count": 0,
+                "purchase_date": datetime.date.today().isoformat()
             }
             await handle_vehicle_purchase(interaction, item=car_item, cost=100000)
         except Exception:
@@ -845,13 +900,19 @@ class TransportationShopButtons(View):
     async def buy_truck(self, interaction: discord.Interaction, button: Button):
         try:
             plate = generate_random_plate()
+            color = random.choice(CAR_COLORS)
             car_item = {
                 "type": "Pickup Truck",
-                "plate": plate
+                "plate": plate,
+                "color": color,
+                "condition": "Pristine",
+                "commute_count": 0,
+                "purchase_date": datetime.date.today().isoformat()
             }
             await handle_vehicle_purchase(interaction, item=car_item, cost=75000)
         except Exception:
             await interaction.response.send_message("🚫 Failed to buy Pickup Truck. Try again later.", ephemeral=True)
+
 
 
 
@@ -869,23 +930,19 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
 
     inventory = user.get("inventory", [])
 
-    # Check if the exact same vehicle already exists
-    def item_exists(new_item, inv):
-        for owned in inv:
-            if isinstance(new_item, dict) and isinstance(owned, dict):
-                if new_item.get("type") == "Bike" and owned.get("type") == "Bike":
-                    if (new_item.get("color") == owned.get("color") and
-                        new_item.get("purchase_date") == owned.get("purchase_date")):
-                        return True
-                elif new_item.get("type") == owned.get("type") and new_item.get("plate") == owned.get("plate"):
-                    return True
-            elif new_item == owned:
-                return True
-        return False
+    # Check if user already owns a bike
+    if item.get("type") == "Bike":
+        for owned in inventory:
+            if isinstance(owned, dict) and owned.get("type") == "Bike":
+                await interaction.response.send_message("🚲 You already own a bike. You can't buy another one.", ephemeral=True)
+                return
 
-    if item_exists(item, inventory):
-        await interaction.response.send_message(f"🚗 You already own this {item.get('type', 'vehicle')}.", ephemeral=True)
-        return
+    # Check if user already owns any car (any vehicle that's not a Bike)
+    else:
+        for owned in inventory:
+            if isinstance(owned, dict) and owned.get("type") != "Bike":
+                await interaction.response.send_message("🚗 You already own a car or truck. You can't buy another one.", ephemeral=True)
+                return
 
     # Deduct money and add vehicle to inventory
     user["checking_account"] -= cost
@@ -896,6 +953,77 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
 
     await interaction.response.send_message(f"✅ You purchased a {item.get('type', 'vehicle')} for ${cost:,}!", ephemeral=True)
 
+
+class SellFromStashView(View):
+    def __init__(self, user_id: int, vehicles: list):
+        super().__init__(timeout=60)
+        self.user_id = user_id
+        self.vehicles = vehicles
+
+        for vehicle in vehicles:
+            btn = Button(
+                label=self.make_button_label(vehicle),
+                style=discord.ButtonStyle.danger,
+                custom_id=f"sell_{vehicle.get('tag', vehicle.get('plate', id(vehicle)))}"
+            )
+            btn.callback = self.make_callback(vehicle)
+            self.add_item(btn)
+
+    def make_button_label(self, item):
+        emoji = {
+            "Bike": "🚴",
+            "Beater Car": "🚙",
+            "Sedan Car": "🚗",
+            "Sports Car": "🏎️",
+            "Pickup Truck": "🛻"
+        }.get(item["type"], "❓")
+        desc = item.get("tag") or item.get("color", "Unknown")
+        cond = item.get("condition", "Unknown")
+        return f"Sell {emoji} {desc} ({cond})"
+
+    def make_callback(self, item):
+        async def callback(interaction: discord.Interaction):
+            if interaction.user.id != self.user_id:
+                await interaction.response.send_message("This isn't your stash.", ephemeral=True)
+                return
+
+            user = await get_user(pool, self.user_id)
+            if not user:
+                await interaction.response.send_message("You don’t have an account yet.", ephemeral=True)
+                return
+
+            condition = item.get("condition", "Unknown")
+            cost_map = {
+                "Bike": 2000,
+                "Beater Car": 10000,
+                "Sedan Car": 25000,
+                "Sports Car": 100000,
+                "Pickup Truck": 75000
+            }
+            base_price = cost_map.get(item["type"], 0)
+
+            resale_pct = {
+                "Pristine": 0.85,
+                "Lightly Used": 0.50,
+                "Heavily Used": 0.25,
+                "Rusted, Failling Apart": 0.10
+            }.get(condition, 0.10)
+
+            resale = int(base_price * resale_pct)
+
+            user["checking_account"] += resale
+            user["inventory"].remove(item)
+            await upsert_user(pool, self.user_id, user)
+
+            await interaction.response.send_message(
+                embed=embed_message(
+                    "✅ Vehicle Sold",
+                    f"You sold your {item['type']} for ${resale:,} ({condition}).",
+                    discord.Color.green()
+                ),
+                ephemeral=True
+            )
+        return callback
 
 
 class GroceryCategoryView(View):
@@ -1381,40 +1509,21 @@ async def stash(interaction: discord.Interaction, category: app_commands.Choice[
     inventory = user.get("inventory", [])
 
     if category.value == "transportation":
-        owned_descriptions = []
-
-        for item in inventory:
-            if isinstance(item, dict):
-                vehicle_type = item.get("type", "Unknown Vehicle")
-
-                if vehicle_type == "Bike":
-                    color = item.get("color", "Unknown Color")
-                    condition = item.get("condition", "Unknown Condition")
-                    purchase_date_str = item.get("purchase_date")
-                    purchase_date = datetime.date.fromisoformat(purchase_date_str) if purchase_date_str else datetime.date.today()
-                    desc = bike_description(purchase_date, condition)
-                    owned_descriptions.append(f"🚴 {vehicle_type} - {color} - {desc} ({condition})")
-
-                else:  # Cars/trucks
-                    plate = item.get("plate", "N/A")
-                    emoji_map = {
-                        "Beater Car": "🚙",
-                        "Sedan Car": "🚗",
-                        "Sports Car": "🏎️",
-                        "Pickup Truck": "🛻"
-                    }
-                    emoji = emoji_map.get(vehicle_type, "🚗")
-                    owned_descriptions.append(f"{emoji} {vehicle_type} - Plate #: {plate}")
-
-        if not owned_descriptions:
-            owned_descriptions = ["You don’t own any transportation items yet."]
+        vehicles = [item for item in inventory if isinstance(item, dict) and item.get("type") in {
+            "Bike", "Beater Car", "Sedan Car", "Sports Car", "Pickup Truck"
+        }]
+        if not vehicles:
+            await interaction.followup.send("You don’t own any transportation items yet.")
+            return
 
         embed = discord.Embed(
             title="🚗 Your Vehicles",
-            description="\n".join(owned_descriptions),
+            description="Click a button to sell a vehicle.",
             color=discord.Color.teal()
         )
-        await interaction.followup.send(embed=embed)
+        view = SellFromStashView(user_id, vehicles)
+        await interaction.followup.send(embed=embed, view=view)
+        return
 
     elif category.value == "groceries":
         from collections import Counter, defaultdict
@@ -1426,7 +1535,6 @@ async def stash(interaction: discord.Interaction, category: app_commands.Choice[
             f"{item['emoji']} {item['name']}": item.get("category", "Misc") for item in item_data
         }
 
-        # Only strings are groceries, skip dicts
         groceries = [item for item in inventory if isinstance(item, str)]
         counts = Counter(groceries)
 
@@ -1465,9 +1573,6 @@ async def stash(interaction: discord.Interaction, category: app_commands.Choice[
         else:
             view = GroceryStashPaginationView(interaction.user.id, embeds)
             await view.send(interaction)
-
-
-
 
 # --- Bot events ---
 
