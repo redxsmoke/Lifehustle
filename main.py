@@ -432,9 +432,9 @@ async def bank(interaction: discord.Interaction):
     await interaction.response.send_message(
         embed=embed_message(
             "💰 Account Balances",
-            f"{interaction.user.display_name}, your account balances are:\n"
-            f"💰 Checking Account: ${user['checking_account']:,}\n"
-            f"🏦 Savings Account:  ${user['savings_account']:,}"
+            f"> {interaction.user.display_name}, your account balances are:\n"
+            f"> > 💰 Checking Account: ${user['checking_account']:,}\n"
+            f"> > 🏦 Savings Account:  ${user['savings_account']:,}"
         )
     )
 
@@ -446,7 +446,7 @@ async def deposit(interaction: discord.Interaction, amount: str):
         await interaction.response.send_message(
             embed=embed_message(
                 "❌ Invalid Format",
-                "Use numbers, commas, or suffixes like 'k' or 'm', or 'all'.",
+                "> Use numbers, commas, or suffixes like 'k' or 'm', or 'all'.",
                 discord.Color.red()
             ),
             ephemeral=True
@@ -466,7 +466,7 @@ async def deposit(interaction: discord.Interaction, amount: str):
             await interaction.response.send_message(
                 embed=embed_message(
                     "❌ Insufficient Funds",
-                    "Aww man - if only you didn't spend it all on booze and OnlyFans LOL - Try depositing when your balance is higher than your IQ",
+                    "> Aww man - if only you didn't spend it all on booze and OnlyFans LOL - Try depositing when your balance is higher than your IQ",
                     discord.Color.red()
                 ),
                 ephemeral=True
@@ -480,7 +480,7 @@ async def deposit(interaction: discord.Interaction, amount: str):
         await interaction.response.send_message(
             embed=embed_message(
                 "❌ Invalid Amount",
-                "Hey stupid, you can't deposit a negative amount LOL.",
+                "> Hey stupid, you can't deposit a negative amount LOL.",
                 discord.Color.red()
             ),
             ephemeral=True
@@ -491,7 +491,7 @@ async def deposit(interaction: discord.Interaction, amount: str):
         await interaction.response.send_message(
             embed=embed_message(
                 "❌ Insufficient Funds",
-                "LMAO - unless you're also depositing your hopes and dreams, you don't have this much in your checking account to deposit.",
+                "> LMAO - unless you're also depositing your hopes and dreams, you don't have this much in your checking account to deposit.",
                 discord.Color.red()
             ),
             ephemeral=True
@@ -505,8 +505,8 @@ async def deposit(interaction: discord.Interaction, amount: str):
     await interaction.response.send_message(
         embed=embed_message(
             "✅ Deposit Successful",
-            f"Successfully deposited ${amount_int:,} from 💰 checking to 🏦 savings.\n"
-            f"New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}",
+            f"> Successfully deposited ${amount_int:,} from 💰 checking to 🏦 savings.\n"
+            f"> New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}",
             discord.Color.green()
         )
     )
@@ -519,7 +519,7 @@ async def withdraw(interaction: discord.Interaction, amount: str):
         await interaction.response.send_message(
             embed=embed_message(
                 "❌ Invalid Format",
-                "Use numbers, commas, or suffixes like 'k' or 'm', or 'all'.",
+                "> Use numbers, commas, or suffixes like 'k' or 'm', or 'all'.",
                 discord.Color.red()
             ),
             ephemeral=True
@@ -539,7 +539,7 @@ async def withdraw(interaction: discord.Interaction, amount: str):
             await interaction.response.send_message(
                 embed=embed_message(
                     "❌ Insufficient Funds",
-                    "LMAO - money don't grow on trees in real life and it doesn't here either. Try again after you do something with your life.",
+                    "> LMAO - money don't grow on trees in real life and it doesn't here either. Try again after you do something with your life.",
                     discord.Color.red()
                 ),
                 ephemeral=True
@@ -553,7 +553,7 @@ async def withdraw(interaction: discord.Interaction, amount: str):
         await interaction.response.send_message(
             embed=embed_message(
                 "❌ Invalid Amount",
-                "Hey stupid, you can't withdraw a negative amount LOL.",
+                "> Hey stupid, you can't withdraw a negative amount LOL.",
                 discord.Color.red()
             ),
             ephemeral=True
@@ -564,7 +564,7 @@ async def withdraw(interaction: discord.Interaction, amount: str):
         await interaction.response.send_message(
             embed=embed_message(
                 "❌ Insufficient Funds",
-                "WOW! Wouldn't it be nice if we could all withdraw money we don't have. You don't have enough funds in your savings to do this. Stop spending it on stupid shit.",
+                "> WOW! Wouldn't it be nice if we could all withdraw money we don't have. You don't have enough funds in your savings to do this. Stop spending it on stupid shit.",
                 discord.Color.red()
             ),
             ephemeral=True
@@ -578,8 +578,8 @@ async def withdraw(interaction: discord.Interaction, amount: str):
     await interaction.response.send_message(
         embed=embed_message(
             "✅ Withdrawal Successful",
-            f"Successfully withdrew ${amount_int:,} from 🏦 savings to 💰 checking.\n"
-            f"New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}",
+            f"> Successfully withdrew ${amount_int:,} from 🏦 savings to 💰 checking.\n"
+            f"> New balances:\n💰 Checking Account: ${user['checking_account']:,}\n🏦 Savings Account: ${user['savings_account']:,}",
             discord.Color.green()
         )
     )
@@ -590,7 +590,7 @@ async def commute(interaction: discord.Interaction):
     await interaction.response.send_message(
         embed=embed_message(
             "🚦 Commute",
-            "Choose your method of commute using the buttons below."
+            "> Pick your method of travel."
         ),
         view=view,
         ephemeral=True
@@ -610,7 +610,7 @@ async def paycheck(interaction: discord.Interaction):
         await interaction.response.send_message(
             embed=embed_message(
                 "⏳ Paycheck Cooldown",
-                f"You already claimed your paycheck. Try again in {hours}h {minutes}m."
+                f"> 😞 Wouldn't this be nice? Unfortunagely you've already claimed your paycheck. Try again in {hours}h {minutes}m."
             ),
             ephemeral=True
         )
@@ -627,7 +627,7 @@ async def paycheck(interaction: discord.Interaction):
     await interaction.response.send_message(
         embed=embed_message(
             "💵 Paycheck Received",
-            f"{interaction.user.display_name}, you have received your paycheck of $10,000!\nYour new 💰 checking balance is ${user['checking_account']:,}."
+            f"> {interaction.user.display_name}, you have received your paycheck of $10,000!\nYour new 💰 checking balance is ${user['checking_account']:,}."
         ),
         ephemeral=True
     )
@@ -641,7 +641,7 @@ async def startcategories(interaction: discord.Interaction, category: str):
         await interaction.response.send_message(
             embed=embed_message(
                 "❌ Invalid Category",
-                f"Category '{category}' does not exist.",
+                f"? Category '{category}' does not exist.",
                 discord.Color.red()
             ),
             ephemeral=True
@@ -653,7 +653,7 @@ async def startcategories(interaction: discord.Interaction, category: str):
         await interaction.response.send_message(
             embed=embed_message(
                 "❌ No Words Found",
-                f"No words found in category '{category}'.",
+                f"> No words found in category '{category}'.",
                 discord.Color.red()
             ),
             ephemeral=True
@@ -667,7 +667,7 @@ async def startcategories(interaction: discord.Interaction, category: str):
     await interaction.response.send_message(
         embed=embed_message(
             f"🎮 Categories Game Started!",
-            f"Category: **{category}**\nLetter: **{chosen_letter}**\nKeep naming words that start with **{chosen_letter}**! Game ends when you mess up."
+            f"> Category: **{category}**\nLetter: **{chosen_letter}**\nKeep naming words that start with **{chosen_letter}**! Game ends when you mess up."
         ),
         ephemeral=False
     )
@@ -684,7 +684,7 @@ async def startcategories(interaction: discord.Interaction, category: str):
             await interaction.followup.send(
                 embed=embed_message(
                     "⏱️ Time's Up!",
-                    "You took too long. Game over!"
+                    "> Aww shucks! You took to long to answer. Game over!"
                 )
             )
             break
@@ -696,7 +696,7 @@ async def startcategories(interaction: discord.Interaction, category: str):
             await interaction.followup.send(
                 embed=embed_message(
                     "❌ Wrong Start Letter",
-                    f"**{word_raw}** doesn't start with **{chosen_letter}**. Game over!",
+                    f"> **{word_raw}** doesn't start with **{chosen_letter}**. Game over!",
                     discord.Color.red()
                 )
             )
@@ -706,7 +706,7 @@ async def startcategories(interaction: discord.Interaction, category: str):
             await interaction.followup.send(
                 embed=embed_message(
                     "⚠️ Word Used",
-                    f"You've already used **{word_raw}**. Try something else!",
+                    f"> You've already used **{word_raw}**. Try something else!",
                     discord.Color.orange()
                 )
             )
@@ -726,7 +726,7 @@ async def startcategories(interaction: discord.Interaction, category: str):
             await interaction.followup.send(
                 embed=embed_message(
                     "✅ Correct!",
-                    f"**{valid_words[word_clean]}** is valid. You earned $10! Keep going!",
+                    f"> **{valid_words[word_clean]}** is valid. You earned $10! Keep going!",
                     discord.Color.green()
                 )
             )
@@ -734,46 +734,35 @@ async def startcategories(interaction: discord.Interaction, category: str):
             await interaction.followup.send(
                 embed=embed_message(
                     "❌ Word Not Found",
-                    f"**{word_raw}** is not in the list. Game over!\n\n*(Game is still in beta testing — many words are still missing)*",
+                    f"> **{word_raw}** is not in the list. Game over!\n\n*(Game is still in beta testing — many words are still missing)*",
                     discord.Color.red()
                 )
             )
             break
-@tree.command(name="purge", description="Delete all messages in this channel (use with caution!)")
+@tree.command(name="purge", description="Delete last 100 messages to clear clutter")
 async def purge(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    channel = interaction.channel
+    # Only allow command in guild channels, not DMs
+    if interaction.guild is None:
+        await interaction.response.send_message("❌ This command can't be used in DMs.", ephemeral=True)
+        return
 
-    deleted = 0
-    while True:
-        # Fetch up to 100 messages
-        messages = await channel.history(limit=100).flatten()
-        if not messages:
-            break
-        # Bulk delete (only messages younger than 14 days)
-        try:
-            await channel.delete_messages(messages)
-            deleted += len(messages)
-        except Exception as e:
-            # Some messages might be too old for bulk delete
-            # Delete older messages one by one
-            for msg in messages:
-                try:
-                    await msg.delete()
-                    deleted += 1
-                except:
-                    pass
-            break  # Stop after this batch
+    # Check if the bot has permission to manage messages
+    if not interaction.channel.permissions_for(interaction.guild.me).manage_messages:
+        await interaction.response.send_message("❌ I need the Manage Messages permission to purge.", ephemeral=True)
+        return
+
+    await interaction.response.defer(ephemeral=True)  # defer since purge might take a moment
+
+    deleted = await interaction.channel.purge(limit=100)
 
     await interaction.followup.send(
         embed=embed_message(
             "🧹 Purge Complete",
-            f"Deleted approximately {deleted} messages in this channel.",
+            f"Deleted {len(deleted)} messages to clear clutter.",
             discord.Color.green()
         ),
         ephemeral=True
     )
-
 
 
 # --- Bot events ---
