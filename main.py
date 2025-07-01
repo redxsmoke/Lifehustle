@@ -35,6 +35,8 @@ async def drop_old_tables(pool):
         DROP TABLE IF EXISTS cd_vehicle_type CASCADE;
         """)
 
+await drop_old_tables(pool)
+
 def embed_message(title: str, description: str, color: discord.Color = discord.Color.blue()) -> discord.Embed:
     return discord.Embed(title=title, description=description, color=color)
 
