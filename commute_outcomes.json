@@ -3,31 +3,31 @@
     "negative": [
       {
         "id": 1,
-        "description": "You got a speeding ticket. The cops took $50 out of your wallet. Next time, watch your speed, slowpoke.",
+        "description": "🚨 You got a speeding ticket. The cops took $50 out of your wallet. Next time, watch your speed, slowpoke.",
         "money_change": -50,
         "base_probability": 0.03
       },
       {
         "id": 2,
-        "description": "Your car broke down in the middle of nowhere. Spent $100 on a tow truck. Hope you like walking!",
+        "description": "🔥 Your car broke down in the middle of nowhere. Spent $100 on a tow truck. Hope you like walking!",
         "money_change": -100,
         "base_probability": 0.03
       },
       {
         "id": 3,
-        "description": "You accidentally ran over a pothole and damaged your tires. Paid $75 for repairs. You're not very good at driving, huh?",
+        "description": "💥 You accidentally ran over a pothole and damaged your tires. Paid $75 for repairs. You're not very good at driving, huh?",
         "money_change": -75,
         "base_probability": 0.03
       },
       {
         "id": 4,
-        "description": "You forgot to pay your parking ticket and got fined $60. Do you even own a calendar?",
+        "description": "⚠️ You forgot to pay your parking ticket and got fined $60. Do you even own a calendar?",
         "money_change": -60,
         "base_probability": 0.03
       },
       {
         "id": 5,
-        "description": "Your GPS led you into a dead-end alley. Cost you $40 in wasted gas and time. Nice navigation skills!",
+        "description": "🛑 Your GPS led you into a dead-end alley. Cost you $40 in wasted gas and time. Nice navigation skills!",
         "money_change": -40,
         "base_probability": 0.03
       }
@@ -35,61 +35,61 @@
     "neutral": [
       {
         "id": 6,
-        "description": "Traffic was meh, nothing special happened. You arrived just in time. Try to make your life more interesting next time.",
+        "description": "😐 Traffic was meh, nothing special happened. You arrived just in time. Try to make your life more interesting next time.",
         "money_change": 0,
         "base_probability": 0.87
       },
       {
         "id": 7,
-        "description": "You sang to your favorite songs in the car. Your neighbors probably hate you now.",
+        "description": "🎶 You sang to your favorite songs in the car. Your neighbors probably hate you now.",
         "money_change": 0,
         "base_probability": 0.87
       },
       {
         "id": 8,
-        "description": "The radio played your jam, but you still looked terrible doing that dance in the driver’s seat.",
+        "description": "📻 The radio played your jam, but you still looked terrible doing that dance in the driver’s seat.",
         "money_change": 0,
         "base_probability": 0.87
       },
       {
         "id": 9,
-        "description": "You stopped at a red light and realized you forgot your coffee. Life is hard, huh?",
+        "description": "☕ You stopped at a red light and realized you forgot your coffee. Life is hard, huh?",
         "money_change": 0,
         "base_probability": 0.87
       },
       {
         "id": 10,
-        "description": "Windows down, breeze in your hair. Eh, it’s just another day in your boring life.",
+        "description": "🍃 Windows down, breeze in your hair. Eh, it’s just another day in your boring life.",
         "money_change": 0,
         "base_probability": 0.87
       },
       {
         "id": 11,
-        "description": "You honked at a slow driver. No change to your dignity, which is probably already low.",
+        "description": "📢 You honked at a slow driver. No change to your dignity, which is probably already low.",
         "money_change": 0,
         "base_probability": 0.87
       },
       {
         "id": 12,
-        "description": "Nothing happened. You barely escaped being a total disaster today.",
+        "description": "🤷‍♂️ Nothing happened. You barely escaped being a total disaster today.",
         "money_change": 0,
         "base_probability": 0.87
       },
       {
         "id": 13,
-        "description": "You adjusted your mirrors. Big achievement in your day.",
+        "description": "🔧 You adjusted your mirrors. Big achievement in your day.",
         "money_change": 0,
         "base_probability": 0.87
       },
       {
         "id": 14,
-        "description": "Your car smelled weird but you’re used to it now. Gross but normal for you.",
+        "description": "👃 Your car smelled weird but you’re used to it now. Gross but normal for you.",
         "money_change": 0,
         "base_probability": 0.87
       },
       {
         "id": 15,
-        "description": "You avoided hitting a squirrel. Congrats, nature loves you for a change.",
+        "description": "🐿️ You avoided hitting a squirrel. Congrats, nature loves you for a change.",
         "money_change": 0,
         "base_probability": 0.87
       }
@@ -97,31 +97,31 @@
     "positive": [
       {
         "id": 16,
-        "description": "You found a $20 bill on the seat! Somebody out there appreciates your presence.",
+        "description": "💵 You found a $20 bill on the seat! Somebody out there appreciates your presence.",
         "money_change": 20,
         "base_probability": 0.18
       },
       {
         "id": 17,
-        "description": "Your car was washed and vacuumed by a stranger while you were away. Lucky you, huh?",
+        "description": "🧼 Your car was washed and vacuumed by a stranger while you were away. Lucky you, huh?",
         "money_change": 0,
         "base_probability": 0.18
       },
       {
         "id": 18,
-        "description": "You got a perfect green light streak all the way. The universe is actually rooting for you today.",
+        "description": "🟢 You got a perfect green light streak all the way. The universe is actually rooting for you today.",
         "money_change": 15,
         "base_probability": 0.18
       },
       {
         "id": 19,
-        "description": "A stranger complimented your ride. Your ego is soaring, don’t get too full of yourself!",
+        "description": "👍 A stranger complimented your ride. Your ego is soaring, don’t get too full of yourself!",
         "money_change": 0,
         "base_probability": 0.18
       },
       {
         "id": 20,
-        "description": "You caught a parking spot right next to the entrance. VIP treatment much?",
+        "description": "🅿️ You caught a parking spot right next to the entrance. VIP treatment much?",
         "money_change": 10,
         "base_probability": 0.18
       }
@@ -131,31 +131,31 @@
     "negative": [
       {
         "id": 21,
-        "description": "You got a flat tire and had to pay $15 for a fix. Your bike is as tired as you are.",
+        "description": "🚲 You got a flat tire and had to pay $15 for a fix. Your bike is as tired as you are.",
         "money_change": -15,
         "base_probability": 0.10
       },
       {
         "id": 22,
-        "description": "A bird pooped on your helmet. Disgusting! No money lost, but your dignity took a hit.",
+        "description": "💩 A bird pooped on your helmet. Disgusting! No money lost, but your dignity took a hit.",
         "money_change": 0,
         "base_probability": 0.10
       },
       {
         "id": 23,
-        "description": "You got stuck behind slow walkers and lost precious time. Nothing lost but your patience.",
+        "description": "🐢 You got stuck behind slow walkers and lost precious time. Nothing lost but your patience.",
         "money_change": 0,
         "base_probability": 0.10
       },
       {
         "id": 24,
-        "description": "You hit a pothole and almost faceplanted. Your ego took $20 damage instead of your face.",
+        "description": "💥 You hit a pothole and almost faceplanted. Your ego took $20 damage instead of your face.",
         "money_change": -20,
         "base_probability": 0.10
       },
       {
         "id": 25,
-        "description": "Your bike chain broke. Cost you $25 to fix. Smooth moves, champ.",
+        "description": "🔗 Your bike chain broke. Cost you $25 to fix. Smooth moves, champ.",
         "money_change": -25,
         "base_probability": 0.10
       }
@@ -163,61 +163,61 @@
     "neutral": [
       {
         "id": 26,
-        "description": "The breeze felt nice and you enjoyed the ride. Could be worse, right?",
+        "description": "🌬️ The breeze felt nice and you enjoyed the ride. Could be worse, right?",
         "money_change": 0,
         "base_probability": 0.55
       },
       {
         "id": 27,
-        "description": "You biked at a chill pace, humming your favorite tunes. Not bad at all.",
+        "description": "🎵 You biked at a chill pace, humming your favorite tunes. Not bad at all.",
         "money_change": 0,
         "base_probability": 0.55
       },
       {
         "id": 28,
-        "description": "Your bike chain slipped once, but nothing major. Keep it up!",
+        "description": "🔧 Your bike chain slipped once, but nothing major. Keep it up!",
         "money_change": 0,
         "base_probability": 0.55
       },
       {
         "id": 29,
-        "description": "You took a selfie mid-ride, hoping to look cooler than you are.",
+        "description": "🤳 You took a selfie mid-ride, hoping to look cooler than you are.",
         "money_change": 0,
         "base_probability": 0.55
       },
       {
         "id": 30,
-        "description": "You saw a squirrel but didn't crash. Small victories.",
+        "description": "🐿️ You saw a squirrel but didn't crash. Small victories.",
         "money_change": 0,
         "base_probability": 0.55
       },
       {
         "id": 31,
-        "description": "Your helmet strap was slightly loose. Close call, genius.",
+        "description": "🎗️ Your helmet strap was slightly loose. Close call, genius.",
         "money_change": 0,
         "base_probability": 0.55
       },
       {
         "id": 32,
-        "description": "You avoided the puddle this time. Skill level: intermediate.",
+        "description": "💧 You avoided the puddle this time. Skill level: intermediate.",
         "money_change": 0,
         "base_probability": 0.55
       },
       {
         "id": 33,
-        "description": "Your bike bell worked perfectly. Ding ding!",
+        "description": "🔔 Your bike bell worked perfectly. Ding ding!",
         "money_change": 0,
         "base_probability": 0.55
       },
       {
         "id": 34,
-        "description": "You waved at a fellow biker. They didn't wave back. That's on them.",
+        "description": "👋 You waved at a fellow biker. They didn't wave back. That's on them.",
         "money_change": 0,
         "base_probability": 0.55
       },
       {
         "id": 35,
-        "description": "You managed not to get lost. Barely.",
+        "description": "🗺️ You managed not to get lost. Barely.",
         "money_change": 0,
         "base_probability": 0.55
       }
@@ -225,31 +225,31 @@
     "positive": [
       {
         "id": 36,
-        "description": "You got a compliment from a cute stranger. Your charm is undeniable.",
+        "description": "😍 You got a compliment from a cute stranger. Your charm is undeniable.",
         "money_change": 15,
         "base_probability": 0.10
       },
       {
         "id": 37,
-        "description": "Your legs felt powerful and you zoomed past traffic like a boss. Well done!",
+        "description": "💪 Your legs felt powerful and you zoomed past traffic like a boss. Well done!",
         "money_change": 20,
         "base_probability": 0.10
       },
       {
         "id": 38,
-        "description": "You found a hidden shortcut that saved you time and money on coffee. Genius move!",
+        "description": "🕵️‍♂️ You found a hidden shortcut that saved you time and money on coffee. Genius move!",
         "money_change": 25,
         "base_probability": 0.10
       },
       {
         "id": 39,
-        "description": "You bumped into an old friend who bought you a smoothie. Cheers to you!",
+        "description": "🍹 You bumped into an old friend who bought you a smoothie. Cheers to you!",
         "money_change": 10,
         "base_probability": 0.10
       },
       {
         "id": 40,
-        "description": "Your bike ride was so smooth you felt like a pro athlete. Watch out Tour de France!",
+        "description": "🏆 Your bike ride was so smooth you felt like a pro athlete. Watch out Tour de France!",
         "money_change": 30,
         "base_probability": 0.10
       }
@@ -259,31 +259,31 @@
     "negative": [
       {
         "id": 41,
-        "description": "You got stuck in a packed subway car next to a guy who smells like old socks. Lost $5 buying air freshener. Ew.",
+        "description": "🤢 You got stuck in a packed subway car next to a guy who smells like old socks. Lost $5 buying air freshener. Ew.",
         "money_change": -5,
         "base_probability": 0.10
       },
       {
         "id": 42,
-        "description": "Your train got delayed by 30 minutes. You missed your morning coffee run. Tragic.",
+        "description": "⏳ Your train got delayed by 30 minutes. You missed your morning coffee run. Tragic.",
         "money_change": 0,
         "base_probability": 0.10
       },
       {
         "id": 43,
-        "description": "Someone tried to pickpocket you but failed. You lost your cool instead. Priceless.",
+        "description": "🕵️ Someone tried to pickpocket you but failed. You lost your cool instead. Priceless.",
         "money_change": 0,
         "base_probability": 0.10
       },
       {
         "id": 44,
-        "description": "You stepped on some gum and it ruined your shoes. $10 gone, style lost.",
+        "description": "👞 You stepped on some gum and it ruined your shoes. $10 gone, style lost.",
         "money_change": -10,
         "base_probability": 0.10
       },
       {
         "id": 45,
-        "description": "You got off at the wrong stop and had to walk back. Lost $3 in cab fare. Brilliant.",
+        "description": "🚶 You got off at the wrong stop and had to walk back. Lost $3 in cab fare. Brilliant.",
         "money_change": -3,
         "base_probability": 0.10
       }
@@ -291,61 +291,61 @@
     "neutral": [
       {
         "id": 46,
-        "description": "The subway ride was as boring as watching paint dry. At least you arrived on time.",
+        "description": "😴 The subway ride was as boring as watching paint dry. At least you arrived on time.",
         "money_change": 0,
         "base_probability": 0.80
       },
       {
         "id": 47,
-        "description": "You people-watched and realized humans are weird. Welcome to the club.",
+        "description": "👀 You people-watched and realized humans are weird. Welcome to the club.",
         "money_change": 0,
         "base_probability": 0.80
       },
       {
         "id": 48,
-        "description": "You read some graffiti and wondered if it was art or just nonsense.",
+        "description": "🎨 You read some graffiti and wondered if it was art or just nonsense.",
         "money_change": 0,
         "base_probability": 0.80
       },
       {
         "id": 49,
-        "description": "You avoided eye contact with everyone. Social skills: intact-ish.",
+        "description": "🙈 You avoided eye contact with everyone. Social skills: intact-ish.",
         "money_change": 0,
         "base_probability": 0.80
       },
       {
         "id": 50,
-        "description": "Your subway car smelled like old socks, but you're used to worse smells.",
+        "description": "👃 Your subway car smelled like old socks, but you're used to worse smells.",
         "money_change": 0,
         "base_probability": 0.80
       },
       {
         "id": 51,
-        "description": "You balanced perfectly while standing. Olympic-level skill.",
+        "description": "🤸 You balanced perfectly while standing. Olympic-level skill.",
         "money_change": 0,
         "base_probability": 0.80
       },
       {
         "id": 52,
-        "description": "Your phone battery lasted the whole trip. Miracles happen.",
+        "description": "📱 Your phone battery lasted the whole trip. Miracles happen.",
         "money_change": 0,
         "base_probability": 0.80
       },
       {
         "id": 53,
-        "description": "You avoided the subway rats. Phew.",
+        "description": "🐀 You avoided the subway rats. Phew.",
         "money_change": 0,
         "base_probability": 0.80
       },
       {
         "id": 54,
-        "description": "Your shoelaces stayed tied. Minor victory.",
+        "description": "👟 Your shoelaces stayed tied. Minor victory.",
         "money_change": 0,
         "base_probability": 0.80
       },
       {
         "id": 55,
-        "description": "You successfully avoided the subway preachers. Bless your soul.",
+        "description": "🙏 You successfully avoided the subway preachers. Bless your soul.",
         "money_change": 0,
         "base_probability": 0.80
       }
@@ -353,31 +353,31 @@
     "positive": [
       {
         "id": 56,
-        "description": "You caught the subway just in time and scored a free coffee voucher! You're crushing it today.",
+        "description": "☕ You caught the subway just in time and scored a free coffee voucher! You're crushing it today.",
         "money_change": 10,
         "base_probability": 0.10
       },
       {
         "id": 57,
-        "description": "A friendly stranger helped you find a seat. Good karma is real, my friend.",
+        "description": "🙂 A friendly stranger helped you find a seat. Good karma is real, my friend.",
         "money_change": 0,
         "base_probability": 0.10
       },
       {
         "id": 58,
-        "description": "You found a lost wallet and returned it. Your conscience thanks you.",
+        "description": "💰 You found a lost wallet and returned it. Your conscience thanks you.",
         "money_change": 20,
         "base_probability": 0.10
       },
       {
         "id": 59,
-        "description": "A subway musician played your favorite song. Your heart melted a little.",
+        "description": "🎶 A subway musician played your favorite song. Your heart melted a little.",
         "money_change": 0,
         "base_probability": 0.10
       },
       {
         "id": 60,
-        "description": "You got upgraded to a less crowded car. Comfort level: expert.",
+        "description": "🚃 You got upgraded to a less crowded car. Comfort level: expert.",
         "money_change": 0,
         "base_probability": 0.10
       }
@@ -387,31 +387,31 @@
     "negative": [
       {
         "id": 61,
-        "description": "The bus driver was late and you missed your stop. You paid $2 for a taxi. Oof.",
+        "description": "⏰ The bus driver was late and you missed your stop. You paid $2 for a taxi. Oof.",
         "money_change": -2,
         "base_probability": 0.10
       },
       {
         "id": 62,
-        "description": "You accidentally dropped your phone on the bus floor. No money lost but major facepalm.",
+        "description": "📱 You accidentally dropped your phone on the bus floor. No money lost but major facepalm.",
         "money_change": 0,
         "base_probability": 0.10
       },
       {
         "id": 63,
-        "description": "Someone sneezed on you. No refund. Gross.",
+        "description": "🤧 Someone sneezed on you. No refund. Gross.",
         "money_change": 0,
         "base_probability": 0.10
       },
       {
         "id": 64,
-        "description": "Your bus card malfunctioned and you had to pay cash. Lost $3. Oops.",
+        "description": "💳 Your bus card malfunctioned and you had to pay cash. Lost $3. Oops.",
         "money_change": -3,
         "base_probability": 0.10
       },
       {
         "id": 65,
-        "description": "You missed the bus by seconds and had to wait 20 minutes. Time is money, you know.",
+        "description": "⌛ You missed the bus by seconds and had to wait 20 minutes. Time is money, you know.",
         "money_change": 0,
         "base_probability": 0.10
       }
@@ -419,61 +419,61 @@
     "neutral": [
       {
         "id": 66,
-        "description": "The bus was on time and the ride was smooth. Meh, could be worse.",
+        "description": "🚌 The bus was on time and the ride was smooth. Meh, could be worse.",
         "money_change": 0,
         "base_probability": 0.70
       },
       {
         "id": 67,
-        "description": "You chatted with a friendly passenger. Small wins in life.",
+        "description": "💬 You chatted with a friendly passenger. Small wins in life.",
         "money_change": 0,
         "base_probability": 0.70
       },
       {
         "id": 68,
-        "description": "You people-watched and got some new gossip. The bus is a drama club on wheels.",
+        "description": "👀 You people-watched and got some new gossip. The bus is a drama club on wheels.",
         "money_change": 0,
         "base_probability": 0.70
       },
       {
         "id": 69,
-        "description": "Your headphones worked perfectly. Music saved your sanity.",
+        "description": "🎧 Your headphones worked perfectly. Music saved your sanity.",
         "money_change": 0,
         "base_probability": 0.70
       },
       {
         "id": 70,
-        "description": "You successfully avoided awkward eye contact. Nailed it.",
+        "description": "🙈 You successfully avoided awkward eye contact. Nailed it.",
         "money_change": 0,
         "base_probability": 0.70
       },
       {
         "id": 71,
-        "description": "Your bus seat didn’t squeak. That’s a win.",
+        "description": "🪑 Your bus seat didn’t squeak. That’s a win.",
         "money_change": 0,
         "base_probability": 0.70
       },
       {
         "id": 72,
-        "description": "You held the door open for someone. Feeling generous, huh?",
+        "description": "🚪 You held the door open for someone. Feeling generous, huh?",
         "money_change": 0,
         "base_probability": 0.70
       },
       {
         "id": 73,
-        "description": "You avoided getting soaked by a splash from a passing car. Luck is real.",
+        "description": "💦 You avoided getting soaked by a splash from a passing car. Luck is real.",
         "money_change": 0,
         "base_probability": 0.70
       },
       {
         "id": 74,
-        "description": "You caught the bus before it filled up. Sweet spot achieved.",
+        "description": "🎯 You caught the bus before it filled up. Quick reflexes!",
         "money_change": 0,
         "base_probability": 0.70
       },
       {
         "id": 75,
-        "description": "Your stop announcement was crystal clear. No surprises today.",
+        "description": "🧹 The bus was surprisingly clean today. Don't get used to it.",
         "money_change": 0,
         "base_probability": 0.70
       }
@@ -481,33 +481,33 @@
     "positive": [
       {
         "id": 76,
-        "description": "You got a free ride because the driver forgot to collect your fare! Jackpot!",
-        "money_change": 5,
-        "base_probability": 0.10
+        "description": "🎟️ You got a free bus ride thanks to a promo. Score!",
+        "money_change": 3,
+        "base_probability": 0.20
       },
       {
         "id": 77,
-        "description": "A kind stranger gave you a snack. Your day just got better!",
+        "description": "🤗 A passenger gave you a compliment on your shoes. Ego boost incoming.",
         "money_change": 0,
-        "base_probability": 0.10
+        "base_probability": 0.20
       },
       {
         "id": 78,
-        "description": "You found a forgotten $10 bill on the bus floor. Lucky you!",
-        "money_change": 10,
-        "base_probability": 0.10
+        "description": "🍩 You found a donut someone dropped on the floor and actually ate it. No regrets.",
+        "money_change": 5,
+        "base_probability": 0.20
       },
       {
         "id": 79,
-        "description": "The bus driver let you off early. Early bird gets the worm!",
+        "description": "🚏 Your stop was announced early so you got off without a rush. Smooth move!",
         "money_change": 0,
-        "base_probability": 0.10
+        "base_probability": 0.20
       },
       {
         "id": 80,
-        "description": "Your bus ride was so smooth you almost forgot where you were going. Almost.",
+        "description": "🏅 You got a seat even during rush hour. Lucky you!",
         "money_change": 0,
-        "base_probability": 0.10
+        "base_probability": 0.20
       }
     ]
   }
