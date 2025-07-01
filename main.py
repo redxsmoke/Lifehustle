@@ -71,6 +71,22 @@ async def plate_exists_in_any_inventory(plate: str) -> bool:
                 return True
     return False
 
+async def update_bike_usage(user: dict):
+    inventory = user.get("inventory", [])
+    for item in inventory:
+        if isinstance(item, dict) and item.get("type") == "Bike":
+            # Increment commute count
+            current_count = item.get("commute_count", 0)
+            new_count = current_count + 1
+            item["commute_count"] = new_count
+
+            # Update condition based on usage count
+            item["condition"] = condition_from_usage(new_count)
+            break  # Assuming only one bike per user
+
+    user["inventory"] = inventory
+    await upsert_user(pool, user["user_id"], user)
+
 def generate_random_plate(length=8):
     chars = string.ascii_uppercase + string.digits
     return ''.join(random.choices(chars, k=length))
@@ -726,8 +742,8 @@ async def shop(interaction: discord.Interaction, category: app_commands.Choice[s
             description=(
                 "Choose a vehicle to purchase:\n\n"
                 "> 🚴 **Bike** — $2,000\n"
-                "> 🚙 **Blue Car** — $10,000\n"
-                "> 🚗 **Red Car** — $25,000\n"
+                "> 🚙 **Beater Car** — $10,000\n"
+                "> 🚗 **Sedan Car** — $25,000\n"
                 "> 🏎️ **Sports Car** — $100,000\n"
                 "> 🛻 **Pickup Truck** — $75,000\n\n"
                 "Each vehicle has unique perks!"
@@ -763,7 +779,8 @@ class TransportationShopButtons(View):
                 "type": "Bike",
                 "color": color,
                 "condition": condition,
-                "purchase_date": datetime.date.today().isoformat()
+                "purchase_date": datetime.date.today().isoformat(),
+                "commute_count":0
             }
             await handle_vehicle_purchase(interaction, item=bike_item, cost=2000)
         except Exception:
@@ -774,19 +791,19 @@ class TransportationShopButtons(View):
         try:
             plate = generate_random_plate()
             car_item = {
-                "type": "Blue Car",
+                "type": "Beater Car",
                 "plate": plate
             }
             await handle_vehicle_purchase(interaction, item=car_item, cost=10000)
         except Exception:
-            await interaction.response.send_message("🚫 Failed to buy Blue Car. Try again later.", ephemeral=True)
+            await interaction.response.send_message("🚫 Failed to buy Beater Car. Try again later.", ephemeral=True)
 
     @discord.ui.button(label="Buy Sedan Car 🚗", style=discord.ButtonStyle.primary, custom_id="buy_red_car")
     async def buy_red_car(self, interaction: discord.Interaction, button: Button):
         try:
             plate = generate_random_plate()
             car_item = {
-                "type": "Red Car",
+                "type": "Sedan Car",
                 "plate": plate
             }
             await handle_vehicle_purchase(interaction, item=car_item, cost=25000)
@@ -1125,6 +1142,28 @@ async def withdraw(interaction: discord.Interaction, amount: str):
 
 @tree.command(name="commute", description="Commute to work using buttons (drive, bike, subway, bus)")
 async def commute(interaction: discord.Interaction):
+    user_id = interaction.user.id
+    user = await get_user(pool, user_id)
+
+    if not user:
+        await interaction.response.send_message(
+            embed=embed_message("❌ No Account Found", "Use `/start` to create your account."),
+            ephemeral=True
+        )
+        return
+
+    # Check and update bike usage if they have one
+    updated = False
+    for item in user.get("inventory", []):
+        if isinstance(item, dict) and item.get("type") == "Bike":
+            item["commute_count"] = item.get("commute_count", 0) + 1
+            item["condition"] = condition_from_usage(item["commute_count"])
+            updated = True
+
+    if updated:
+        await upsert_user(pool, user_id, user)
+
+    # Send commute button view
     view = CommuteButtons()
     await interaction.response.send_message(
         embed=embed_message(
@@ -1134,6 +1173,7 @@ async def commute(interaction: discord.Interaction):
         view=view,
         ephemeral=True
     )
+
 
 @tree.command(name="paycheck", description="Claim your paycheck ($10,000 every 12 hours)")
 async def paycheck(interaction: discord.Interaction):
@@ -1339,8 +1379,8 @@ async def stash(interaction: discord.Interaction, category: app_commands.Choice[
                 else:  # Cars/trucks
                     plate = item.get("plate", "N/A")
                     emoji_map = {
-                        "Blue Car": "🚙",
-                        "Red Car": "🚗",
+                        "Beater Car": "🚙",
+                        "Sedan Car": "🚗",
                         "Sports Car": "🏎️",
                         "Pickup Truck": "🛻"
                     }
