@@ -1399,25 +1399,11 @@ async def stash(interaction: discord.Interaction, category: app_commands.Choice[
             await view.send(interaction)
 
 
-async def migrate_inventory_column():
-    async with pool.acquire() as conn:
-        await conn.execute("""
-            ALTER TABLE users
-            ALTER COLUMN inventory TYPE jsonb USING inventory::jsonb;
-        """)
 
-# Call this once when the bot starts
-async def on_ready():
-    print("Bot is ready!")
-    try:
-        await migrate_inventory_column()
-        print("Inventory column migration completed.")
-    except Exception as e:
-        print(f"Migration skipped or failed: {e}")
-
-client.event(on_ready)
 
 # --- Bot events ---
+
+ 
 
 @client.event
 async def on_ready():
@@ -1428,6 +1414,12 @@ async def on_ready():
     print(f'Logged in as {client.user} (ID: {client.user.id})')
     await tree.sync()
     print("Commands synced.")
+    
+    try:
+        await migrate_inventory_column()
+        print("Inventory column migration completed.")
+    except Exception as e:
+        print(f"Migration skipped or failed: {e}")
 
 # --- Run bot ---
 
