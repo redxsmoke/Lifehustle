@@ -739,6 +739,41 @@ async def startcategories(interaction: discord.Interaction, category: str):
                 )
             )
             break
+@tree.command(name="purge", description="Delete all messages in this channel (use with caution!)")
+async def purge(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    channel = interaction.channel
+
+    deleted = 0
+    while True:
+        # Fetch up to 100 messages
+        messages = await channel.history(limit=100).flatten()
+        if not messages:
+            break
+        # Bulk delete (only messages younger than 14 days)
+        try:
+            await channel.delete_messages(messages)
+            deleted += len(messages)
+        except Exception as e:
+            # Some messages might be too old for bulk delete
+            # Delete older messages one by one
+            for msg in messages:
+                try:
+                    await msg.delete()
+                    deleted += 1
+                except:
+                    pass
+            break  # Stop after this batch
+
+    await interaction.followup.send(
+        embed=embed_message(
+            "🧹 Purge Complete",
+            f"Deleted approximately {deleted} messages in this channel.",
+            discord.Color.green()
+        ),
+        ephemeral=True
+    )
+
 
 
 # --- Bot events ---
