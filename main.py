@@ -539,18 +539,6 @@ async def handle_commute(interaction: discord.Interaction, method: str):
 
 # --- Database functions ---
 
-async def migrate_inventory_column():
-    async with pool.acquire() as conn:
-        # Drop default first
-        await conn.execute("""
-            ALTER TABLE users ALTER COLUMN inventory DROP DEFAULT;
-        """)
-        # Then alter type
-        await conn.execute("""
-            ALTER TABLE users
-            ALTER COLUMN inventory TYPE jsonb USING inventory::jsonb;
-        """)
-
 async def create_pool():
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
@@ -774,51 +762,66 @@ class TransportationShopButtons(View):
 
     @discord.ui.button(label="Buy Bike 🚴", style=discord.ButtonStyle.success, custom_id="buy_bike")
     async def buy_bike(self, interaction: discord.Interaction, button: Button):
-        color = random.choice(BIKE_COLORS)
-        condition = "Pristine"
-        bike_item = {
-            "type": "Bike",
-            "color": color,
-            "condition": condition,
-            "purchase_date": datetime.date.today().isoformat()
-        }
-        await handle_vehicle_purchase(interaction, item=bike_item, cost=2000)
+        try:
+            color = random.choice(BIKE_COLORS)
+            condition = "Pristine"
+            bike_item = {
+                "type": "Bike",
+                "color": color,
+                "condition": condition,
+                "purchase_date": datetime.date.today().isoformat()
+            }
+            await handle_vehicle_purchase(interaction, item=bike_item, cost=2000)
+        except Exception:
+            await interaction.response.send_message("🚫 Failed to buy Bike. Try again later.", ephemeral=True)
 
     @discord.ui.button(label="Buy Beater Car 🚙", style=discord.ButtonStyle.primary, custom_id="buy_blue_car")
     async def buy_blue_car(self, interaction: discord.Interaction, button: Button):
-        plate = await generate_unique_license_plate()
-        car_item = {
-            "type": "Blue Car",
-            "plate": plate
-        }
-        await handle_vehicle_purchase(interaction, item=car_item, cost=10000)
+        try:
+            plate = await generate_unique_license_plate()
+            car_item = {
+                "type": "Blue Car",
+                "plate": plate
+            }
+            await handle_vehicle_purchase(interaction, item=car_item, cost=10000)
+        except Exception:
+            await interaction.response.send_message("🚫 Failed to buy Blue Car. Try again later.", ephemeral=True)
 
     @discord.ui.button(label="Buy Sedan Car 🚗", style=discord.ButtonStyle.primary, custom_id="buy_red_car")
     async def buy_red_car(self, interaction: discord.Interaction, button: Button):
-        plate = await generate_unique_license_plate()
-        car_item = {
-            "type": "Red Car",
-            "plate": plate
-        }
-        await handle_vehicle_purchase(interaction, item=car_item, cost=25000)
+        try:
+            plate = await generate_unique_license_plate()
+            car_item = {
+                "type": "Red Car",
+                "plate": plate
+            }
+            await handle_vehicle_purchase(interaction, item=car_item, cost=25000)
+        except Exception:
+            await interaction.response.send_message("🚫 Failed to buy Red Car. Try again later.", ephemeral=True)
 
     @discord.ui.button(label="Buy Sports Car 🏎️", style=discord.ButtonStyle.primary, custom_id="buy_sports_car")
     async def buy_sports_car(self, interaction: discord.Interaction, button: Button):
-        plate = await generate_unique_license_plate()
-        car_item = {
-            "type": "Sports Car",
-            "plate": plate
-        }
-        await handle_vehicle_purchase(interaction, item=car_item, cost=100000)
+        try:
+            plate = await generate_unique_license_plate()
+            car_item = {
+                "type": "Sports Car",
+                "plate": plate
+            }
+            await handle_vehicle_purchase(interaction, item=car_item, cost=100000)
+        except Exception:
+            await interaction.response.send_message("🚫 Failed to buy Sports Car. Try again later.", ephemeral=True)
 
     @discord.ui.button(label="Buy Pickup Truck 🛻", style=discord.ButtonStyle.primary, custom_id="buy_truck")
     async def buy_truck(self, interaction: discord.Interaction, button: Button):
-        plate = await generate_unique_license_plate()
-        car_item = {
-            "type": "Pickup Truck",
-            "plate": plate
-        }
-        await handle_vehicle_purchase(interaction, item=car_item, cost=75000)
+        try:
+            plate = await generate_unique_license_plate()
+            car_item = {
+                "type": "Pickup Truck",
+                "plate": plate
+            }
+            await handle_vehicle_purchase(interaction, item=car_item, cost=75000)
+        except Exception:
+            await interaction.response.send_message("🚫 Failed to buy Pickup Truck. Try again later.", ephemeral=True)
 
 
 
@@ -1415,8 +1418,6 @@ async def stash(interaction: discord.Interaction, category: app_commands.Choice[
 
 # --- Bot events ---
 
- 
-
 @client.event
 async def on_ready():
     global pool
@@ -1426,12 +1427,6 @@ async def on_ready():
     print(f'Logged in as {client.user} (ID: {client.user.id})')
     await tree.sync()
     print("Commands synced.")
-    
-    try:
-        await migrate_inventory_column()
-        print("Inventory column migration completed.")
-    except Exception as e:
-        print(f"Migration skipped or failed: {e}")
 
        
 
