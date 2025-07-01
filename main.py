@@ -71,7 +71,7 @@ def bike_condition_from_usage(usage_count: int) -> str:
     elif usage_count < 3:
         return "Heavily Used"
     else:
-        return "Rusted, Falling Apart"
+        return "Rusted"
 
 def car_condition_from_usage(commute_count: int) -> str:
     if commute_count < 1:
@@ -81,7 +81,7 @@ def car_condition_from_usage(commute_count: int) -> str:
     elif commute_count < 3:
         return "Heavily Used"
     else:
-        return "Rusted, Failling Apart"
+        return "Rusted"
 
 
 async def can_user_buy_vehicle(user_inventory, item):
@@ -913,10 +913,6 @@ class TransportationShopButtons(View):
         except Exception:
             await interaction.response.send_message("🚫 Failed to buy Pickup Truck. Try again later.", ephemeral=True)
 
-
-
-
-
 async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, cost: int):
     user_id = interaction.user.id
     user = await get_user(pool, user_id)
@@ -950,6 +946,10 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
     user["inventory"] = inventory
 
     await upsert_user(pool, user_id, user)
+
+    # Reload user fresh from DB to keep in-memory user accurate
+    user = await get_user(pool, user_id)
+    # (Optional) print(f"Inventory after purchase: {user['inventory']}")
 
     await interaction.response.send_message(f"✅ You purchased a {item.get('type', 'vehicle')} for ${cost:,}!", ephemeral=True)
 
@@ -1087,6 +1087,10 @@ class SellFromStashView(View):
             user["checking_account"] += resale
             await upsert_user(pool, self.user_id, user)
 
+            # *** Reload user data fresh here to sync inventory ***
+            user = await get_user(pool, self.user_id)
+            # (Optional) print(f"Inventory after sale: {user['inventory']}")
+
             self.clear_items()  # Remove buttons after sale
             await interaction.response.edit_message(
                 content=f"✅ You sold your {item['type']} for ${resale:,} ({condition}).",
@@ -1097,7 +1101,7 @@ class SellFromStashView(View):
                 "❌ That item is no longer in your stash.",
                 ephemeral=True
             )
-        return callback
+
 
 
 
