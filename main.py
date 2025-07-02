@@ -63,6 +63,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree  # Shortcut
 
+# --- SQL: Create tables ---
 CREATE_INVENTORY_SQL = """
 -- Vehicle Types with cost
 CREATE TABLE IF NOT EXISTS cd_vehicle_type (
@@ -165,10 +166,24 @@ JOIN cd_grocery_type gt ON ugi.grocery_type_id = gt.id
 WHERE ugi.sold_at IS NULL;
 """
 
+# --- SQL: Alter tables to add emoji columns ---
+ALTER_INVENTORY_SQL = """
+ALTER TABLE cd_vehicle_type
+    ADD COLUMN IF NOT EXISTS emoji TEXT;
+
+ALTER TABLE cd_grocery_type
+    ADD COLUMN IF NOT EXISTS emoji TEXT;
+"""
+
 async def create_inventory_tables(pool):
     async with pool.acquire() as conn:
         await conn.execute(CREATE_INVENTORY_SQL)
         print("✅ Inventory tables and views ensured.")
+
+async def alter_inventory_tables(pool):
+    async with pool.acquire() as conn:
+        await conn.execute(ALTER_INVENTORY_SQL)
+        print("✅ Altered inventory tables to add emoji columns.")
 
 @bot.event
 async def on_ready():
@@ -177,6 +192,9 @@ async def on_ready():
         pool = await create_pool()
         await init_db(pool)
         await create_inventory_tables(pool)
+        await alter_inventory_tables(pool)
+        # Optionally seed your data here with your own seed function
+        # await seed_tables(pool)
 
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
