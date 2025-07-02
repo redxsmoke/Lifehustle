@@ -5,7 +5,6 @@ import time
 from data_tier import seed_grocery_types, seed_grocery_categories
 from collections import defaultdict
 
-
 # --- Third-Party Libraries ---
 import asyncpg
 import discord
@@ -65,9 +64,8 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree  # Shortcut
 
-# --- SQL: Create tables ---
-
-DROP_VEHICLE_CONDITION_SQL = """
+# --- SQL: Create and Reset Tables ---
+RESET_VEHICLE_CONDITION_SQL = """
 DROP TABLE IF EXISTS cd_vehicle_condition;
 
 CREATE TABLE cd_vehicle_condition (
@@ -85,15 +83,7 @@ CREATE TABLE IF NOT EXISTS cd_vehicle_type (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
     cost INTEGER NOT NULL,
-    emoji TEXT -- added emoji here for vehicles
-);
-
--- Vehicle Condition Thresholds
-CREATE TABLE IF NOT EXISTS cd_vehicle_condition (
-    name TEXT PRIMARY KEY,
-    min_commute_count INTEGER,
-    max_commute_count INTEGER,
-    resale_percent INTEGER
+    emoji TEXT
 );
 
 -- User Vehicle Inventory
@@ -124,7 +114,7 @@ CREATE TABLE IF NOT EXISTS vehicle_ownership_history (
 CREATE TABLE IF NOT EXISTS cd_grocery_category (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
-    emoji TEXT -- added emoji here for grocery categories
+    emoji TEXT
 );
 
 -- Grocery Types with Category and Cost
@@ -133,7 +123,7 @@ CREATE TABLE IF NOT EXISTS cd_grocery_type (
     name TEXT UNIQUE NOT NULL,
     category_id INTEGER NOT NULL REFERENCES cd_grocery_category(id),
     cost INTEGER NOT NULL,
-    emoji TEXT -- added emoji here for grocery types
+    emoji TEXT
 );
 
 -- User Grocery Inventory
@@ -186,7 +176,6 @@ JOIN cd_grocery_type gt ON ugi.grocery_type_id = gt.id
 WHERE ugi.sold_at IS NULL;
 """
 
-# --- SQL: Alter tables to add emoji columns if needed (optional if you use CREATE TABLE IF NOT EXISTS) ---
 ALTER_INVENTORY_SQL = """
 ALTER TABLE cd_vehicle_type
     ADD COLUMN IF NOT EXISTS emoji TEXT;
@@ -208,6 +197,11 @@ async def alter_inventory_tables(pool):
         await conn.execute(ALTER_INVENTORY_SQL)
         print("✅ Altered inventory tables to add emoji columns if missing.")
 
+async def reset_vehicle_condition_table(pool):
+    async with pool.acquire() as conn:
+        await conn.execute(RESET_VEHICLE_CONDITION_SQL)
+        print("✅ Vehicle condition table dropped and recreated.")
+
 @bot.event
 async def on_ready():
     global pool
@@ -215,6 +209,7 @@ async def on_ready():
         pool = await create_pool()
         await init_db(pool)
         await create_inventory_tables(pool)
+        await reset_vehicle_condition_table(pool)
         await alter_inventory_tables(pool)
         await seed_grocery_categories(pool)
         await seed_grocery_types(pool)

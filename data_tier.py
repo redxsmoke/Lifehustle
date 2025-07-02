@@ -73,3 +73,6 @@ async def seed_grocery_categories(pool):
                 emoji,
             )
     print("✅ Seeded grocery categories with emojis.")
+
+
+    
