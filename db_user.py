@@ -11,7 +11,7 @@ async def get_user(pool, user_id: int):
         if row:
             return {
                 'user_id': row['user_id'],
-                'user_name': row['username'],
+                'user_name': row['user_name'],
                 'last_seen': row['last_seen']
             }
         return None
