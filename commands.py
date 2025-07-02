@@ -4,8 +4,9 @@ import json
 import random
 import asyncio
 import time
-
+import defaults
 import discord
+import category_loader
 from discord import app_commands
 
 from views import (
@@ -15,12 +16,10 @@ from views import (
     GroceryCategoryView,
     GroceryStashPaginationView,
 )
-
 from db_user import get_user, upsert_user
 from utilities import parse_amount, embed_message, bike_description, normalize
-from globals import pool, DEFAULT_USER, last_paycheck_times, categories, SHOP_ITEMS
+from globals import pool,  last_paycheck_times, categories, SHOP_ITEMS
 from config import PAYCHECK_AMOUNT, PAYCHECK_COOLDOWN_SECONDS, COLOR_RED, COLOR_GREEN
-
 
 # CATEGORIES GAME COMMANDS
 
