@@ -1,5 +1,4 @@
 from collections import defaultdict, Counter
-import datetime
 import json
 import random
 import asyncio
@@ -8,6 +7,18 @@ import defaults
 import discord
 from discord import app_commands, Interaction
 import category_loader
+
+from datetime import datetime, timezone, timedelta   
+from db_user import get_user_finances, upsert_user_finances  
+from utilities import embed_message  
+
+# CONSTANTS IMPORTS
+from constants import (
+    PAYCHECK_AMOUNT,
+    PAYCHECK_COOLDOWN_SECONDS,
+    COLOR_GREEN,
+    COLOR_RED,
+)
 
 
 from views import (
@@ -180,13 +191,27 @@ def register_commands(tree: app_commands.CommandTree):
     @tree.command(name="paycheck", description=f"Claim your paycheck (${PAYCHECK_AMOUNT:,}) every 12h")
     async def paycheck(interaction: discord.Interaction):
         user_id = interaction.user.id
-        now = time.time()
-        last_time = last_paycheck_times.get(user_id, 0)
+        now = datetime.now(timezone.utc)
 
-        if now - last_time < PAYCHECK_COOLDOWN_SECONDS:
-            remaining = PAYCHECK_COOLDOWN_SECONDS - (now - last_time)
+        # Get or initialize finances
+        finances = await get_user_finances(pool, user_id)
+        if finances is None:
+            finances = {
+                'checking_account_balance': 0,
+                'savings_account_balance': 0,
+               'debt_balance': 0,
+               'last_paycheck_claimed': datetime.fromtimestamp(0, tz=timezone.utc)
+            }
+
+        last_claim = finances['last_paycheck_claimed']
+        time_since = (now - last_claim).total_seconds()
+
+        # Cooldown check
+        if time_since < PAYCHECK_COOLDOWN_SECONDS:
+            remaining = PAYCHECK_COOLDOWN_SECONDS - time_since
             hours = int(remaining // 3600)
             minutes = int((remaining % 3600) // 60)
+
             await interaction.response.send_message(embed=embed_message(
                 "⏳ Cooldown",
                 f"> Try again in {hours}h {minutes}m.",
@@ -194,19 +219,19 @@ def register_commands(tree: app_commands.CommandTree):
             ), ephemeral=True)
             return
 
-        user = await get_user(pool, user_id)
-        if user is None:
-            user = DEFAULT_USER.copy()
+        # Grant paycheck and update timestamp
+        finances['checking_account_balance'] += PAYCHECK_AMOUNT
+        finances['last_paycheck_claimed'] = now
 
-        user['checking_account'] += PAYCHECK_AMOUNT
-        await upsert_user(pool, user_id, user)
-        last_paycheck_times[user_id] = now
+        await upsert_user_finances(pool, user_id, finances)
 
+        # Respond to user
         await interaction.response.send_message(embed=embed_message(
             "💵 Paycheck Claimed",
-            f"> You got ${PAYCHECK_AMOUNT:,}!\n💰 Balance: ${user['checking_account']:,}",
+            f"> You got ${PAYCHECK_AMOUNT:,}!\n💰 New Balance: ${finances['checking_account_balance']:,}",
             COLOR_GREEN
         ), ephemeral=True)
+
 
     @tree.command(name="startcategories", description="Start a categories game round")
     @app_commands.describe(category="Choose the category to play")

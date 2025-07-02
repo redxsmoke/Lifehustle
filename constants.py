@@ -1,0 +1,13 @@
+#USER PAYCHECK & COOLDOWN
+ 
+# Payouts
+PAYCHECK_AMOUNT = 10_000
+
+# Time-based cooldowns (in seconds)
+PAYCHECK_COOLDOWN_SECONDS = 12 * 60 * 60  # 12 hours
+
+# Embed colors
+COLOR_GREEN = 0x00FF00
+COLOR_RED = 0xFF0000
+COLOR_YELLOW = 0xFFFF00
+COLOR_BLUE = 0x3498DB
