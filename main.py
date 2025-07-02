@@ -177,8 +177,9 @@ ALTER TABLE cd_grocery_type
 
 DROP_OLD_USER_COLUMNS_SQL = """
 ALTER TABLE users
-DROP COLUMN IF EXISTS checking_account
+DROP COLUMN IF EXISTS checking_account,
 DROP COLUMN IF EXISTS savings_account,
+DROP COLUMN IF EXISTS relationship_status,
 DROP COLUMN IF EXISTS car,
 DROP COLUMN IF EXISTS bike,
 DROP COLUMN IF EXISTS fridge,
