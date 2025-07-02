@@ -69,9 +69,6 @@ print("⏳ [Main] before register_commands, tree has:", [c.name for c in tree.wa
 register_commands(tree)
 print("✅ [Main] after register_commands, tree has:", [c.name for c in tree.walk_commands()])
 
-# Optional: specify dev guild for faster sync
-DEV_GUILD_ID = 1389059101165883482  # Replace with your dev server ID
-dev_guild = discord.Object(id=DEV_GUILD_ID)
 
 @bot.event
 async def on_ready():
@@ -83,7 +80,7 @@ async def on_ready():
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
     try:
-        await tree.sync(guild=dev_guild)  # For testing/dev only
+        await tree.sync()
         print("✅ Slash commands synced to dev guild.")
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
