@@ -7,6 +7,7 @@ import time
 import defaults
 import discord
 import category_loader
+from main import tree
 from discord import app_commands
 
 from views import (
