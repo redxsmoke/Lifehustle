@@ -81,7 +81,6 @@ CREATE TABLE cd_vehicle_condition (
 """
 
 CREATE_INVENTORY_SQL = """
--- Vehicle Types with cost
 CREATE TABLE IF NOT EXISTS cd_vehicle_type (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
@@ -89,7 +88,6 @@ CREATE TABLE IF NOT EXISTS cd_vehicle_type (
     emoji TEXT
 );
 
--- User Vehicle Inventory
 CREATE TABLE IF NOT EXISTS user_vehicle_inventory (
     id SERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
@@ -104,23 +102,12 @@ CREATE TABLE IF NOT EXISTS user_vehicle_inventory (
     sold_at TIMESTAMP
 );
 
--- Vehicle Ownership History
-CREATE TABLE IF NOT EXISTS vehicle_ownership_history (
-    id SERIAL PRIMARY KEY,
-    vehicle_inventory_id INTEGER NOT NULL REFERENCES user_vehicle_inventory(id) ON DELETE CASCADE,
-    owner_user_id BIGINT NOT NULL,
-    acquired_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    sold_at TIMESTAMP
-);
-
--- Grocery Categories
 CREATE TABLE IF NOT EXISTS cd_grocery_category (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
     emoji TEXT
 );
 
--- Grocery Types with Category and Cost
 CREATE TABLE IF NOT EXISTS cd_grocery_type (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
@@ -129,7 +116,6 @@ CREATE TABLE IF NOT EXISTS cd_grocery_type (
     emoji TEXT
 );
 
--- User Grocery Inventory
 CREATE TABLE IF NOT EXISTS user_grocery_inventory (
     id SERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
@@ -142,7 +128,6 @@ CREATE TABLE IF NOT EXISTS user_grocery_inventory (
     sold_at TIMESTAMP
 );
 
--- User Item Summary View
 CREATE OR REPLACE VIEW user_item_summary AS
 SELECT 
     uvi.user_id,
@@ -234,7 +219,6 @@ async def seed_vehicle_conditions(pool):
 
         conditions_data = []
 
-        # Conditions template for most vehicles (starting_commute_count = 0)
         standard_conditions = [
             ('Brand New', 0, 50, 85, 0),
             ('Good Condition', 51, 100, 70, 0),
@@ -244,12 +228,12 @@ async def seed_vehicle_conditions(pool):
         ]
 
         for vehicle_name, vehicle_id in vehicle_type_map.items():
-            if vehicle_name == 'Blue Car':  # Beater car special starting_commute_count on 'Poor Condition'
+            if vehicle_name == 'Blue Car':
                 conditions_data.extend([
                     (vehicle_id, 'Brand New', 0, 50, 85, 0),
                     (vehicle_id, 'Good Condition', 51, 100, 70, 0),
                     (vehicle_id, 'Fair Condition', 101, 150, 50, 0),
-                    (vehicle_id, 'Poor Condition', 151, 200, 30, 151),  # special starting count
+                    (vehicle_id, 'Poor Condition', 151, 200, 30, 151),
                     (vehicle_id, 'Broken Down', 201, 202, 0, 0),
                 ])
             else:
