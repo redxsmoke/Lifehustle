@@ -168,8 +168,9 @@ WHERE ugi.sold_at IS NULL;
 
 # --- SQL: Alter tables to add emoji columns ---
 ALTER_INVENTORY_SQL = """
-ALTER TABLE cd_vehicle_type
-    ADD COLUMN IF NOT EXISTS emoji TEXT;
+ALTER TABLE cd_grocery_category
+    ADD COLUMN IF NOT EXISTS emoji TEXT,
+    DROP COLUMN IF EXISTS emoju;
 
 ALTER TABLE cd_grocery_type
     ADD COLUMN IF NOT EXISTS emoji TEXT;
