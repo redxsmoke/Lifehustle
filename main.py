@@ -270,7 +270,7 @@ async def seed_vehicle_conditions(pool):
 
 async def setup_user_finances_table(pool):
     async with pool.acquire() as conn:
-        await conn.execute(DROP_OLD_USER_COLUMNS_SQL)
+        await conn.execute(ADD_NEW_USER_COLUMNS_SQL)
         await conn.execute(CREATE_USER_FINANCES_SQL)
         print("✅ User table columns dropped and user_finances table created.")
 
