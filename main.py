@@ -70,10 +70,13 @@ DROP TABLE IF EXISTS cd_vehicle_condition;
 
 CREATE TABLE cd_vehicle_condition (
     id SERIAL PRIMARY KEY,
+    vehicle_type_id INTEGER NOT NULL REFERENCES cd_vehicle_type(id) ON DELETE CASCADE,
     description TEXT NOT NULL,
     min_commute_count INTEGER NOT NULL,
     max_commute_count INTEGER NOT NULL,
-    resale_percent INTEGER NOT NULL
+    resale_percent INTEGER NOT NULL,
+    starting_commute_count INTEGER NOT NULL DEFAULT 0,
+    UNIQUE(vehicle_type_id, description)
 );
 """
 
@@ -200,15 +203,69 @@ async def alter_inventory_tables(pool):
 async def reset_vehicle_condition_table(pool):
     async with pool.acquire() as conn:
         await conn.execute(RESET_VEHICLE_CONDITION_SQL)
-        await conn.execute("""
-            INSERT INTO cd_vehicle_condition (description, min_commute_count, max_commute_count, resale_percent) VALUES
-            ('Brand New', 0, 50, 85),
-            ('Good Condition', 51, 100, 70),
-            ('Fair Condition', 101, 150, 50),
-            ('Poor Condition', 151, 200, 30),
-            ('Broken Down', 201, 202, 0);
-        """)
-        print("✅ Vehicle condition table reset and seeded.")
+        print("✅ Vehicle condition table reset.")
+
+async def seed_vehicle_types(pool):
+    vehicle_types = [
+        ("Blue Car", 10000, "🚙"),
+        ("Red Car", 25000, "🚗"),
+        ("Sports Car", 100000, "🏎️"),
+        ("Pickup Truck", 30000, "🛻"),
+        ("Bike", 1500, "🚲"),
+    ]
+    async with pool.acquire() as conn:
+        for name, cost, emoji in vehicle_types:
+            await conn.execute(
+                """
+                INSERT INTO cd_vehicle_type (name, cost, emoji)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (name) DO NOTHING
+                """,
+                name,
+                cost,
+                emoji,
+            )
+    print("✅ Seeded vehicle types.")
+
+async def seed_vehicle_conditions(pool):
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("SELECT id, name FROM cd_vehicle_type;")
+        vehicle_type_map = {r['name']: r['id'] for r in rows}
+
+        conditions_data = []
+
+        # Conditions template for most vehicles (starting_commute_count = 0)
+        standard_conditions = [
+            ('Brand New', 0, 50, 85, 0),
+            ('Good Condition', 51, 100, 70, 0),
+            ('Fair Condition', 101, 150, 50, 0),
+            ('Poor Condition', 151, 200, 30, 0),
+            ('Broken Down', 201, 202, 0, 0),
+        ]
+
+        for vehicle_name, vehicle_id in vehicle_type_map.items():
+            if vehicle_name == 'Blue Car':  # Beater car special starting_commute_count on 'Poor Condition'
+                conditions_data.extend([
+                    (vehicle_id, 'Brand New', 0, 50, 85, 0),
+                    (vehicle_id, 'Good Condition', 51, 100, 70, 0),
+                    (vehicle_id, 'Fair Condition', 101, 150, 50, 0),
+                    (vehicle_id, 'Poor Condition', 151, 200, 30, 151),  # special starting count
+                    (vehicle_id, 'Broken Down', 201, 202, 0, 0),
+                ])
+            else:
+                for desc, min_c, max_c, resale, start_c in standard_conditions:
+                    conditions_data.append((vehicle_id, desc, min_c, max_c, resale, start_c))
+
+        await conn.executemany(
+            """
+            INSERT INTO cd_vehicle_condition 
+                (vehicle_type_id, description, min_commute_count, max_commute_count, resale_percent, starting_commute_count)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (vehicle_type_id, description) DO NOTHING
+            """,
+            conditions_data,
+        )
+    print("✅ Seeded vehicle conditions with starting commute counts.")
 
 @bot.event
 async def on_ready():
@@ -219,6 +276,8 @@ async def on_ready():
         await create_inventory_tables(pool)
         await reset_vehicle_condition_table(pool)
         await alter_inventory_tables(pool)
+        await seed_vehicle_types(pool)
+        await seed_vehicle_conditions(pool)
         await seed_grocery_categories(pool)
         await seed_grocery_types(pool)
 
