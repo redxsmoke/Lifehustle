@@ -360,3 +360,5 @@ class GroceryStashPaginationView(View):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # TODO: Add your pagination logic here later
+
+

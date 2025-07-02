@@ -96,3 +96,21 @@ async def reset_user_finances_table(pool):
             );
         """)
         print("✅ user_finances table recreated with TIMESTAMPTZ.")
+
+async def get_grocery_stash(pool, user_id):
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("""
+            SELECT 
+                cgc.name AS category,
+                cgc.emoji AS category_emoji,
+                cgt.name AS item_name,
+                cgt.emoji AS item_emoji,
+                ugi.quantity,
+                ugi.expiration_date
+            FROM user_grocery_inventory ugi 
+            JOIN cd_grocery_type cgt ON cgt.id = ugi.grocery_type_id
+            JOIN cd_grocery_category cgc ON cgc.id = ugi.grocery_category_id
+            WHERE ugi.user_id = $1 AND ugi.sold_at IS NULL
+            ORDER BY cgc.name, cgt.name;
+        """, user_id)
+    return rows

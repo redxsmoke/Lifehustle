@@ -21,7 +21,6 @@ from constants import (
     COLOR_RED,
 )
 
-
 from views import (
     CommuteButtons,
     TransportationShopButtons,
@@ -106,7 +105,6 @@ def register_commands(tree: app_commands.CommandTree):
     @tree.command(name="deposit", description="Deposit money from checking to savings")
     @app_commands.describe(amount="Amount to deposit")
     async def deposit(interaction: Interaction, amount: str):
-        from utilities import parse_amount
         parsed_amount = parse_amount(amount)
         if parsed_amount is None:
             await interaction.response.send_message(embed=embed_message(
@@ -141,7 +139,6 @@ def register_commands(tree: app_commands.CommandTree):
     @tree.command(name="withdraw", description="Withdraw money from savings to checking")
     @app_commands.describe(amount="Amount to withdraw")
     async def withdraw(interaction: Interaction, amount: str):
-        from utilities import parse_amount
         parsed_amount = parse_amount(amount)
         if parsed_amount is None:
             await interaction.response.send_message(embed=embed_message(
@@ -186,11 +183,9 @@ def register_commands(tree: app_commands.CommandTree):
         await interaction.response.send_message(embed=embed_message(
             "🚗 Commute", "Choose your commute method:"), view=view, ephemeral=True)
 
-    
     @tree.command(name="paycheck", description=f"Claim your paycheck (${PAYCHECK_AMOUNT:,}) every 12h")
     async def paycheck(interaction: Interaction):
         from globals import pool
-        # Ensure the DB pool is initialized
         if pool is None:
             await interaction.response.send_message(
                 "Database is not ready yet. Please try again in a moment.",
@@ -201,7 +196,6 @@ def register_commands(tree: app_commands.CommandTree):
         user_id = interaction.user.id
         now = datetime.now(timezone.utc)
 
-        # Fetch or initialize this user’s finance record
         finances = await get_user_finances(pool, user_id)
         if finances is None:
             finances = {
@@ -211,7 +205,6 @@ def register_commands(tree: app_commands.CommandTree):
                 'last_paycheck_claimed': datetime.fromtimestamp(0, tz=timezone.utc)
             }
 
-        # Parse last claim time
         last_claim = finances['last_paycheck_claimed']
         if not isinstance(last_claim, datetime):
             try:
@@ -219,7 +212,6 @@ def register_commands(tree: app_commands.CommandTree):
             except:
                 last_claim = datetime.fromtimestamp(0, tz=timezone.utc)
 
-        # Check cooldown
         elapsed = (now - last_claim).total_seconds()
         if elapsed < PAYCHECK_COOLDOWN_SECONDS:
             remaining = PAYCHECK_COOLDOWN_SECONDS - elapsed
@@ -232,18 +224,15 @@ def register_commands(tree: app_commands.CommandTree):
             ), ephemeral=True)
             return
 
-        # Grant paycheck and update timestamp
         finances['checking_account_balance'] += PAYCHECK_AMOUNT
         finances['last_paycheck_claimed'] = now
         await upsert_user_finances(pool, user_id, finances)
 
-        # Send confirmation
         await interaction.response.send_message(embed=embed_message(
             "💵 Paycheck Claimed",
             f"> You got ${PAYCHECK_AMOUNT:,}!\n💰 New Balance: ${finances['checking_account_balance']:,}",
             COLOR_GREEN
         ), ephemeral=True)
-
 
     @tree.command(name="startcategories", description="Start a categories game round")
     @app_commands.describe(category="Choose the category to play")
@@ -415,18 +404,11 @@ def register_commands(tree: app_commands.CommandTree):
             return
 
         elif category.value == "groceries":
-            with open("shop_items.json", "r", encoding="utf-8") as f:
-                item_data = json.load(f)
+            from db_user import get_grocery_stash
 
-            name_to_category = {
-                f"{item['emoji']} {item['name']}": item.get("category", "Misc")
-                for item in item_data
-            }
+            groceries = await get_grocery_stash(pool, user_id)
 
-            groceries = [item for item in inventory if isinstance(item, str)]
-            counts = Counter(groceries)
-
-            if not counts:
+            if not groceries:
                 embed = discord.Embed(
                     title="🛒 Your Groceries",
                     description="You don’t have any groceries yet.",
@@ -435,33 +417,28 @@ def register_commands(tree: app_commands.CommandTree):
                 await interaction.followup.send(embed=embed)
                 return
 
+            # Group groceries by category
             categorized = defaultdict(list)
-            for item, count in counts.items():
-                category_name = name_to_category.get(item, "Misc").capitalize()
-                categorized[category_name].append(f"> {item} — {count}")
+            for row in groceries:
+                line = f"> {row['item_emoji']} **{row['item_name']}** — {row['quantity']}x (exp: {row['expiration_date']})"
+                key = f"{row['category_emoji']} {row['category']}"
+                categorized[key].append(line)
 
+            # Create paginated embeds
             embeds = []
-            for cat, items in sorted(categorized.items()):
-                emoji = {
-                    "Produce": "🥬",
-                    "Dairy": "🧀",
-                    "Protein": "🍖",
-                    "Snacks": "🍪",
-                    "Baked": "🍞",
-                    "Misc": "📦"
-                }.get(cat, "📦")
-                embeds.append(discord.Embed(
-                    title=f"{emoji} {cat}",
-                    description="\n".join(items),
+            for category_name, lines in categorized.items():
+                embed = discord.Embed(
+                    title=category_name,
+                    description="\n".join(lines),
                     color=discord.Color.green()
-                ))
+                )
+                embeds.append(embed)
 
             if len(embeds) == 1:
                 await interaction.followup.send(embed=embeds[0])
             else:
                 view = GroceryStashPaginationView(interaction.user.id, embeds)
                 await view.send(interaction)
-
 
     @tree.command(name="purge", description="Delete last 100 messages to clear clutter")
     async def purge(interaction: discord.Interaction):
