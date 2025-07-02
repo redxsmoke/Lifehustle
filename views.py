@@ -309,7 +309,7 @@ class SellFromStashView(View):
 # ConfirmSellButton and SellVehicleView (using SQL vehicle id and resale_value)
 class ConfirmSellButton(Button):
     def __init__(self, vehicle_id: int, resale_value: int):
-        super().__init__(label="Sell", style=discord.ButtonStyle.red)
+        super().__init__(label="Sell", style=discord.ButtonStyle.danger)
         self.vehicle_id = vehicle_id
         self.resale_value = resale_value
 
@@ -343,3 +343,12 @@ class SellVehicleView(View):
     def __init__(self, vehicle_id: int, resale_value: int):
         super().__init__(timeout=None)
         self.add_item(ConfirmSellButton(vehicle_id, resale_value))
+
+
+import discord
+from discord.ui import View
+
+class GroceryCategoryView(View):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Minimal stub, add your real code here later
