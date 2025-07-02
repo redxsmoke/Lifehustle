@@ -258,14 +258,16 @@ async def on_ready():
 
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
+    register_commands(tree)
+    print("✅ Commands registered.")
+
     try:
         await tree.sync()
         print("✅ Slash commands synced.")
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
 
-    register_commands(tree)
-    print("✅ Commands registered.")
+
 
 # --- Run the Bot ---
 if __name__ == "__main__":
