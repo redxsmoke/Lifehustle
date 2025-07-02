@@ -235,6 +235,19 @@ async def setup_user_finances_table(pool):
         await conn.execute(CREATE_USER_FINANCES_SQL)
     print("✅ user_finances table ensured.")
 
+
+async def rename_username_column(pool):
+    async with pool.acquire() as conn:
+        result = await conn.fetchrow("""
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name = 'users' AND column_name = 'username';
+        """)
+        if result:
+            await conn.execute("""ALTER TABLE users RENAME COLUMN username TO user_name;""")
+            print("✅ Renamed 'username' to 'user_name'.")
+        else:
+            print("ℹ️ Column 'username' does not exist or was already renamed.")
+
 # --- Bot Events & Startup ---
 async def create_pool():
     ssl_context = ssl.create_default_context()
@@ -258,7 +271,7 @@ async def on_ready():
         await seed_grocery_types(globals.pool)
         await setup_user_finances_table(globals.pool)
         await reset_user_finances_table(globals.pool)
-        await rename_username_column(pool)
+        await rename_username_column(globals.pool)
 
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 

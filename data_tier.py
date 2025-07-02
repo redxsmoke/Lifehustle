@@ -74,12 +74,6 @@ async def seed_grocery_categories(pool):
             )
     print("✅ Seeded grocery categories with emojis.")
 
-import asyncpg
 
-async def rename_username_column(pool):
-    async with pool.acquire() as conn:
-        await conn.execute("""
-            ALTER TABLE users RENAME COLUMN username TO user_name;
-        """)
-    print("✅ Renamed column 'username' to 'user_name'.")
-    
+
+
