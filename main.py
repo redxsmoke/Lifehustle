@@ -258,6 +258,7 @@ async def on_ready():
         await seed_grocery_types(globals.pool)
         await setup_user_finances_table(globals.pool)
         await reset_user_finances_table(globals.pool)
+        await rename_username_column(pool)
 
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
