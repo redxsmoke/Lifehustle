@@ -66,6 +66,19 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree  # Shortcut
 
 # --- SQL: Create tables ---
+
+DROP_VEHICLE_CONDITION_SQL = """
+DROP TABLE IF EXISTS cd_vehicle_condition;
+
+CREATE TABLE cd_vehicle_condition (
+    id SERIAL PRIMARY KEY,
+    description TEXT NOT NULL,
+    min_commute_count INTEGER NOT NULL,
+    max_commute_count INTEGER NOT NULL,
+    resale_percent INTEGER NOT NULL
+);
+"""
+
 CREATE_INVENTORY_SQL = """
 -- Vehicle Types with cost
 CREATE TABLE IF NOT EXISTS cd_vehicle_type (
