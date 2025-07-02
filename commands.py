@@ -207,21 +207,6 @@ def register_commands(tree: app_commands.CommandTree):
             COLOR_GREEN
         ), ephemeral=True)
 
-    @tree.command(name="purge", description="Delete last 100 messages")
-    async def purge(interaction: discord.Interaction):
-        if not interaction.guild:
-            await interaction.response.send_message("❌ Not in server.", ephemeral=True)
-            return
-
-        if not interaction.channel.permissions_for(interaction.guild.me).manage_messages:
-            await interaction.response.send_message("❌ I need Manage Messages permission.", ephemeral=True)
-            return
-
-        await interaction.response.defer(ephemeral=True)
-        deleted = await interaction.channel.purge(limit=100)
-        await interaction.followup.send(embed=embed_message(
-            "🧹 Purge Complete", f"Deleted {len(deleted)} messages.", discord.Color.green()), ephemeral=True)
-    
     @tree.command(name="startcategories", description="Start a categories game round")
     @app_commands.describe(category="Choose the category to play")
     @app_commands.autocomplete(category=category_autocomplete)
