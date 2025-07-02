@@ -1,6 +1,5 @@
 from collections import defaultdict, Counter
 import json
-from main import pool
 import random
 import asyncio
 import time
