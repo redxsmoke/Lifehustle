@@ -3,12 +3,8 @@ import random
 import discord
 from discord.ui import View, Button
 
-from utilities import (
-    generate_random_plate,
-    BIKE_COLORS,
-    CAR_COLORS,
-)
-from vehicle_logic import handle_vehicle_purchase, handle_purchase, handle_commute
+import utilities 
+import vehicle_logic 
 from db_user import get_user, upsert_user
 from globals import pool
 
