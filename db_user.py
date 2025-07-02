@@ -32,27 +32,9 @@ async def upsert_user(pool, user_id: int, data: dict):
 
 
 # ---------- USER_FINANCES TABLE (Money, Debts, Paycheck Timestamp) ----------
-
-async def get_user_finances(pool, user_id: int):
-    async with pool.acquire() as conn:
-        row = await conn.fetchrow('SELECT * FROM user_finances WHERE user_id = $1', user_id)
-        if row:
-            data = dict(row)
-            # Normalize last_paycheck_claimed to a datetime (or epoch)
-            if data.get('last_paycheck_claimed') is None:
-                data['last_paycheck_claimed'] = datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc)
-            elif not isinstance(data['last_paycheck_claimed'], datetime.datetime):
-                try:
-                    data['last_paycheck_claimed'] = datetime.datetime.fromisoformat(str(data['last_paycheck_claimed']))
-                except Exception:
-                    data['last_paycheck_claimed'] = datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc)
-            return data
-        return None
-
-
 async def upsert_user_finances(pool, user_id: int, finances: dict):
     async with pool.acquire() as conn:
-        # Ensure last_paycheck_claimed is always a datetime object
+        # Ensure last_paycheck_claimed is always a timezone-aware datetime object
         last_claim = finances.get('last_paycheck_claimed')
         if last_claim is None:
             last_claim = datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc)
@@ -61,6 +43,9 @@ async def upsert_user_finances(pool, user_id: int, finances: dict):
         elif not isinstance(last_claim, datetime.datetime):
             try:
                 last_claim = datetime.datetime.fromisoformat(str(last_claim))
+                if last_claim.tzinfo is None:
+                    # Assume UTC if no timezone info present
+                    last_claim = last_claim.replace(tzinfo=datetime.timezone.utc)
             except Exception:
                 last_claim = datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc)
 
@@ -78,3 +63,4 @@ async def upsert_user_finances(pool, user_id: int, finances: dict):
              finances.get('debt_balance', 0),
              last_claim
         )
+
