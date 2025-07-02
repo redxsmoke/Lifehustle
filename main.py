@@ -35,6 +35,7 @@ from config import (
 
 from db_pool import create_pool, init_db
 from db_user import get_user, upsert_user
+
 from globals import pool
 from defaults import DEFAULT_USER
 
@@ -46,10 +47,9 @@ from autocomplete import (
 
 from category_loader import load_categories
 categories = load_categories()
-
 from utilities import handle_commute, handle_purchase
 from vehicle_logic import handle_vehicle_purchase
-
+from embeds import embed_message
 from views import (
     CommuteButtons,
     TransportationShopButtons,

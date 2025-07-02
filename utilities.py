@@ -8,7 +8,7 @@ import discord
 
 from db_user import get_user, upsert_user
 from globals import pool
-from main import embed_message
+from embeds import embed_message
 
 #HELPER FUNCTIONS
 
