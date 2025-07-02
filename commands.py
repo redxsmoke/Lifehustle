@@ -440,4 +440,109 @@ async def purge(interaction: discord.Interaction):
 
 
 @tree.command(name="stash", description="View your inventory by category.")
-@app_commands.describe(category="Which category do you want to check
+@app_commands.describe(category="Which category do you want to check?")
+@app_commands.choices(category=[
+    app_commands.Choice(name="Transportation", value="transportation"),
+    app_commands.Choice(name="Groceries", value="groceries")
+])
+async def stash(interaction: discord.Interaction, category: app_commands.Choice[str]):
+    await interaction.response.defer()
+
+    user_id = interaction.user.id
+    user = await get_user(pool, user_id)
+
+    if not user:
+        await interaction.followup.send("❌ You don’t have an account yet. Use `/start` first.")
+        return
+
+    inventory = user.get("inventory", [])
+
+    if category.value == "transportation":
+        vehicles = [item for item in inventory if isinstance(item, dict) and item.get("type") in {
+            "Bike", "Beater Car", "Sedan Car", "Sports Car", "Pickup Truck"
+        }]
+        if not vehicles:
+            await interaction.followup.send("You don’t own any transportation items yet.")
+            return
+
+        desc_lines = []
+        for item in vehicles:
+            vehicle_type = item.get("type", "Unknown")
+            color = item.get("color", "Unknown")
+            condition = item.get("condition", "Unknown")
+            commute_count = item.get("commute_count", 0)
+            purchase_date_str = item.get("purchase_date")
+            purchase_date = datetime.date.fromisoformat(purchase_date_str) if purchase_date_str else datetime.date.today()
+
+            if vehicle_type == "Bike":
+                description = bike_description(purchase_date, condition)
+                desc_lines.append(f"🚴 **{vehicle_type}** — {color} — {description} ({condition})")
+
+            else:  # Cars/Trucks
+                tag = item.get("tag", "N/A")
+                emoji = {
+                    "Beater Car": "🚙",
+                    "Sedan Car": "🚗",
+                    "Sports Car": "🏎️",
+                    "Pickup Truck": "🛻"
+                }.get(vehicle_type, "🚗")
+                desc_lines.append(f"{emoji} **{vehicle_type}** — {color} — Tag: {tag} — {condition}")
+
+        embed = discord.Embed(
+            title="🚗 Your Vehicles",
+            description="\n".join(desc_lines),
+            color=discord.Color.teal()
+        )
+
+        view = SellFromStashView(user_id, vehicles)
+        await interaction.followup.send(embed=embed, view=view)
+        return
+   
+    elif category.value == "groceries":
+        from collections import Counter, defaultdict
+
+        with open("shop_items.json", "r", encoding="utf-8") as f:
+            item_data = json.load(f)
+
+        name_to_category = {
+            f"{item['emoji']} {item['name']}": item.get("category", "Misc") for item in item_data
+        }
+
+        groceries = [item for item in inventory if isinstance(item, str)]
+        counts = Counter(groceries)
+
+        if not counts:
+            embed = discord.Embed(
+                title="🛒 Your Groceries",
+                description="You don’t have any groceries yet.",
+                color=discord.Color.green()
+            )
+            await interaction.followup.send(embed=embed)
+            return
+
+        categorized = defaultdict(list)
+        for item, count in counts.items():
+            category_name = name_to_category.get(item, "Misc").capitalize()
+            categorized[category_name].append(f"> {item} -{count}")
+
+        embeds = []
+        for cat, items in sorted(categorized.items()):
+            emoji = {
+                "Produce": "🥬",
+                "Dairy": "🧀",
+                "Protein": "🍖",
+                "Snacks": "🍪",
+                "Baked": "🍞",
+                "Misc": "📦"
+            }.get(cat, "📦")
+            embeds.append(discord.Embed(
+                title=f"{emoji} {cat}",
+                description="\n".join(items),
+                color=discord.Color.green()
+            ))
+
+        if len(embeds) == 1:
+            await interaction.followup.send(embed=embeds[0])
+        else:
+            view = GroceryStashPaginationView(interaction.user.id, embeds)
+            await view.send(interaction)
