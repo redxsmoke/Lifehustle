@@ -2,11 +2,20 @@ import datetime
 import random
 import discord
 from discord.ui import View, Button
+from discord import Interaction, Embed
 
-import utilities 
-import vehicle_logic 
+import utilities
+import vehicle_logic
 from db_user import get_user, upsert_user
 from globals import pool
+
+# Constants for colors etc. (define or import as you have them)
+BIKE_COLORS = ["Red", "Blue", "Green", "Black", "White"]
+CAR_COLORS = ["Blue", "Red", "Black", "White", "Silver"]
+
+
+def generate_random_plate():
+    return ''.join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", k=8))
 
 
 # COMMUTE BUTTONS VIEW
@@ -34,7 +43,7 @@ class CommuteButtons(View):
     async def on_timeout(self):
         for child in self.children:
             child.disabled = True
-        
+
         if self.message:
             try:
                 await self.message.edit(
@@ -43,6 +52,65 @@ class CommuteButtons(View):
                 )
             except Exception as e:
                 print(f"[ERROR] Failed to edit message on timeout: {e}")
+
+
+# VEHICLE PURCHASE HANDLER
+async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, cost: int):
+    user_id = interaction.user.id
+    user = await get_user(pool, user_id)
+    if user is None:
+        await interaction.response.send_message("❌ You don't have an account yet. Use `/start`.", ephemeral=True)
+        return
+
+    if user["checking_account"] < cost:
+        await interaction.response.send_message(f"🚫 Not enough money to buy {item.get('type', 'that item')}.", ephemeral=True)
+        return
+
+    vehicle_type_id = item.get("vehicle_type_id")
+    if vehicle_type_id is None:
+        await interaction.response.send_message("🚫 Internal error: No vehicle_type_id provided.", ephemeral=True)
+        return
+
+    # Check bike ownership restriction
+    if vehicle_type_id == 1:  # Assuming 1 = Bike
+        exists = await pool.fetchrow(
+            "SELECT 1 FROM user_vehicle_inventory WHERE user_id = $1 AND vehicle_type_id = 1 LIMIT 1", user_id
+        )
+        if exists:
+            await interaction.response.send_message("🚲 You already own a bike. You can't buy another one.", ephemeral=True)
+            return
+    else:
+        # Check if user owns any car/truck (vehicle_type_id != 1)
+        exists = await pool.fetchrow(
+            "SELECT 1 FROM user_vehicle_inventory WHERE user_id = $1 AND vehicle_type_id != 1 LIMIT 1", user_id
+        )
+        if exists:
+            await interaction.response.send_message("🚗 You already own a car or truck. You can't buy another one.", ephemeral=True)
+            return
+
+    # Deduct cost and update user
+    user["checking_account"] -= cost
+    await upsert_user(pool, user_id, user)
+
+    plate = item.get("plate") or generate_random_plate()
+    color = item.get("color", "Unknown")
+    condition = item.get("condition", "Pristine")
+    commute_count = item.get("commute_count", 0)
+    resale_value = cost  # or adjust based on condition if desired
+
+    await pool.execute(
+        """
+        INSERT INTO user_vehicle_inventory (
+            user_id, vehicle_type_id, plate_number, color, condition, commute_count, resale_value
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        """,
+        user_id, vehicle_type_id, plate, color, condition, commute_count, resale_value
+    )
+
+    await interaction.response.send_message(
+        f"✅ You purchased a {item.get('type', 'vehicle')} for ${cost:,}!",
+        ephemeral=True
+    )
 
 
 # TRANSPORTATION SHOP BUTTONS VIEW
@@ -57,6 +125,7 @@ class TransportationShopButtons(View):
             condition = "Pristine"
             bike_item = {
                 "type": "Bike",
+                "vehicle_type_id": 1,  # Must match your DB vehicle_type_id for bike
                 "color": color,
                 "condition": condition,
                 "purchase_date": datetime.date.today().isoformat(),
@@ -73,6 +142,7 @@ class TransportationShopButtons(View):
             color = random.choice(CAR_COLORS)
             car_item = {
                 "type": "Beater Car",
+                "vehicle_type_id": 2,  # Replace with your actual ID for Beater Car
                 "plate": plate,
                 "color": color,
                 "condition": "Heavily Used",
@@ -83,7 +153,7 @@ class TransportationShopButtons(View):
         except Exception:
             await interaction.response.send_message("🚫 Failed to buy Beater Car. Try again later.", ephemeral=True)
 
-    # Add other car buttons similarly...
+    # Add other car buttons similarly, setting vehicle_type_id accordingly
 
 
 # SELL FROM STASH VIEW
@@ -95,7 +165,8 @@ class SellFromStashView(View):
         self.pending_confirmation = {}  # Tracks items awaiting confirmation keyed by custom_id
 
         for vehicle in vehicles:
-            custom_id = f"sell_{vehicle.get('tag', vehicle.get('plate', id(vehicle)))}"
+            plate_or_tag = vehicle.get('plate') or vehicle.get('tag') or str(id(vehicle))
+            custom_id = f"sell_{plate_or_tag}"
             btn = Button(
                 label=self.make_button_label(vehicle),
                 style=discord.ButtonStyle.danger,
@@ -111,7 +182,7 @@ class SellFromStashView(View):
             "Sedan Car": "🚗",
             "Sports Car": "🏎️",
             "Pickup Truck": "🛻"
-        }.get(item["type"], "❓")
+        }.get(item.get("type"), "❓")
         desc = item.get("tag") or item.get("color", "Unknown")
         cond = item.get("condition", "Unknown")
 
@@ -128,7 +199,7 @@ class SellFromStashView(View):
             "Heavily Used": 0.25,
             "Rusted": 0.10
         }
-        base_price = base_prices.get(item["type"], 0)
+        base_price = base_prices.get(item.get("type"), 0)
         percent = resale_percent.get(cond, 0.10)
         resale = int(base_price * percent)
 
@@ -140,14 +211,11 @@ class SellFromStashView(View):
                 await interaction.response.send_message("This isn't your stash.", ephemeral=True)
                 return
 
-            # Save pending item to confirm keyed by custom_id
             self.pending_confirmation[custom_id] = item
 
-            # Disable all buttons except the one clicked
             for child in self.children:
                 child.disabled = True
 
-            # Confirm and Cancel buttons
             confirm_btn = Button(label="Confirm Sale", style=discord.ButtonStyle.success, custom_id=f"confirm_{custom_id}")
             cancel_btn = Button(label="Cancel", style=discord.ButtonStyle.secondary, custom_id=f"cancel_{custom_id}")
 
@@ -158,10 +226,10 @@ class SellFromStashView(View):
                 if i.user.id != self.user_id:
                     await i.response.send_message("This isn't your stash.", ephemeral=True)
                     return
-                # Restore original buttons
                 self.clear_items()
                 for vehicle in self.vehicles:
-                    cid = f"sell_{vehicle.get('tag', vehicle.get('plate', id(vehicle)))}"
+                    plate_or_tag = vehicle.get('plate') or vehicle.get('tag') or str(id(vehicle))
+                    cid = f"sell_{plate_or_tag}"
                     btn = Button(
                         label=self.make_button_label(vehicle),
                         style=discord.ButtonStyle.danger,
@@ -179,7 +247,7 @@ class SellFromStashView(View):
             self.add_item(cancel_btn)
 
             await interaction.response.edit_message(
-                content=f"Are you sure you want to sell your {item['type']} ({item.get('color', 'Unknown')}, {item.get('condition', 'Unknown')})?",
+                content=f"Are you sure you want to sell your {item.get('type')} ({item.get('color', 'Unknown')}, {item.get('condition', 'Unknown')})?",
                 view=self
             )
         return callback
@@ -193,6 +261,18 @@ class SellFromStashView(View):
         if not user:
             await interaction.response.send_message("You don’t have an account yet.", ephemeral=True)
             return
+
+        # Remove vehicle by plate number from DB
+        plate = item.get("plate")
+        if not plate:
+            await interaction.response.send_message("❌ Cannot find vehicle plate to remove.", ephemeral=True)
+            return
+
+        # Remove from DB
+        await pool.execute(
+            "DELETE FROM user_vehicle_inventory WHERE user_id = $1 AND plate_number = $2",
+            self.user_id, plate
+        )
 
         condition = item.get("condition", "Unknown")
         base_prices = {
@@ -208,230 +288,58 @@ class SellFromStashView(View):
             "Heavily Used": 0.25,
             "Rusted": 0.10
         }
-
-        base_price = base_prices.get(item["type"], 0)
+        base_price = base_prices.get(item.get("type"), 0)
         percent = resale_percent.get(condition, 0.10)
         resale = int(base_price * percent)
 
-        inventory = user.get("inventory", [])
-
-        def is_same_vehicle(v):
-            if not isinstance(v, dict):
-                return False
-            if "plate" in item and "plate" in v and item["plate"] == v["plate"]:
-                return True
-            if "tag" in item and "tag" in v and item["tag"] == v["tag"]:
-                return True
-            return v == item  # fallback exact dict match
-
-        new_inventory = [v for v in inventory if not is_same_vehicle(v)]
-
-        if len(new_inventory) == len(inventory):
-            await interaction.response.send_message(
-                "❌ That item is no longer in your stash.",
-                ephemeral=True
-            )
-            return
-
-        user["inventory"] = new_inventory
+        # Credit user
         user["checking_account"] += resale
         await upsert_user(pool, self.user_id, user)
 
         self.clear_items()
         await interaction.response.edit_message(
-            content=f"✅ You sold your {item['type']} for ${resale:,} ({condition}).",
+            content=f"✅ You sold your {item.get('type')} for ${resale:,} ({condition}).",
             view=None
         )
 
 
-# GROCERY CATEGORY VIEW (pagination)
-class GroceryCategoryView(View):
-    def __init__(self, pages, user_id, timeout=60):
-        super().__init__(timeout=timeout)
-        self.pages = pages  # List of tuples: (category_title, items_list)
-        self.user_id = user_id
-        self.current_page = 0
-        self.message = None
+# You can keep the other views (GroceryCategoryView, GroceryStashPaginationView, SubmitWordModal)
+# unchanged unless you want them converted to SQL-backed inventories too.
 
-        # Pagination buttons
-        self.previous_button.disabled = True
-        if len(pages) <= 1:
-            self.next_button.disabled = True
+# ConfirmSellButton and SellVehicleView (using SQL vehicle id and resale_value)
+class ConfirmSellButton(Button):
+    def __init__(self, vehicle_id: int, resale_value: int):
+        super().__init__(label="Sell", style=discord.ButtonStyle.red)
+        self.vehicle_id = vehicle_id
+        self.resale_value = resale_value
 
-        # Load buttons for the first page
-        self.load_page_buttons()
+    async def callback(self, interaction: Interaction):
+        from db_helpers import remove_vehicle_by_id  # Your helper to delete vehicle by id
+        from db_user import get_user, upsert_user
 
-    def load_page_buttons(self):
-        # Remove all existing item buttons first (except prev/next)
-        for child in list(self.children):
-            if getattr(child, "custom_id", None) and child.custom_id not in ("previous", "next"):
-                self.remove_item(child)
+        user_id = interaction.user.id
+        user = await get_user(pool, user_id)
 
-        # Add buttons for current page items
-        _, items = self.pages[self.current_page]
-        for item in items:
-            btn = Button(
-                label=f"{item['emoji']} {item['name']} - ${item['price']}",
-                style=discord.ButtonStyle.primary,
-                custom_id=f"buy_{item['id']}"
-            )
-            btn.callback = self.make_purchase_callback(item)
-            self.add_item(btn)
+        if not user:
+            await interaction.response.send_message("❌ You don’t have an account.", ephemeral=True)
+            return
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("This is not your shop to use.", ephemeral=True)
-            return False
-        return True
+        await remove_vehicle_by_id(pool, self.vehicle_id)
 
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message:
-            await self.message.edit(view=self)
+        user["checking_account"] += self.resale_value
+        await upsert_user(pool, user_id, user)
 
-    def _get_embed(self):
-        title, items = self.pages[self.current_page]
-        desc = "\n".join(f"{item['emoji']} {item['name']} - ${item['price']}" for item in items)
-        embed = discord.Embed(title=title, description=desc, color=discord.Color.green())
-        embed.set_footer(text=f"Page {self.current_page + 1} of {len(self.pages)}")
-        return embed
-
-    async def send(self, interaction: discord.Interaction):
-        embed = self._get_embed()
-        self.message = await interaction.followup.send(embed=embed, view=self)
-
-    def make_purchase_callback(self, item):
-        async def callback(interaction: discord.Interaction):
-            if interaction.user.id != self.user_id:
-                await interaction.response.send_message("You cannot use this button.", ephemeral=True)
-                return
-
-            user = await get_user(pool, self.user_id)
-            if user is None:
-                await interaction.response.send_message("You don't have an account yet.", ephemeral=True)
-                return
-
-            balance = user.get("checking_account", 0)
-            if balance < item["price"]:
-                await interaction.response.send_message(
-                    f"🚫 You don't have enough money to buy {item['emoji']} {item['name']}.",
-                    ephemeral=True
-                )
-                return
-
-            # Deduct price and add to inventory
-            user["checking_account"] -= item["price"]
-            inventory = user.get("inventory", [])
-            inventory.append(f"{item['emoji']} {item['name']}")
-            user["inventory"] = inventory
-
-            await upsert_user(pool, self.user_id, user)
-
-            await interaction.response.send_message(
-                f"✅ You bought {item['emoji']} {item['name']} for ${item['price']:,}!",
-                ephemeral=True
-            )
-        return callback
-
-    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary, custom_id="previous")
-    async def previous_button(self, interaction: discord.Interaction, button: Button):
-        if self.current_page > 0:
-            self.current_page -= 1
-            button.disabled = self.current_page == 0
-            self.next_button.disabled = False
-            self.load_page_buttons()
-            embed = self._get_embed()
-            await interaction.response.edit_message(embed=embed, view=self)
-
-    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary, custom_id="next")
-    async def next_button(self, interaction: discord.Interaction, button: Button):
-        if self.current_page < len(self.pages) - 1:
-            self.current_page += 1
-            button.disabled = self.current_page == len(self.pages) - 1
-            self.previous_button.disabled = False
-            self.load_page_buttons()
-            embed = self._get_embed()
-            await interaction.response.edit_message(embed=embed, view=self)
-
-
-# GROCERY STASH PAGINATION VIEW
-class GroceryStashPaginationView(View):
-    def __init__(self, user_id, embeds, timeout=120):
-        super().__init__(timeout=timeout)
-        self.user_id = user_id
-        self.embeds = embeds
-        self.current_page = 0
-        self.message = None
-
-        # Disable prev button on first page
-        self.previous_button.disabled = True
-        if len(embeds) <= 1:
-            self.next_button.disabled = True
-
-    async def send(self, interaction: discord.Interaction):
-        self.message = await interaction.followup.send(embed=self.embeds[self.current_page], view=self)
-
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("This is not your inventory view.", ephemeral=True)
-            return False
-        return True
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message:
-            await self.message.edit(view=self)
-
-    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary, custom_id="stash_previous")
-    async def previous_button(self, interaction: discord.Interaction, button: Button):
-        if self.current_page > 0:
-            self.current_page -= 1
-            button.disabled = self.current_page == 0
-            self.next_button.disabled = False
-            await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
-
-    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary, custom_id="stash_next")
-    async def next_button(self, interaction: discord.Interaction, button: Button):
-        if self.current_page < len(self.embeds) - 1:
-            self.current_page += 1
-            button.disabled = self.current_page == len(self.embeds) - 1
-            self.previous_button.disabled = False
-            await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
-
-class SubmitWordModal(discord.ui.Modal, title="Submit a new word"):
-    def __init__(self, category: str):
-        super().__init__()
-        self.category = category
-
-        self.word_input = discord.ui.TextInput(
-            label="Enter your word",
-            placeholder="Type your word here...",
-            max_length=100,
-        )
-        self.add_item(self.word_input)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        word_raw = self.word_input.value.strip()
-
-        # Confirm to submitter
         await interaction.response.send_message(
-            f"✅ Thanks for your submission of '{word_raw}' in category '{self.category}'. Your word will be reviewed by a moderator.",
+            embed=Embed(
+                title="✅ Vehicle Sold",
+                description=f"You sold your vehicle for ${self.resale_value:,}.",
+                color=discord.Color.green()
+            ),
             ephemeral=True
         )
 
-        # Notify the moderator by DM
-        notify_user = interaction.client.get_user(NOTIFY_USER_ID)
-        if notify_user:
-            try:
-                await notify_user.send(
-                    f"📢 New word submission:\n"
-                    f"User: {interaction.user} ({interaction.user.id})\n"
-                    f"Category: {self.category}\n"
-                    f"Word: {word_raw}"
-                )
-            except Exception as e:
-                print(f"[ERROR] Failed to send DM to {NOTIFY_USER_ID}: {e}")
-        else:
-            print(f"[ERROR] Could not find user with ID {NOTIFY_USER_ID} to send DM.")
+
+class SellVehicleView(View):
+    def __init__(self, vehicle_id: int, resale_value: int):
+        super().__init__(timeout=None)
+        self.add_item(ConfirmSellButton(vehicle_id, resale_value))

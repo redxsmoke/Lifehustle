@@ -52,3 +52,27 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
     await upsert_user(pool, user_id, user)
 
     await interaction.response.send_message(f"✅ You purchased a {item.get('type', 'vehicle')} for ${cost:,}!", ephemeral=True)
+
+    async def get_user_vehicles(pool, user_id: int):
+    query = """
+    SELECT
+        cvt.name AS vehicle_type,
+        uvi.color,
+        uvi.appearance_description,
+        uvi.plate_number,
+        uvi.condition,
+        uvi.commute_count,
+        uvi.resale_value
+    FROM user_vehicle_inventory uvi
+    JOIN users u ON u.user_id = uvi.user_id
+    JOIN cd_vehicle_type cvt ON cvt.id = uvi.vehicle_type_id
+    WHERE u.user_id = $1
+    """
+    return await pool.fetch(query, user_id)
+
+
+#SELL VEHICLE HELPER
+async def remove_vehicle_by_id(pool, vehicle_id: int):
+    async with pool.acquire() as conn:
+        await conn.execute("DELETE FROM user_vehicle_inventory WHERE id = $1", vehicle_id)
+

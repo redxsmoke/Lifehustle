@@ -371,3 +371,7 @@ def normalize(text: str) -> str:
     # Remove leading/trailing whitespace
     text = text.strip()
     return text
+
+
+# db_helpers.py
+
