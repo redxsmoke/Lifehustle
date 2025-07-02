@@ -79,6 +79,9 @@ client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 import commands
 
+GUILD_ID = 1389059101165883482  # Replace with your guild ID (integer)
+guild = discord.Object(id=GUILD_ID)
+
 @client.event
 async def on_ready():
     global pool
@@ -87,8 +90,9 @@ async def on_ready():
         await init_db(pool)
 
     print(f'Logged in as {client.user} (ID: {client.user.id})')
-    await tree.sync()
-    print("Commands synced.")
+    # Sync commands only to your guild (faster than global)
+    await tree.sync(guild=guild)
+    print("Commands synced to guild.")
 
        
 
