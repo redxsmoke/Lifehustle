@@ -69,7 +69,8 @@ CREATE_INVENTORY_SQL = """
 CREATE TABLE IF NOT EXISTS cd_vehicle_type (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
-    cost INTEGER NOT NULL
+    cost INTEGER NOT NULL,
+    emoji TEXT -- added emoji here for vehicles
 );
 
 -- Vehicle Condition Thresholds
@@ -107,7 +108,8 @@ CREATE TABLE IF NOT EXISTS vehicle_ownership_history (
 -- Grocery Categories
 CREATE TABLE IF NOT EXISTS cd_grocery_category (
     id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL
+    name TEXT UNIQUE NOT NULL,
+    emoji TEXT -- added emoji here for grocery categories
 );
 
 -- Grocery Types with Category and Cost
@@ -115,7 +117,8 @@ CREATE TABLE IF NOT EXISTS cd_grocery_type (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
     category_id INTEGER NOT NULL REFERENCES cd_grocery_category(id),
-    cost INTEGER NOT NULL
+    cost INTEGER NOT NULL,
+    emoji TEXT -- added emoji here for grocery types
 );
 
 -- User Grocery Inventory
@@ -143,7 +146,8 @@ SELECT
     uvi.condition,
     vt.cost AS base_cost,
     uvi.resale_value,
-    uvi.created_at
+    uvi.created_at,
+    vt.emoji
 FROM user_vehicle_inventory uvi
 JOIN cd_vehicle_type vt ON uvi.vehicle_type_id = vt.id
 WHERE uvi.sold_at IS NULL
@@ -160,20 +164,20 @@ SELECT
     ugi.condition,
     gt.cost AS base_cost,
     ugi.resale_value,
-    ugi.created_at
+    ugi.created_at,
+    gt.emoji
 FROM user_grocery_inventory ugi
 JOIN cd_grocery_type gt ON ugi.grocery_type_id = gt.id
 WHERE ugi.sold_at IS NULL;
 """
 
-# --- SQL: Alter tables to add emoji columns ---
-INSERT INTO cd_grocery_category (name, emoji) VALUES
-  ('Produce', '🍎'),
-  ('Dairy', '🥛'),
-  ('Protein', '🍗'),
-  ('Snacks', '🍿'),
-  ('Beverages', '🥤')
-ON CONFLICT (name) DO NOTHING;
+# --- SQL: Alter tables to add emoji columns if needed (optional if you use CREATE TABLE IF NOT EXISTS) ---
+ALTER_INVENTORY_SQL = """
+ALTER TABLE cd_vehicle_type
+    ADD COLUMN IF NOT EXISTS emoji TEXT;
+
+ALTER TABLE cd_grocery_category
+    ADD COLUMN IF NOT EXISTS emoji TEXT;
 
 ALTER TABLE cd_grocery_type
     ADD COLUMN IF NOT EXISTS emoji TEXT;
@@ -187,7 +191,28 @@ async def create_inventory_tables(pool):
 async def alter_inventory_tables(pool):
     async with pool.acquire() as conn:
         await conn.execute(ALTER_INVENTORY_SQL)
-        print("✅ Altered inventory tables to add emoji columns.")
+        print("✅ Altered inventory tables to add emoji columns if missing.")
+
+async def seed_grocery_categories(pool):
+    grocery_categories = [
+        ('Produce', '🍎'),
+        ('Dairy', '🥛'),
+        ('Protein', '🍗'),
+        ('Snacks', '🍿'),
+        ('Beverages', '🥤'),
+    ]
+    async with pool.acquire() as conn:
+        for name, emoji in grocery_categories:
+            await conn.execute(
+                """
+                INSERT INTO cd_grocery_category (name, emoji)
+                VALUES ($1, $2)
+                ON CONFLICT (name) DO NOTHING
+                """,
+                name,
+                emoji,
+            )
+    print("✅ Seeded grocery categories with emojis.")
 
 @bot.event
 async def on_ready():
@@ -197,8 +222,7 @@ async def on_ready():
         await init_db(pool)
         await create_inventory_tables(pool)
         await alter_inventory_tables(pool)
-        # Optionally seed your data here with your own seed function
-        # await seed_tables(pool)
+        await seed_grocery_categories(pool)
 
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
@@ -209,7 +233,6 @@ async def on_ready():
         print(f"❌ Error syncing commands: {e}")
 
     print("✅ [Main] after sync, tree has:", [c.name for c in tree.walk_commands()])
-
 
 # Register slash commands after bot defined
 from commands import register_commands
