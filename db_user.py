@@ -64,3 +64,17 @@ async def upsert_user_finances(pool, user_id: int, finances: dict):
              last_claim
         )
 
+async def get_user_finances(pool, user_id: int):
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM user_finances WHERE user_id = $1",
+            user_id
+        )
+        if row:
+            return {
+                'checking_account_balance': row['checking_account_balance'],
+                'savings_account_balance': row['savings_account_balance'],
+                'debt_balance': row['debt_balance'],
+                'last_paycheck_claimed': row['last_paycheck_claimed']
+            }
+        return None
