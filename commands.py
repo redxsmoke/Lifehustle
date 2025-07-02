@@ -358,6 +358,7 @@ def register_commands(tree: app_commands.CommandTree):
         app_commands.Choice(name="Groceries", value="groceries")
     ])
     async def stash(interaction: discord.Interaction, category: app_commands.Choice[str]):
+        from globals import pool
         await interaction.response.defer()
 
         user_id = interaction.user.id
