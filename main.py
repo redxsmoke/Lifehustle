@@ -44,6 +44,9 @@ from autocomplete import (
     commute_direction_autocomplete,
 )
 
+from category_loader import load_categories
+categories = load_categories()
+
 from utilities import handle_commute, handle_purchase
 from vehicle_logic import handle_vehicle_purchase
 
