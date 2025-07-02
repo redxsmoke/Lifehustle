@@ -150,8 +150,8 @@ ALTER TABLE cd_vehicle_type
     ADD COLUMN IF NOT EXISTS emoji TEXT;
 ALTER TABLE cd_grocery_category
     ADD COLUMN IF NOT EXISTS emoji TEXT;
-ALTER TABLE cd_grocery_type
-    ADD COLUMN IF NOT EXISTS emoji TEXT;
+ALTER TABLE user_grocery_inventory
+    ADD COLUMN IF NOT EXISTS grocery_category_id INTEGER REFERENCES cd_grocery_category(id);
 '''
 
 CREATE_USER_FINANCES_SQL = '''
