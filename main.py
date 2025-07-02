@@ -175,6 +175,28 @@ ALTER TABLE cd_grocery_type
     ADD COLUMN IF NOT EXISTS emoji TEXT;
 """
 
+DROP_OLD_USER_COLUMNS_SQL = """
+ALTER TABLE users
+DROP COLUMN IF EXISTS hunger_level,
+DROP COLUMN IF EXISTS relationship_status,
+DROP COLUMN IF EXISTS car,
+DROP COLUMN IF EXISTS bike,
+DROP COLUMN IF EXISTS fridge,
+DROP COLUMN IF EXISTS debt,
+DROP COLUMN IF EXISTS inventory;
+"""
+
+CREATE_USER_FINANCES_SQL = """
+CREATE TABLE IF NOT EXISTS user_finances (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT UNIQUE NOT NULL,
+    checking_account_balance NUMERIC(12,2) DEFAULT 0,
+    savings_account_balance NUMERIC(12,2) DEFAULT 0,
+    debt_balance NUMERIC(12,2) DEFAULT 0,
+    last_paycheck_claimed TIMESTAMP
+);
+"""
+
 async def create_inventory_tables(pool):
     async with pool.acquire() as conn:
         await conn.execute(CREATE_INVENTORY_SQL)
@@ -251,6 +273,12 @@ async def seed_vehicle_conditions(pool):
         )
     print("✅ Seeded vehicle conditions with starting commute counts.")
 
+async def setup_user_finances_table(pool):
+    async with pool.acquire() as conn:
+        await conn.execute(DROP_OLD_USER_COLUMNS_SQL)
+        await conn.execute(CREATE_USER_FINANCES_SQL)
+        print("✅ User table columns dropped and user_finances table created.")
+
 @bot.event
 async def on_ready():
     global pool
@@ -264,6 +292,7 @@ async def on_ready():
         await seed_vehicle_conditions(pool)
         await seed_grocery_categories(pool)
         await seed_grocery_types(pool)
+        await setup_user_finances_table(pool)
 
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
