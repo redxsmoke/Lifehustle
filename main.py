@@ -200,7 +200,15 @@ async def alter_inventory_tables(pool):
 async def reset_vehicle_condition_table(pool):
     async with pool.acquire() as conn:
         await conn.execute(RESET_VEHICLE_CONDITION_SQL)
-        print("✅ Vehicle condition table dropped and recreated.")
+        await conn.execute("""
+            INSERT INTO cd_vehicle_condition (description, min_commute_count, max_commute_count, resale_percent) VALUES
+            ('Brand New', 0, 50, 85),
+            ('Good Condition', 51, 100, 70),
+            ('Fair Condition', 101, 150, 50),
+            ('Poor Condition', 151, 200, 30),
+            ('Broken Down', 201, 202, 0);
+        """)
+        print("✅ Vehicle condition table reset and seeded.")
 
 @bot.event
 async def on_ready():
