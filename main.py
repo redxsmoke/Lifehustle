@@ -10,8 +10,6 @@ import string
 import time
 from collections import defaultdict
 
-
-
 # --- Third-Party Libraries ---
 import asyncpg
 import discord
@@ -34,21 +32,16 @@ from config import (
     COLOR_ORANGE,
     COLOR_TEAL,
 )
-
 from db_pool import create_pool, init_db
 from db_user import get_user, upsert_user
-
 from globals import pool
 from defaults import DEFAULT_USER
-
 from autocomplete import (
     category_autocomplete,
     commute_method_autocomplete,
     commute_direction_autocomplete,
 )
-
 from category_loader import load_categories
-categories = load_categories()
 from utilities import handle_commute, handle_purchase
 from vehicle_logic import handle_vehicle_purchase
 from embeds import embed_message
@@ -60,29 +53,30 @@ from views import (
     GroceryStashPaginationView,
 )
 
-def embed_message(title: str, description: str, color: discord.Color = discord.Color.blue()) -> discord.Embed:
-    return discord.Embed(title=title, description=description, color=color)
-
-#LOAD COMMUTE OUTCOMES JSON
+# Load JSON data
 with open("commute_outcomes.json", "r") as f:
     COMMUTE_OUTCOMES = json.load(f)
 
-#LOAD SHOP ITEMS JSON
 with open("shop_items.json", "r", encoding="utf-8") as f:
     SHOP_ITEMS = json.load(f)
-#LOAD CATEGORIES JSON.
-with open('categories.json', 'r') as f:
+
+with open("categories.json", "r") as f:
     categories = json.load(f)
 
+# Initialize intents
 intents = discord.Intents.default()
 intents.message_content = True
 
+# Create client and command tree
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
+
+# Import and register commands (make sure your commands.py file has a register_commands function)
 from commands import register_commands
 register_commands(tree)
 
-GUILD_ID = 1389059101165883482  # Replace with your guild ID (integer)
+# Your testing guild ID (replace with your actual guild ID)
+GUILD_ID = 1389059101165883482
 guild = discord.Object(id=GUILD_ID)
 
 @client.event
@@ -92,17 +86,10 @@ async def on_ready():
         pool = await create_pool()
         await init_db(pool)
 
-    print(f'Logged in as {client.user} (ID: {client.user.id})')
-    # Sync commands only to your guild (faster than global)
+    print(f"Logged in as {client.user} (ID: {client.user.id})")
+    # Sync commands only to your guild for faster updates during development
     await tree.sync(guild=guild)
     print("Commands synced to guild.")
 
-       
-
-# --- Run bot ---
-
-
-
+# Run the bot
 client.run(DISCORD_BOT_TOKEN)
-
- 

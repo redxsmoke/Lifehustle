@@ -6,8 +6,9 @@ import asyncio
 import time
 import defaults
 import discord
+from discord import app_commands, Interaction
 import category_loader
-from discord import app_commands
+
 
 from views import (
     CommuteButtons,
