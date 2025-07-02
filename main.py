@@ -2,7 +2,9 @@
 import asyncio
 import json
 import time
+import data_tier
 from collections import defaultdict
+
 
 # --- Third-Party Libraries ---
 import asyncpg
@@ -193,13 +195,7 @@ async def alter_inventory_tables(pool):
         await conn.execute(ALTER_INVENTORY_SQL)
         print("✅ Altered inventory tables to add emoji columns if missing.")
 
-async def seed_grocery_categories(pool):
-    grocery_categories = [
-        ('Produce', '🍎'),
-        ('Dairy', '🥛'),
-        ('Protein', '🍗'),
-        ('Snacks', '🍿'),
-        ('Beverages', '🥤'),
+
     ]
     async with pool.acquire() as conn:
         for name, emoji in grocery_categories:
