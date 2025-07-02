@@ -30,7 +30,7 @@ from views import (
 )
 from db_user import get_user, upsert_user
 from utilities import parse_amount, embed_message, bike_description, normalize
-from globals import pool, last_paycheck_times
+
 from config import PAYCHECK_AMOUNT, PAYCHECK_COOLDOWN_SECONDS, COLOR_RED, COLOR_GREEN
 from category_loader import categories, category_autocomplete
 from defaults import DEFAULT_USER
@@ -185,8 +185,10 @@ def register_commands(tree: app_commands.CommandTree):
         await interaction.response.send_message(embed=embed_message(
             "🚗 Commute", "Choose your commute method:"), view=view, ephemeral=True)
 
+    
     @tree.command(name="paycheck", description=f"Claim your paycheck (${PAYCHECK_AMOUNT:,}) every 12h")
     async def paycheck(interaction: Interaction):
+        from globals import pool, last_paycheck_times
         # Ensure the DB pool is initialized
         if pool is None:
             await interaction.response.send_message(
