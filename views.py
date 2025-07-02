@@ -5,10 +5,10 @@ from discord.ui import View, Button
 
 from utilities import (
     generate_random_plate,
-    handle_vehicle_purchase,
     BIKE_COLORS,
     CAR_COLORS,
 )
+from vehicle_logic import handle_vehicle_purchase, handle_purchase, handle_commute
 from db_user import get_user, upsert_user
 from globals import pool
 
