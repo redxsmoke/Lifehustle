@@ -1,5 +1,6 @@
 from collections import defaultdict, Counter
 import json
+from main import pool
 import random
 import asyncio
 import time
@@ -37,11 +38,10 @@ from defaults import DEFAULT_USER
 from shop_items import SHOP_ITEMS  # Assuming you load items from this
 
 def register_commands(tree: app_commands.CommandTree):
-
     @tree.command(name="submitword", description="Submit a new word to a category")
     @app_commands.describe(category="Select the category for your word")
     @app_commands.autocomplete(category=category_autocomplete)
-    async def submitword(interaction: discord.Interaction, category: str):
+    async def submitword(interaction: Interaction, category: str):
         if category not in categories:
             await interaction.response.send_message(
                 f"Category '{category}' does not exist. Please select a valid category.",
@@ -53,7 +53,7 @@ def register_commands(tree: app_commands.CommandTree):
         await interaction.response.send_modal(modal)
 
     @tree.command(name="bank", description="View your checking and savings account balances")
-    async def bank(interaction: discord.Interaction):
+    async def bank(interaction: Interaction):
         user_id = interaction.user.id
         user = await get_user(pool, user_id)
         if user is None:
@@ -75,7 +75,7 @@ def register_commands(tree: app_commands.CommandTree):
         app_commands.Choice(name="Transportation", value="transportation"),
         app_commands.Choice(name="Groceries", value="groceries")
     ])
-    async def shop(interaction: discord.Interaction, category: app_commands.Choice[str]):
+    async def shop(interaction: Interaction, category: app_commands.Choice[str]):
         await interaction.response.defer(ephemeral=True)
         if category.value == "transportation":
             embed = discord.Embed(
@@ -95,24 +95,22 @@ def register_commands(tree: app_commands.CommandTree):
             await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
         elif category.value == "groceries":
-            grouped = defaultdict(list)
+            grouped = {}
             for item in SHOP_ITEMS:
-                grouped[item.get("category", "Misc")].append(item)
+                grouped.setdefault(item.get("category", "Misc"), []).append(item)
 
-            pages = []
-            for cat in sorted(grouped):
-                pages.append((cat.capitalize(), grouped[cat]))
-
+            pages = [(cat.capitalize(), grouped[cat]) for cat in sorted(grouped)]
             view = GroceryCategoryView(pages, interaction.user.id)
             await view.send(interaction)
 
     @tree.command(name="deposit", description="Deposit money from checking to savings")
     @app_commands.describe(amount="Amount to deposit")
-    async def deposit(interaction: discord.Interaction, amount: str):
+    async def deposit(interaction: Interaction, amount: str):
+        from utilities import parse_amount
         parsed_amount = parse_amount(amount)
         if parsed_amount is None:
             await interaction.response.send_message(embed=embed_message(
-                "❌ Invalid Format", "Use numbers like 1000, or 'all'.", discord.Color.red()), ephemeral=True)
+                "❌ Invalid Format", "Use numbers like 1000, or 'all'.", COLOR_RED), ephemeral=True)
             return
 
         user_id = interaction.user.id
@@ -125,7 +123,7 @@ def register_commands(tree: app_commands.CommandTree):
 
         if amount_int <= 0 or amount_int > checking:
             await interaction.response.send_message(embed=embed_message(
-                "❌ Invalid Amount", "You don't have enough in checking.", discord.Color.red()), ephemeral=True)
+                "❌ Invalid Amount", "You don't have enough in checking.", COLOR_RED), ephemeral=True)
             return
 
         user['checking_account'] -= amount_int
@@ -137,16 +135,17 @@ def register_commands(tree: app_commands.CommandTree):
             f"> Moved ${amount_int:,} to savings.\n"
             f"> 💰 Checking: ${user['checking_account']:,}\n"
             f"> 🏦 Savings: ${user['savings_account']:,}",
-            discord.Color.green()
+            COLOR_GREEN
         ))
 
     @tree.command(name="withdraw", description="Withdraw money from savings to checking")
     @app_commands.describe(amount="Amount to withdraw")
-    async def withdraw(interaction: discord.Interaction, amount: str):
+    async def withdraw(interaction: Interaction, amount: str):
+        from utilities import parse_amount
         parsed_amount = parse_amount(amount)
         if parsed_amount is None:
             await interaction.response.send_message(embed=embed_message(
-                "❌ Invalid Format", "Use numbers like 1000, or 'all'.", discord.Color.red()), ephemeral=True)
+                "❌ Invalid Format", "Use numbers like 1000, or 'all'.", COLOR_RED), ephemeral=True)
             return
 
         user_id = interaction.user.id
@@ -159,7 +158,7 @@ def register_commands(tree: app_commands.CommandTree):
 
         if amount_int <= 0 or amount_int > savings:
             await interaction.response.send_message(embed=embed_message(
-                "❌ Invalid Amount", "You don't have enough in savings.", discord.Color.red()), ephemeral=True)
+                "❌ Invalid Amount", "You don't have enough in savings.", COLOR_RED), ephemeral=True)
             return
 
         user['savings_account'] -= amount_int
@@ -171,11 +170,11 @@ def register_commands(tree: app_commands.CommandTree):
             f"> Moved ${amount_int:,} to checking.\n"
             f"> 💰 Checking: ${user['checking_account']:,}\n"
             f"> 🏦 Savings: ${user['savings_account']:,}",
-            discord.Color.green()
+            COLOR_GREEN
         ))
 
     @tree.command(name="commute", description="Commute to work using buttons")
-    async def commute(interaction: discord.Interaction):
+    async def commute(interaction: Interaction):
         user_id = interaction.user.id
         user = await get_user(pool, user_id)
         if not user:
@@ -184,34 +183,46 @@ def register_commands(tree: app_commands.CommandTree):
             return
 
         view = CommuteButtons()
-        view.message = None
         await interaction.response.send_message(embed=embed_message(
             "🚗 Commute", "Choose your commute method:"), view=view, ephemeral=True)
 
     @tree.command(name="paycheck", description=f"Claim your paycheck (${PAYCHECK_AMOUNT:,}) every 12h")
-    async def paycheck(interaction: discord.Interaction):
+    async def paycheck(interaction: Interaction):
+        # Ensure the DB pool is initialized
+        if pool is None:
+            await interaction.response.send_message(
+                "Database is not ready yet. Please try again in a moment.",
+                ephemeral=True
+            )
+            return
+
         user_id = interaction.user.id
         now = datetime.now(timezone.utc)
 
-        # Get or initialize finances
+        # Fetch or initialize this user’s finance record
         finances = await get_user_finances(pool, user_id)
         if finances is None:
             finances = {
                 'checking_account_balance': 0,
                 'savings_account_balance': 0,
-               'debt_balance': 0,
-               'last_paycheck_claimed': datetime.fromtimestamp(0, tz=timezone.utc)
+                'debt_balance': 0,
+                'last_paycheck_claimed': datetime.fromtimestamp(0, tz=timezone.utc)
             }
 
+        # Parse last claim time
         last_claim = finances['last_paycheck_claimed']
-        time_since = (now - last_claim).total_seconds()
+        if not isinstance(last_claim, datetime):
+            try:
+                last_claim = datetime.fromisoformat(str(last_claim))
+            except:
+                last_claim = datetime.fromtimestamp(0, tz=timezone.utc)
 
-        # Cooldown check
-        if time_since < PAYCHECK_COOLDOWN_SECONDS:
-            remaining = PAYCHECK_COOLDOWN_SECONDS - time_since
+        # Check cooldown
+        elapsed = (now - last_claim).total_seconds()
+        if elapsed < PAYCHECK_COOLDOWN_SECONDS:
+            remaining = PAYCHECK_COOLDOWN_SECONDS - elapsed
             hours = int(remaining // 3600)
             minutes = int((remaining % 3600) // 60)
-
             await interaction.response.send_message(embed=embed_message(
                 "⏳ Cooldown",
                 f"> Try again in {hours}h {minutes}m.",
@@ -222,10 +233,9 @@ def register_commands(tree: app_commands.CommandTree):
         # Grant paycheck and update timestamp
         finances['checking_account_balance'] += PAYCHECK_AMOUNT
         finances['last_paycheck_claimed'] = now
-
         await upsert_user_finances(pool, user_id, finances)
 
-        # Respond to user
+        # Send confirmation
         await interaction.response.send_message(embed=embed_message(
             "💵 Paycheck Claimed",
             f"> You got ${PAYCHECK_AMOUNT:,}!\n💰 New Balance: ${finances['checking_account_balance']:,}",

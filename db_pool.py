@@ -9,20 +9,13 @@ async def create_pool():
     ssl_context.verify_mode = ssl.CERT_NONE
     return await asyncpg.create_pool(DATABASE_URL, ssl=ssl_context)
 
-async def init_db(pool):
+async def init_db(pool): 
     async with pool.acquire() as conn:
         await conn.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 user_id BIGINT PRIMARY KEY,
-                checking_account BIGINT DEFAULT 0,
-                savings_account BIGINT DEFAULT 0,
-                hunger_level INT DEFAULT 100,
-                relationship_status TEXT DEFAULT 'single',
-                car TEXT,
-                bike TEXT,
-                fridge TEXT DEFAULT '[]',
-                debt BIGINT DEFAULT 0,
-                inventory TEXT DEFAULT '[]'
+                user_name TEXT,
+                last_seen TIMESTAMP
             );
         ''')
 

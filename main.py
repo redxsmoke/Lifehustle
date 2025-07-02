@@ -1,15 +1,18 @@
+# main.py
+
 # --- Standard Library ---
-import asyncio
+import os
+import ssl
 import json
-import time
-from data_tier import seed_grocery_types, seed_grocery_categories
+import asyncio
+from datetime import datetime, timezone
 from collections import defaultdict
 
 # --- Third-Party Libraries ---
 import asyncpg
 import discord
-from discord import app_commands
 from discord.ext import commands
+from discord import app_commands
 
 # --- Local Imports ---
 from config import (
@@ -17,55 +20,31 @@ from config import (
     DATABASE_URL,
     PAYCHECK_AMOUNT,
     PAYCHECK_COOLDOWN_SECONDS,
-    CATEGORIES,
-    GAME_RESPONSE_TIMEOUT,
-    MAX_GUESSES,
     COLOR_GREEN,
     COLOR_RED,
-    COLOR_ORANGE,
-    COLOR_TEAL,
     DISCORD_CHANNEL_ID,
 )
-from db_pool import create_pool, init_db
-from db_user import get_user, upsert_user
-from globals import pool
-from defaults import DEFAULT_USER
-from autocomplete import (
-    category_autocomplete,
-    commute_method_autocomplete,
-    commute_direction_autocomplete,
-)
-from category_loader import load_categories
-from utilities import handle_commute, handle_purchase
-from vehicle_logic import handle_vehicle_purchase
-from embeds import embed_message
-from views import (
-    CommuteButtons,
-    TransportationShopButtons,
-    SellFromStashView,
-    GroceryCategoryView,
-    GroceryStashPaginationView,
-)
+from db_pool import init_db  # migrations / CREATE TABLE logic
+from commands import register_commands  # registers slash commands
+import globals  # holds pool and last_paycheck_times
+from data_tier import seed_grocery_types, seed_grocery_categories
 
-# Load JSON data
+# --- Load JSON data ---
 with open("commute_outcomes.json", "r") as f:
     COMMUTE_OUTCOMES = json.load(f)
-
 with open("shop_items.json", "r", encoding="utf-8") as f:
     SHOP_ITEMS = json.load(f)
-
 with open("categories.json", "r") as f:
-    categories = json.load(f)
+    CATEGORIES = json.load(f)
 
 # --- Bot Setup ---
 intents = discord.Intents.default()
 intents.message_content = True
-
 bot = commands.Bot(command_prefix="!", intents=intents)
-tree = bot.tree  # Shortcut
+tree = bot.tree
 
-# --- SQL: Create and Reset Tables ---
-RESET_VEHICLE_CONDITION_SQL = """
+# --- SQL & Seed SQL ---
+RESET_VEHICLE_CONDITION_SQL = '''
 DROP TABLE IF EXISTS cd_vehicle_condition;
 
 CREATE TABLE cd_vehicle_condition (
@@ -78,9 +57,9 @@ CREATE TABLE cd_vehicle_condition (
     starting_commute_count INTEGER NOT NULL DEFAULT 0,
     UNIQUE(vehicle_type_id, description)
 );
-"""
+'''
 
-CREATE_INVENTORY_SQL = """
+CREATE_INVENTORY_SQL = '''
 CREATE TABLE IF NOT EXISTS cd_vehicle_type (
     id SERIAL PRIMARY KEY,
     name TEXT UNIQUE NOT NULL,
@@ -162,26 +141,18 @@ SELECT
 FROM user_grocery_inventory ugi
 JOIN cd_grocery_type gt ON ugi.grocery_type_id = gt.id
 WHERE ugi.sold_at IS NULL;
-"""
+'''
 
-ALTER_INVENTORY_SQL = """
+ALTER_INVENTORY_SQL = '''
 ALTER TABLE cd_vehicle_type
     ADD COLUMN IF NOT EXISTS emoji TEXT;
-
 ALTER TABLE cd_grocery_category
     ADD COLUMN IF NOT EXISTS emoji TEXT;
-
 ALTER TABLE cd_grocery_type
     ADD COLUMN IF NOT EXISTS emoji TEXT;
-"""
+'''
 
-ADD_NEW_USER_COLUMNS_SQL = """
-ALTER TABLE users
-ADD COLUMN IF NOT EXISTS username TEXT,
-ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP;
-"""
-
-CREATE_USER_FINANCES_SQL = """
+CREATE_USER_FINANCES_SQL = '''
 CREATE TABLE IF NOT EXISTS user_finances (
     id SERIAL PRIMARY KEY,
     user_id BIGINT UNIQUE NOT NULL,
@@ -190,22 +161,23 @@ CREATE TABLE IF NOT EXISTS user_finances (
     debt_balance NUMERIC(12,2) DEFAULT 0,
     last_paycheck_claimed TIMESTAMP
 );
-"""
+'''
 
+# --- Table creation and seeding ---
 async def create_inventory_tables(pool):
     async with pool.acquire() as conn:
         await conn.execute(CREATE_INVENTORY_SQL)
-        print("✅ Inventory tables and views ensured.")
+    print("✅ Inventory tables and views ensured.")
 
 async def alter_inventory_tables(pool):
     async with pool.acquire() as conn:
         await conn.execute(ALTER_INVENTORY_SQL)
-        print("✅ Altered inventory tables to add emoji columns if missing.")
+    print("✅ Altered inventory tables (emoji columns).")
 
 async def reset_vehicle_condition_table(pool):
     async with pool.acquire() as conn:
         await conn.execute(RESET_VEHICLE_CONDITION_SQL)
-        print("✅ Vehicle condition table reset.")
+    print("✅ Vehicle condition table reset.")
 
 async def seed_vehicle_types(pool):
     vehicle_types = [
@@ -223,9 +195,7 @@ async def seed_vehicle_types(pool):
                 VALUES ($1, $2, $3)
                 ON CONFLICT (name) DO NOTHING
                 """,
-                name,
-                cost,
-                emoji,
+                name, cost, emoji
             )
     print("✅ Seeded vehicle types.")
 
@@ -233,8 +203,6 @@ async def seed_vehicle_conditions(pool):
     async with pool.acquire() as conn:
         rows = await conn.fetch("SELECT id, name FROM cd_vehicle_type;")
         vehicle_type_map = {r['name']: r['id'] for r in rows}
-
-        conditions_data = []
 
         standard_conditions = [
             ('Brand New', 0, 50, 85, 0),
@@ -244,18 +212,10 @@ async def seed_vehicle_conditions(pool):
             ('Broken Down', 201, 202, 0, 0),
         ]
 
-        for vehicle_name, vehicle_id in vehicle_type_map.items():
-            if vehicle_name == 'Blue Car':
-                conditions_data.extend([
-                    (vehicle_id, 'Brand New', 0, 50, 85, 0),
-                    (vehicle_id, 'Good Condition', 51, 100, 70, 0),
-                    (vehicle_id, 'Fair Condition', 101, 150, 50, 0),
-                    (vehicle_id, 'Poor Condition', 151, 200, 30, 151),
-                    (vehicle_id, 'Broken Down', 201, 202, 0, 0),
-                ])
-            else:
-                for desc, min_c, max_c, resale, start_c in standard_conditions:
-                    conditions_data.append((vehicle_id, desc, min_c, max_c, resale, start_c))
+        data = []
+        for name, vid in vehicle_type_map.items():
+            for desc, min_c, max_c, resale, start in standard_conditions:
+                data.append((vid, desc, min_c, max_c, resale, start))
 
         await conn.executemany(
             """
@@ -264,46 +224,49 @@ async def seed_vehicle_conditions(pool):
             VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (vehicle_type_id, description) DO NOTHING
             """,
-            conditions_data,
+            data
         )
-    print("✅ Seeded vehicle conditions with starting commute counts.")
+    print("✅ Seeded vehicle conditions.")
 
 async def setup_user_finances_table(pool):
     async with pool.acquire() as conn:
-        await conn.execute(ADD_NEW_USER_COLUMNS_SQL)
         await conn.execute(CREATE_USER_FINANCES_SQL)
-        print("✅ User table columns dropped and user_finances table created.")
+    print("✅ user_finances table ensured.")
+
+# --- Bot Events & Startup ---
+async def create_pool():
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
+    globals.pool = await asyncpg.create_pool(DATABASE_URL, ssl=ssl_context)
+    print("✅ Database connection pool created.")
 
 @bot.event
 async def on_ready():
-    global pool
-    if pool is None:
-        pool = await create_pool()
-        await init_db(pool)
-        await create_inventory_tables(pool)
-        await reset_vehicle_condition_table(pool)
-        await alter_inventory_tables(pool)
-        await seed_vehicle_types(pool)
-        await seed_vehicle_conditions(pool)
-        await seed_grocery_categories(pool)
-        await seed_grocery_types(pool)
-        await setup_user_finances_table(pool)
+    if globals.pool is None:
+        await create_pool()
+        await init_db(globals.pool)
+        await create_inventory_tables(globals.pool)
+        await reset_vehicle_condition_table(globals.pool)
+        await alter_inventory_tables(globals.pool)
+        await seed_vehicle_types(globals.pool)
+        await seed_vehicle_conditions(globals.pool)
+        await seed_grocery_categories(globals.pool)
+        await seed_grocery_types(globals.pool)
+        await setup_user_finances_table(globals.pool)
 
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
     try:
         await tree.sync()
-        print("✅ Slash commands synced to dev guild.")
+        print("✅ Slash commands synced.")
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
 
-    print("✅ [Main] after sync, tree has:", [c.name for c in tree.walk_commands()])
-
-# Register slash commands after bot defined
-from commands import register_commands
-print("⏳ [Main] before register_commands, tree has:", [c.name for c in tree.walk_commands()])
-register_commands(tree)
-print("✅ [Main] after register_commands, tree has:", [c.name for c in tree.walk_commands()])
+    register_commands(tree)
+    print("✅ Commands registered.")
 
 # --- Run the Bot ---
-bot.run(DISCORD_BOT_TOKEN)
+if __name__ == "__main__":
+    bot.run(DISCORD_BOT_TOKEN)
