@@ -354,4 +354,20 @@ async def handle_commute(interaction: discord.Interaction, method: str):
     embed = embed_message(f"{emoji} Commute Summary", f"  {msg}")
     await interaction.response.send_message(embed=embed)
 
- 
+
+#NORMALIZE FUNCTION
+import unicodedata
+import re
+
+def normalize(text: str) -> str:
+    # Normalize Unicode characters (decompose accents)
+    text = unicodedata.normalize('NFD', text)
+    # Remove accents
+    text = ''.join(ch for ch in text if unicodedata.category(ch) != 'Mn')
+    # Convert to lowercase
+    text = text.lower()
+    # Remove any non-alphanumeric characters except spaces
+    text = re.sub(r'[^a-z0-9\s]', '', text)
+    # Remove leading/trailing whitespace
+    text = text.strip()
+    return text
