@@ -13,6 +13,9 @@ from datetime import datetime, timezone, timedelta
 from db_user import get_user_finances, upsert_user_finances  
 from utilities import embed_message  
 
+def register_commands():
+    from main import pool  
+
 # CONSTANTS IMPORTS
 from constants import (
     PAYCHECK_AMOUNT,
