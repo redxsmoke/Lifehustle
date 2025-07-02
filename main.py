@@ -206,4 +206,21 @@ async def on_ready():
         await seed_grocery_categories(pool)
         await seed_grocery_types(pool)
 
-    print(f"✅ Logged in as {bot.user} (ID: {bot.
+    print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
+
+    try:
+        await tree.sync()
+        print("✅ Slash commands synced to dev guild.")
+    except Exception as e:
+        print(f"❌ Error syncing commands: {e}")
+
+    print("✅ [Main] after sync, tree has:", [c.name for c in tree.walk_commands()])
+
+# Register slash commands after bot defined
+from commands import register_commands
+print("⏳ [Main] before register_commands, tree has:", [c.name for c in tree.walk_commands()])
+register_commands(tree)
+print("✅ [Main] after register_commands, tree has:", [c.name for c in tree.walk_commands()])
+
+# --- Run the Bot ---
+bot.run(DISCORD_BOT_TOKEN)
