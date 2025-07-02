@@ -188,7 +188,7 @@ def register_commands(tree: app_commands.CommandTree):
     
     @tree.command(name="paycheck", description=f"Claim your paycheck (${PAYCHECK_AMOUNT:,}) every 12h")
     async def paycheck(interaction: Interaction):
-        from globals import pool, last_paycheck_times
+        from globals import pool
         # Ensure the DB pool is initialized
         if pool is None:
             await interaction.response.send_message(
