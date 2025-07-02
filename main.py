@@ -107,11 +107,11 @@ async def create_inventory_tables(pool):
 
 @bot.event
 async def on_ready():
-    global pool
+    global pool  # ensure global variable is used and updated here
     if pool is None:
         pool = await create_pool()
         await init_db(pool)
-        await create_inventory_tables(pool)  # << Run table creation here
+        await create_inventory_tables(pool)  # create tables after DB init
 
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
