@@ -2,7 +2,7 @@
 import asyncio
 import json
 import time
-import data_tier
+from data_tier import seed_grocery_types, seed_grocery_categories
 from collections import defaultdict
 
 
@@ -195,21 +195,6 @@ async def alter_inventory_tables(pool):
         await conn.execute(ALTER_INVENTORY_SQL)
         print("✅ Altered inventory tables to add emoji columns if missing.")
 
-
-    ]
-    async with pool.acquire() as conn:
-        for name, emoji in grocery_categories:
-            await conn.execute(
-                """
-                INSERT INTO cd_grocery_category (name, emoji)
-                VALUES ($1, $2)
-                ON CONFLICT (name) DO NOTHING
-                """,
-                name,
-                emoji,
-            )
-    print("✅ Seeded grocery categories with emojis.")
-
 @bot.event
 async def on_ready():
     global pool
@@ -219,22 +204,6 @@ async def on_ready():
         await create_inventory_tables(pool)
         await alter_inventory_tables(pool)
         await seed_grocery_categories(pool)
+        await seed_grocery_types(pool)
 
-    print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
-
-    try:
-        await tree.sync()
-        print("✅ Slash commands synced to dev guild.")
-    except Exception as e:
-        print(f"❌ Error syncing commands: {e}")
-
-    print("✅ [Main] after sync, tree has:", [c.name for c in tree.walk_commands()])
-
-# Register slash commands after bot defined
-from commands import register_commands
-print("⏳ [Main] before register_commands, tree has:", [c.name for c in tree.walk_commands()])
-register_commands(tree)
-print("✅ [Main] after register_commands, tree has:", [c.name for c in tree.walk_commands()])
-
-# --- Run the Bot ---
-bot.run(DISCORD_BOT_TOKEN)
+    print(f"✅ Logged in as {bot.user} (ID: {bot.

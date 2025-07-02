@@ -50,3 +50,26 @@ async def seed_grocery_types(pool):
                 item["emoji"],
             )
     print("✅ Seeded grocery types with emojis, categories, and costs.")
+
+
+async def seed_grocery_categories(pool):
+    grocery_categories = [
+        ("Produce", "🍎"),
+        ("Dairy", "🥛"),
+        ("Protein", "🍗"),
+        ("Snacks", "🍿"),
+        ("Beverages", "🥤"),
+    ]
+
+    async with pool.acquire() as conn:
+        for name, emoji in grocery_categories:
+            await conn.execute(
+                """
+                INSERT INTO cd_grocery_category (name, emoji)
+                VALUES ($1, $2)
+                ON CONFLICT (name) DO NOTHING
+                """,
+                name,
+                emoji,
+            )
+    print("✅ Seeded grocery categories with emojis.")
