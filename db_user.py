@@ -78,3 +78,21 @@ async def get_user_finances(pool, user_id: int):
                 'last_paycheck_claimed': row['last_paycheck_claimed']
             }
         return None
+
+
+async def reset_user_finances_table(pool):
+    async with pool.acquire() as conn:
+        print("⚠️ Dropping and recreating user_finances table...")
+        await conn.execute("""
+            DROP TABLE IF EXISTS user_finances;
+        """)
+        await conn.execute("""
+            CREATE TABLE user_finances (
+                user_id BIGINT PRIMARY KEY,
+                checking_account_balance INT DEFAULT 0,
+                savings_account_balance INT DEFAULT 0,
+                debt_balance INT DEFAULT 0,
+                last_paycheck_claimed TIMESTAMPTZ DEFAULT NOW()
+            );
+        """)
+        print("✅ user_finances table recreated with TIMESTAMPTZ.")

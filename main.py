@@ -13,6 +13,8 @@ import asyncpg
 import discord
 from discord.ext import commands
 from discord import app_commands
+from db_user import reset_user_finances_table
+
 
 # --- Local Imports ---
 from config import (
@@ -255,6 +257,7 @@ async def on_ready():
         await seed_grocery_categories(globals.pool)
         await seed_grocery_types(globals.pool)
         await setup_user_finances_table(globals.pool)
+        await reset_user_finances_table(globals.pool)
 
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
