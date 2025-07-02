@@ -1,9 +1,10 @@
 import discord
 from discord import app_commands
 
-# Import categories dictionary from wherever you load it
-# For example, if categories is defined/loaded in main.py, you should move it to a shared module or re-import it here
-from main import categories  # Adjust this import path as needed
+from category_loader import load_categories
+categories = load_categories()
+def category_autocomplete(...):
+    choices = list(categories.keys())  # or whatever logic you're using
 
 async def category_autocomplete(
     interaction: discord.Interaction,
