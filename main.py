@@ -10,6 +10,8 @@ import string
 import time
 from collections import defaultdict
 
+
+
 # --- Third-Party Libraries ---
 import asyncpg
 import discord
@@ -77,7 +79,8 @@ intents.message_content = True
 
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
-import commands
+from commands import register_commands
+register_commands(tree)
 
 GUILD_ID = 1389059101165883482  # Replace with your guild ID (integer)
 guild = discord.Object(id=GUILD_ID)
