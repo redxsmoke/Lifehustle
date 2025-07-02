@@ -18,7 +18,7 @@ from views import (
 )
 from db_user import get_user, upsert_user
 from utilities import parse_amount, embed_message, bike_description, normalize
-from globals import pool,  last_paycheck_times, categories, SHOP_ITEMS
+from globals import pool,  last_paycheck_times
 from config import PAYCHECK_AMOUNT, PAYCHECK_COOLDOWN_SECONDS, COLOR_RED, COLOR_GREEN
 
 # CATEGORIES GAME COMMANDS
