@@ -1,10 +1,8 @@
 import discord
 from discord import app_commands
-
 from category_loader import load_categories
+
 categories = load_categories()
-def category_autocomplete(...):
-    choices = list(categories.keys())  # or whatever logic you're using
 
 async def category_autocomplete(
     interaction: discord.Interaction,
