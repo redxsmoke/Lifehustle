@@ -70,10 +70,11 @@ intents.message_content = True
 # Create client and command tree
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
-
+print("⏳ [Main] before register_commands, tree has:", [c.name for c in tree.walk_commands()])
 # Import and register commands (make sure your commands.py file has a register_commands function)
 from commands import register_commands
 register_commands(tree)
+print("✅ [Main] after register_commands, tree has:", [c.name for c in tree.walk_commands()])
 
 # Your testing guild ID (replace with your actual guild ID)
 GUILD_ID = 1389059101165883482
@@ -87,9 +88,9 @@ async def on_ready():
         await init_db(pool)
 
     print(f"Logged in as {client.user} (ID: {client.user.id})")
-    # Sync commands only to your guild for faster updates during development
     await tree.sync(guild=guild)
     print("Commands synced to guild.")
-
+    # DEBUG: after sync
+    print("✅ [Main] after sync, tree has:", [c.name for c in tree.walk_commands()])
 # Run the bot
 client.run(DISCORD_BOT_TOKEN)
