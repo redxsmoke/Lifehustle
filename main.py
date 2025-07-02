@@ -8,7 +8,6 @@ import re
 import ssl
 import string
 import time
-import commands
 from collections import defaultdict
 
 # --- Third-Party Libraries ---
@@ -78,7 +77,7 @@ intents.message_content = True
 
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
-
+import commands
 
 @client.event
 async def on_ready():
