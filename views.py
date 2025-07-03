@@ -148,44 +148,55 @@ class SellFromStashView(View):
         )
 
     async def confirm_sale(self, interaction: discord.Interaction):
-        if not self.pending_item:
-            await interaction.response.send_message("❌ No item pending confirmation.", ephemeral=True)
-            return
+        import traceback
 
-        user = await get_user(pool, self.user_id)
-        if not user:
-            await interaction.response.send_message("You don’t have an account yet.", ephemeral=True)
-            return
+        try:
+            if not self.pending_item:
+                await interaction.response.send_message("❌ No item pending confirmation.", ephemeral=True)
+                return
 
-        plate = self.pending_item.get("plate")
-        if not plate:
-            await interaction.response.send_message("❌ Cannot find vehicle plate to remove.", ephemeral=True)
-            return
+            user = await get_user(pool, self.user_id)
+            if not user:
+                await interaction.response.send_message("You don’t have an account yet.", ephemeral=True)
+                return
 
-        # Remove vehicle from DB
-        await pool.execute(
-            "DELETE FROM user_vehicle_inventory WHERE user_id = $1 AND plate_number = $2",
-            self.user_id, plate
-        )
+            plate = self.pending_item.get("plate")
+            if not plate:
+                await interaction.response.send_message("❌ Cannot find vehicle plate to remove.", ephemeral=True)
+                return
 
-        base_price = BASE_PRICES.get(self.pending_item.get("type"), 0)
-        resale_percent = self.pending_item.get("resale_percent", 0.10)
-        resale = int(base_price * resale_percent)
+            # Remove vehicle from DB
+            await pool.execute(
+                "DELETE FROM user_vehicle_inventory WHERE user_id = $1 AND plate_number = $2",
+                self.user_id, plate
+            )
 
-        # Credit user
-        user["checking_account"] += resale
-        await upsert_user(pool, self.user_id, user)
+            base_price = BASE_PRICES.get(self.pending_item.get("type"), 0)
+            resale_percent = self.pending_item.get("resale_percent", 0.10)
+            resale = int(base_price * resale_percent)
 
-        sold_type = self.pending_item.get("type", "vehicle")
-        condition = self.pending_item.get("condition", "Unknown")
+            # Credit user
+            user["checking_account"] += resale
+            await upsert_user(pool, self.user_id, user)
 
-        self.pending_item = None
-        self.clear_items()
+            sold_type = self.pending_item.get("type", "vehicle")
+            condition = self.pending_item.get("condition", "Unknown")
 
-        await interaction.response.edit_message(
-            content=f"✅ You sold your {sold_type} for ${resale:,} ({condition}).",
-            view=None
-        )
+            self.pending_item = None
+            self.clear_items()
+
+            await interaction.response.edit_message(
+                content=f"✅ You sold your {sold_type} for ${resale:,} ({condition}).",
+                view=None
+            )
+        except Exception:
+            print("Error in confirm_sale:")
+            traceback.print_exc()
+            if not interaction.response.is_done():
+                await interaction.response.send_message(
+                    "❌ Something went wrong while selling your vehicle. Please try again later.",
+                    ephemeral=True
+                )
 
 
 # ConfirmSellButton and SellVehicleView (using SQL vehicle id and resale_value)
