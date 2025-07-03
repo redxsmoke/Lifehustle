@@ -1,5 +1,4 @@
 from collections import defaultdict, Counter
-import json
 import random
 import asyncio
 import time
@@ -34,7 +33,7 @@ from utilities import parse_amount, embed_message, bike_description, normalize
 from config import PAYCHECK_AMOUNT, PAYCHECK_COOLDOWN_SECONDS, COLOR_RED, COLOR_GREEN
 from category_loader import categories, category_autocomplete
 from defaults import DEFAULT_USER
-from shop_items import SHOP_ITEMS  # Assuming you load items from this
+
 
 def register_commands(tree: app_commands.CommandTree):
     @tree.command(name="submitword", description="Submit a new word to a category")
@@ -77,30 +76,41 @@ def register_commands(tree: app_commands.CommandTree):
     async def shop(interaction: Interaction, category: app_commands.Choice[str]):
         await interaction.response.defer(ephemeral=True)
         if category.value == "transportation":
-            embed = discord.Embed(
-                title="🛒 Transportation Shop",
-                description=(
-                    "Choose a vehicle to purchase:\n\n"
-                    "> 🚴 **Bike** — $2,000\n"
-                    "> 🚙 **Beater Car** — $10,000\n"
-                    "> 🚗 **Sedan Car** — $25,000\n"
-                    "> 🏎️ **Sports Car** — $100,000\n"
-                    "> 🛻 **Pickup Truck** — $75,000\n\n"
-                    "Each vehicle has unique perks!"
-                ),
-                color=discord.Color.blue()
-            )
+            async with pool.acquire() as conn:
+                vehicles = await conn.fetch("SELECT id, emoji, name, cost FROM cd_vehicle_type ORDER BY cost")
+
+            if not vehicles:
+                await interaction.followup.send("No vehicles available in the shop right now.", ephemeral=True)
+                return
+
+            desc_lines = []
+            for v in vehicles:
+                desc_lines.append(f"{v['emoji']} **{v['name']}** — ${v['cost']:,}")
+
+            description = "Choose a vehicle to purchase:\n\n" + "\n".join(desc_lines) + "\n\nEach vehicle has unique perks!"
+            embed = discord.Embed(title="🛒 Transportation Shop", description=description, color=discord.Color.blue())
+
             view = TransportationShopButtons(pool)
             await view.setup_buttons()
+            await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
         elif category.value == "groceries":
-            grouped = {}
-            for item in SHOP_ITEMS:
-                grouped.setdefault(item.get("category", "Misc"), []).append(item)
+            async with pool.acquire() as conn:
+                groceries = await conn.fetch("SELECT id, emoji, name, cost FROM cd_grocery_type ORDER BY name")
 
-            pages = [(cat.capitalize(), grouped[cat]) for cat in sorted(grouped)]
-            view = GroceryCategoryView(pages, interaction.user.id)
-            await view.send(interaction)
+            if not groceries:
+                await interaction.followup.send("No grocery items available right now.", ephemeral=True)
+                return
+
+            desc_lines = []
+            for item in groceries:
+                emoji = item["emoji"] or ""
+                desc_lines.append(f"{emoji} **{item['name']}** — ${item['cost']:,}")
+
+            description = "Choose a grocery item to purchase:\n\n" + "\n".join(desc_lines)
+            embed = discord.Embed(title="🛒 Grocery Shop", description=description, color=discord.Color.green())
+
+            await interaction.followup.send(embed=embed, ephemeral=True)
 
     @tree.command(name="deposit", description="Deposit money from checking to savings")
     @app_commands.describe(amount="Amount to deposit")
