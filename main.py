@@ -42,7 +42,6 @@ async def on_ready():
 async def setup_hook():
     print("🛠️ setup_hook starting...")
     register_commands(tree)
-    print("✅ Commands registered.")
     try:
         synced = await tree.sync()
         print(f"✅ Synced {len(synced)} slash commands.")
@@ -69,6 +68,7 @@ async def main():
     await create_pool()
     await setup_database()
     print("✅ Starting bot...")
+    # Start the bot (this will block until bot closes)
     await bot.start(DISCORD_BOT_TOKEN)
 
 if __name__ == "__main__":
