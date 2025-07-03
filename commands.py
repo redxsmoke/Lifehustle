@@ -22,7 +22,6 @@ from constants import (
 
 from views import (
     CommuteButtons,
-    TransportationShopButtons,
     SellFromStashView,
     GroceryCategoryView,
     GroceryStashPaginationView,
