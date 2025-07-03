@@ -17,7 +17,7 @@ from config import DISCORD_BOT_TOKEN, DATABASE_URL
 from db_user import reset_user_finances_table
 from db_pool import init_db
 from commands import register_commands
-from data_tier import seed_grocery_types, seed_grocery_categories
+from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_condition_table
 import globals
 
 # --- Load JSON Data ---
@@ -59,6 +59,7 @@ async def create_pool():
 
 async def setup_database():
     await init_db(globals.pool)
+    await drop_vehicle_condition_table(globals.pool)  # 🔥 Drop the table here
     await seed_grocery_categories(globals.pool)
     await seed_grocery_types(globals.pool)
     await reset_user_finances_table(globals.pool)
@@ -68,7 +69,6 @@ async def main():
     await create_pool()
     await setup_database()
     print("✅ Starting bot...")
-    # Start the bot (this will block until bot closes)
     await bot.start(DISCORD_BOT_TOKEN)
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+# ✅ Seeds the grocery types
 async def seed_grocery_types(pool):
     category_map = {
         "produce": 1,
@@ -52,6 +53,7 @@ async def seed_grocery_types(pool):
     print("✅ Seeded grocery types with emojis, categories, and costs.")
 
 
+# ✅ Seeds the grocery categories
 async def seed_grocery_categories(pool):
     grocery_categories = [
         ("Produce", "🍎"),
@@ -61,13 +63,22 @@ async def seed_grocery_categories(pool):
         ("Beverages", "🥤"),
     ]
 
-async with pool.acquire() as conn:
-    await conn.execute("""
-        DROP TABLE IF EXISTS cd_vehicle_condition;
-    """)
-    print("✅ Dropped cd_vehicle_condition table.")
+    async with pool.acquire() as conn:
+        for name, emoji in grocery_categories:
+            await conn.execute(
+                """
+                INSERT INTO cd_grocery_category (name, emoji)
+                VALUES ($1, $2)
+                ON CONFLICT (name) DO NOTHING
+                """,
+                name,
+                emoji,
+            )
+    print("✅ Seeded grocery categories with emojis.")
 
 
-
-
-
+# ✅ Drops the vehicle condition table
+async def drop_vehicle_condition_table(pool):
+    async with pool.acquire() as conn:
+        await conn.execute("DROP TABLE IF EXISTS cd_vehicle_condition;")
+        print("✅ Dropped cd_vehicle_condition table.")
