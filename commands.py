@@ -90,11 +90,11 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
         await upsert_user_finances(pool, user_id, finances)
 
         if item["type"] == "Beater Car":
-            condition = "Poor"
+            condition = "4"
             commute_count = random.randint(151, 195)
             resale_percent = 0.3
         else:
-            condition = "Brand New"
+            condition = "1"
             commute_count = 0
             resale_percent = 0.85
 
