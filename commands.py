@@ -537,11 +537,12 @@ def register_commands(tree: app_commands.CommandTree):
                     emoji = item.get("emoji", "🚗")
 
                     desc_lines.append(
-                        f"> {emoji} **{vehicle_type}**\n"
-                        f"> \u200b    Condition: {condition}\n"
-                        f"> \u200b    Description: {description}\n"
-                        f"> \u200b    Commute Count: {commute_count}"
+                        f"> {emoji} **{vehicle_type}** | Plate: {item['plate_number']}\n"
+                        f"> \u200b\u200b    Condition: {condition}\n"
+                        f"> \u200b\u200b    Description: {description}\n"
+                        f"> \u200b\u200b    Commute Count: {commute_count}"
                     )
+
 
                 embed = discord.Embed(
                     title="🚗 Your Vehicles",
