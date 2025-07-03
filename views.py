@@ -167,3 +167,54 @@ class GroceryCategoryView(View):
 class GroceryStashPaginationView(View):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+
+
+import discord
+from discord.ui import View, Button
+
+class CommuteButtons(View):
+    def __init__(self):
+        super().__init__(timeout=60)
+        self.message = None
+
+    async def disable_all_items(self, interaction: discord.Interaction):
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except Exception as e:
+                print(f"[ERROR] Failed to edit message when disabling buttons: {e}")
+
+    @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="commute_drive")
+    async def drive_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.disable_all_items(interaction)
+        await handle_commute(interaction, "drive")  # Make sure this is imported
+
+    @discord.ui.button(label="Bike 🚴 (+$10)", style=discord.ButtonStyle.success, custom_id="commute_bike")
+    async def bike_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.disable_all_items(interaction)
+        await handle_commute(interaction, "bike")
+
+    @discord.ui.button(label="Subway 🚇 ($10)", style=discord.ButtonStyle.primary, custom_id="commute_subway")
+    async def subway_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.disable_all_items(interaction)
+        await handle_commute(interaction, "subway")
+
+    @discord.ui.button(label="Bus 🚌 ($5)", style=discord.ButtonStyle.secondary, custom_id="commute_bus")
+    async def bus_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.disable_all_items(interaction)
+        await handle_commute(interaction, "bus")
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(
+                    content="⌛ Commute selection timed out. Please try again.",
+                    view=self
+                )
+            except Exception as e:
+                print(f"[ERROR] Failed to edit message on timeout: {e}")
