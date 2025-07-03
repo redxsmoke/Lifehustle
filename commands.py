@@ -90,8 +90,8 @@ def register_commands(tree: app_commands.CommandTree):
                 ),
                 color=discord.Color.blue()
             )
-            view = TransportationShopButtons()
-            await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+            view = TransportationShopButtons(pool)
+            await view.setup_buttons()
 
         elif category.value == "groceries":
             grouped = {}
