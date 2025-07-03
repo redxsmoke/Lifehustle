@@ -8,30 +8,27 @@ import vehicle_logic
 from db_user import get_user, upsert_user
 import globals  # Make sure pool is initialized here
 
-# Fixed base prices by vehicle type
-BASE_PRICES = {
-    "Bike": 2000,
-    "Beater Car": 10000,
-    "Sedan Car": 25000,
-    "Sports Car": 100000,
-    "Pickup Truck": 75000
-}
-
 class SellButton(Button):
     def __init__(self, vehicle, parent_view):
+        # Make sure vehicle has a valid 'plate' key (non-empty string)
+        plate = vehicle.get("plate")
+        if not plate or not isinstance(plate, str) or plate.strip() == "":
+            raise ValueError(f"Vehicle missing valid 'plate': {vehicle}")
+
         label = parent_view.make_button_label(vehicle)
         super().__init__(label=label, style=discord.ButtonStyle.danger)
+
         self.vehicle = vehicle
         self.parent_view = parent_view
-        # Store plate on the button for easy access
-        self.plate = vehicle.get("plate", "").upper()
+        self.plate = plate.upper()
 
     async def callback(self, interaction: Interaction):
         if interaction.user.id != self.parent_view.user_id:
             await interaction.response.send_message("This isn't your stash.", ephemeral=True)
             return
-        # Pass the vehicle and plate explicitly
+        # Pass vehicle and plate explicitly
         await self.parent_view.start_sell_flow(interaction, self.vehicle, self.plate)
+
 
 class SellFromStashView(View):
     def __init__(self, user_id: int, vehicles: list):
@@ -39,10 +36,15 @@ class SellFromStashView(View):
         self.user_id = user_id
         self.vehicles = vehicles
         self.pending_vehicle = None
-        self.pending_plate = None  # Store plate for confirmation
+        self.pending_plate = None
 
+        # Only add buttons for vehicles with valid plate keys
         for vehicle in vehicles:
-            self.add_item(SellButton(vehicle, self))
+            plate = vehicle.get("plate")
+            if plate and isinstance(plate, str) and plate.strip() != "":
+                self.add_item(SellButton(vehicle, self))
+            else:
+                print(f"[WARNING] Vehicle without valid plate skipped: {vehicle}")
 
     def make_button_label(self, vehicle):
         emoji = {
@@ -63,9 +65,11 @@ class SellFromStashView(View):
         return f"Sell {emoji} {desc} ({condition}) - ${resale:,}"
 
     async def start_sell_flow(self, interaction: Interaction, vehicle, plate):
-        self.clear_items()
+        # Store state immediately BEFORE clearing buttons
         self.pending_vehicle = vehicle
-        self.pending_plate = plate  # Save plate for sale confirmation
+        self.pending_plate = plate
+
+        self.clear_items()
 
         confirm_btn = Button(label="Confirm Sale", style=discord.ButtonStyle.success)
         cancel_btn = Button(label="Cancel", style=discord.ButtonStyle.secondary)
@@ -83,8 +87,11 @@ class SellFromStashView(View):
             self.pending_vehicle = None
             self.pending_plate = None
             self.clear_items()
+            # Re-add buttons for vehicles with valid plates
             for v in self.vehicles:
-                self.add_item(SellButton(v, self))
+                p = v.get("plate")
+                if p and isinstance(p, str) and p.strip() != "":
+                    self.add_item(SellButton(v, self))
             await i.response.edit_message(content="Sale cancelled.", view=self)
 
         confirm_btn.callback = confirm_callback
@@ -151,60 +158,3 @@ class SellFromStashView(View):
                     "❌ Something went wrong while selling your vehicle. Please try again later.",
                     ephemeral=True
                 )
-
-
-class GroceryCategoryView(View):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-class GroceryStashPaginationView(View):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-
-class CommuteButtons(View):
-    def __init__(self):
-        super().__init__(timeout=60)
-        self.message = None  # Will hold the message with buttons
-
-    async def disable_all_items(self, interaction: discord.Interaction):
-        for child in self.children:
-            child.disabled = True
-        if self.message:
-            try:
-                await self.message.edit(view=self)
-            except Exception as e:
-                print(f"[ERROR] Failed to edit message when disabling buttons: {e}")
-
-    @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="commute_drive")
-    async def drive_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.disable_all_items(interaction)
-        await handle_commute(interaction, "drive")  # Make sure handle_commute is imported/defined
-
-    @discord.ui.button(label="Bike 🚴 (+$10)", style=discord.ButtonStyle.success, custom_id="commute_bike")
-    async def bike_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.disable_all_items(interaction)
-        await handle_commute(interaction, "bike")
-
-    @discord.ui.button(label="Subway 🚇 ($10)", style=discord.ButtonStyle.primary, custom_id="commute_subway")
-    async def subway_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.disable_all_items(interaction)
-        await handle_commute(interaction, "subway")
-
-    @discord.ui.button(label="Bus 🚌 ($5)", style=discord.ButtonStyle.secondary, custom_id="commute_bus")
-    async def bus_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.disable_all_items(interaction)
-        await handle_commute(interaction, "bus")
-
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message:
-            try:
-                await self.message.edit(
-                    content="⌛ Commute selection timed out. Please try again.",
-                    view=self
-                )
-            except Exception as e:
-                print(f"[ERROR] Failed to edit message on timeout: {e}")
-#
