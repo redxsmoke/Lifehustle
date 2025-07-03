@@ -17,7 +17,7 @@ class Bank(commands.Cog):
     @bank_group.command(name="view", description="View your checking and savings balances")
     async def view(self, interaction: Interaction):
         user_id = interaction.user.id
-        user = await get_user(pool, user_id)
+        user = await get_user(globals.pool, user_id)
         if user is None:
             user = DEFAULT_USER.copy()
             await upsert_user(pool, user_id, user)
@@ -50,7 +50,7 @@ class Bank(commands.Cog):
             return
 
         user_id = interaction.user.id
-        user = await get_user(pool, user_id)
+        user = await get_user(globals.pool, user_id)
         if user is None:
             user = DEFAULT_USER.copy()
 
@@ -98,7 +98,7 @@ class Bank(commands.Cog):
             return
 
         user_id = interaction.user.id
-        user = await get_user(pool, user_id)
+        user = await get_user(globals.pool, user_id)
         if user is None:
             user = DEFAULT_USER.copy()
 
