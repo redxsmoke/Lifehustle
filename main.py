@@ -15,9 +15,6 @@ from discord.ext import commands
 from discord import app_commands
 from db_user import reset_user_finances_table
 
-
-
-
 # --- Local Imports ---
 from config import (
     DISCORD_BOT_TOKEN,
@@ -183,8 +180,6 @@ async def reset_vehicle_condition_table(pool):
         await conn.execute(RESET_VEHICLE_CONDITION_SQL)
     print("✅ Vehicle condition table reset.")
 
-
-
 async def seed_vehicle_conditions(pool):
     async with pool.acquire() as conn:
         rows = await conn.fetch("SELECT id, name FROM cd_vehicle_type;")
@@ -219,7 +214,6 @@ async def setup_user_finances_table(pool):
         await conn.execute(CREATE_USER_FINANCES_SQL)
     print("✅ user_finances table ensured.")
 
-
 async def rename_username_column(pool):
     async with pool.acquire() as conn:
         result = await conn.fetchrow("""
@@ -233,6 +227,11 @@ async def rename_username_column(pool):
             print("ℹ️ Column 'username' does not exist or was already renamed.")
 
 # --- Bot Events & Startup ---
+@bot.event
+async def on_ready():
+    print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
+
+# --- DB Pool creation & setup ---
 async def create_pool():
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
@@ -241,23 +240,21 @@ async def create_pool():
     globals.pool = await asyncpg.create_pool(DATABASE_URL, ssl=ssl_context)
     print("✅ Database connection pool created.")
 
-@bot.event
-async def on_ready():
-    if globals.pool is None:
-        await create_pool()
-        await init_db(globals.pool)
-        await create_inventory_tables(globals.pool)
-        await reset_vehicle_condition_table(globals.pool)
-        await alter_inventory_tables(globals.pool)
-        await seed_vehicle_conditions(globals.pool)
-        await seed_grocery_categories(globals.pool)
-        await seed_grocery_types(globals.pool)
-        await setup_user_finances_table(globals.pool)
-        await reset_user_finances_table(globals.pool)
-        await rename_username_column(globals.pool)
+async def setup_database():
+    await init_db(globals.pool)
+    await create_inventory_tables(globals.pool)
+    await reset_vehicle_condition_table(globals.pool)
+    await alter_inventory_tables(globals.pool)
+    await seed_vehicle_conditions(globals.pool)
+    await seed_grocery_categories(globals.pool)
+    await seed_grocery_types(globals.pool)
+    await setup_user_finances_table(globals.pool)
+    await reset_user_finances_table(globals.pool)
+    await rename_username_column(globals.pool)
 
-
-    print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
+async def main():
+    await create_pool()
+    await setup_database()
 
     register_commands(tree)
     print("✅ Commands registered.")
@@ -268,8 +265,9 @@ async def on_ready():
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
 
-
+    print("✅ Starting bot...")
+    await bot.start(DISCORD_BOT_TOKEN)
 
 # --- Run the Bot ---
 if __name__ == "__main__":
-    bot.run(DISCORD_BOT_TOKEN)
+    asyncio.run(main())
