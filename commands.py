@@ -105,36 +105,37 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             color_row = await conn.fetchrow("SELECT description FROM cd_vehicle_colors ORDER BY random() LIMIT 1")
             color = color_row["description"] if color_row else "Unknown"
 
-            # Convert condition to int before querying
+            # Convert condition to int
             condition_int = int(condition)
 
-            # Query using condition_id with correct column name
-            condition_row = await conn.fetchrow(
-                "SELECT condition_id FROM cd_vehicle_condition WHERE condition_id = $1", condition_int
+            # Fetch condition description from cd_vehicle_condition by condition_id
+            condition_desc_row = await conn.fetchrow(
+                "SELECT description FROM cd_vehicle_condition WHERE condition_id = $1",
+                condition_int
             )
-            if not condition_row:
-                condition_id = 1  # fallback to default condition ID if not found
+            if not condition_desc_row:
+                condition_desc = "Unknown"  # fallback if not found
             else:
-                condition_id = condition_row["condition_id"]
+                condition_desc = condition_desc_row["description"]
 
-            # Get random appearance description for that vehicle type + condition
+            # Get random appearance description for vehicle_type + condition_id
             appearance_row = await conn.fetchrow("""
                 SELECT description
                 FROM cd_vehicle_appearance
                 WHERE vehicle_type_id = $1 AND condition_id = $2
                 ORDER BY random()
                 LIMIT 1
-            """, item["vehicle_type_id"], condition_id)
+            """, item["vehicle_type_id"], condition_int)
 
             appearance_description = appearance_row["description"] if appearance_row else "No description available"
 
-            # Insert new vehicle record
+            # Insert new vehicle record with condition description string
             await conn.execute("""
                 INSERT INTO user_vehicle_inventory (
-                    user_id, vehicle_type_id, color, appearance_description, condition_id, commute_count, created_at, resale_percent
+                    user_id, vehicle_type_id, color, appearance_description, condition, commute_count, created_at, resale_percent
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7)
-            """, user_id, item["vehicle_type_id"], color, appearance_description, condition_id, commute_count, resale_percent)
+            """, user_id, item["vehicle_type_id"], color, appearance_description, condition_desc, commute_count, resale_percent)
 
 
         await interaction.followup.send(
