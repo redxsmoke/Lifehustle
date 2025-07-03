@@ -37,6 +37,17 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
+@bot.tree.error
+async def on_app_command_error(interaction: discord.Interaction, error):
+    print(f"❌ Slash command error: {error}")
+    try:
+        await interaction.response.send_message(
+            embed=embed_message("❌ Error", str(error), COLOR_RED),
+            ephemeral=True
+        )
+    except Exception as e:
+        print(f"Failed to send error message: {e}")
+
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")

@@ -17,9 +17,11 @@ class Bank(commands.Cog):
     @bank_group.command(name="view", description="View your checking and savings balances")
     async def view(self, interaction: Interaction):
         user_id = interaction.user.id
+        print(f"[bank view] Invoked by {user_id} ({interaction.user.display_name})")
 
         # Check if user finances exist
         user = await get_user_finances(globals.pool, user_id)
+        print(f"[bank view] Retrieved finances: {user}")
 
         if user is None:
             # Create a full default structure with required finance fields
@@ -30,6 +32,7 @@ class Bank(commands.Cog):
                 'last_paycheck_claimed': None
             }
             await upsert_user_finances(globals.pool, user_id, user)
+            print("[bank view] Inserted default finances")
 
         checking = user.get('checking_account_balance', 0)
         savings = user.get('savings_account_balance', 0)
