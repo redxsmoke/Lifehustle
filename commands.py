@@ -81,7 +81,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             await interaction.followup.send(
                 embed=embed_message(
                     "❌ Insufficient Funds",
-                    f"You need ${cost:,} but only have ${checking:,} in checking.",
+                    f"> You need ${cost:,} but only have ${checking:,} in checking.",
                     COLOR_RED
                 ),
                 ephemeral=True
