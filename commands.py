@@ -105,7 +105,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             color_row = await conn.fetchrow("SELECT description FROM cd_vehicle_colors ORDER BY random() LIMIT 1")
             color = color_row["description"] if color_row else "Unknown"
             condition_row = await conn.fetchrow(
-                "SELECT condition_id FROM cd_vehicle_condition WHERE name = $1", condition
+                "SELECT condition_id FROM cd_vehicle_condition WHERE condition_id = $1", condition
             )
             if not condition_row:
                 condition_id = 1  # fallback to default condition ID if not found
