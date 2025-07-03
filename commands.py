@@ -104,6 +104,13 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             # Get random color from code table
             color_row = await conn.fetchrow("SELECT description FROM cd_vehicle_colors ORDER BY random() LIMIT 1")
             color = color_row["description"] if color_row else "Unknown"
+            condition_row = await conn.fetchrow(
+                "SELECT id FROM cd_vehicle_condition WHERE name = $1", condition
+            )
+            if not condition_row:
+                condition_id = 1  # fallback to default condition ID if not found
+            else:
+                condition_id = int(condition_row["id"])  # convert to int explicitly
 
             # Get random appearance description for that vehicle type + condition
             appearance_row = await conn.fetchrow("""
@@ -112,7 +119,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
                 WHERE vehicle_type_id = $1 AND condition_id = $2
                 ORDER BY random()
                 LIMIT 1
-            """, item["vehicle_type_id"], condition)
+            """, item["vehicle_type_id"], condition_id)
 
             appearance_description = appearance_row["description"] if appearance_row else "No description available"
 
