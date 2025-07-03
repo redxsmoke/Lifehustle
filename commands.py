@@ -75,6 +75,7 @@ def register_commands(tree: app_commands.CommandTree):
     ])
     async def shop(interaction: Interaction, category: app_commands.Choice[str]):
         await interaction.response.defer(ephemeral=True)
+        from globals import pool
         if category.value == "transportation":
             async with pool.acquire() as conn:
                 vehicles = await conn.fetch("SELECT id, emoji, name, cost FROM cd_vehicle_type ORDER BY cost")
@@ -182,6 +183,7 @@ def register_commands(tree: app_commands.CommandTree):
 
     @tree.command(name="commute", description="Commute to work using buttons")
     async def commute(interaction: Interaction):
+        from globals import pool
         user_id = interaction.user.id
         user = await get_user(pool, user_id)
         if not user:
@@ -248,6 +250,7 @@ def register_commands(tree: app_commands.CommandTree):
     @app_commands.describe(category="Choose the category to play")
     @app_commands.autocomplete(category=category_autocomplete)
     async def startcategories(interaction: discord.Interaction, category: str):
+        from globals import pool
         if category not in categories:
             await interaction.response.send_message(
                 embed=embed_message(
