@@ -60,26 +60,29 @@ class CommuteButtons(View):
 
 
 # SELL FROM STASH VIEW
+class SellButton(Button):
+    def __init__(self, item, parent_view):
+        super().__init__(label=parent_view.make_button_label(item), style=discord.ButtonStyle.danger)
+        self.item = item
+        self.parent_view = parent_view
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.parent_view.user_id:
+            await interaction.response.send_message("This isn't your stash.", ephemeral=True)
+            return
+
+        await self.parent_view.start_sell_flow(interaction, self.item)
+
+
 class SellFromStashView(View):
     def __init__(self, user_id: int, vehicles: list):
-        super().__init__(timeout=60)
+        super().__init__(timeout=None)  # Use no timeout or increase as needed
         self.user_id = user_id
         self.vehicles = vehicles
-        self.pending_confirmation = {}  # Tracks items awaiting confirmation keyed by custom_id
-        self._build_vehicle_buttons()
+        self.pending_item = None
 
-    def _build_vehicle_buttons(self):
-        self.clear_items()
-        for vehicle in self.vehicles:
-            plate_or_tag = vehicle.get('plate') or vehicle.get('tag') or str(id(vehicle))
-            custom_id = f"sell_{plate_or_tag}"
-            btn = Button(
-                label=self.make_button_label(vehicle),
-                style=discord.ButtonStyle.danger,
-                custom_id=custom_id
-            )
-            btn.callback = self.make_sell_request_callback(vehicle, custom_id)
-            self.add_item(btn)
+        for vehicle in vehicles:
+            self.add_item(SellButton(vehicle, self))
 
     def make_button_label(self, item):
         emoji = {
@@ -111,49 +114,43 @@ class SellFromStashView(View):
 
         return f"Sell {emoji} {desc} ({cond}) - ${resale:,}"
 
-    def make_sell_request_callback(self, item, custom_id):
-        async def callback(interaction: discord.Interaction):
-            if interaction.user.id != self.user_id:
-                await interaction.response.send_message("This isn't your stash.", ephemeral=True)
+    async def start_sell_flow(self, interaction: discord.Interaction, item):
+        self.clear_items()
+        self.pending_item = item
+
+        confirm_btn = Button(label="Confirm Sale", style=discord.ButtonStyle.success)
+        cancel_btn = Button(label="Cancel", style=discord.ButtonStyle.secondary)
+
+        async def confirm_callback(i: discord.Interaction):
+            if i.user.id != self.user_id:
+                await i.response.send_message("This isn't your stash.", ephemeral=True)
                 return
+            await self.confirm_sale(i)
 
-            self.pending_confirmation[custom_id] = item
-
-            # Disable all buttons
-            for child in self.children:
-                child.disabled = True
-
-            # Confirm & Cancel buttons
-            confirm_btn = Button(label="Confirm Sale", style=discord.ButtonStyle.success, custom_id=f"confirm_{custom_id}")
-            cancel_btn = Button(label="Cancel", style=discord.ButtonStyle.secondary, custom_id=f"cancel_{custom_id}")
-
-            async def confirm_callback(i: discord.Interaction):
-                await self.confirm_sale(i, item, custom_id)
-
-            async def cancel_callback(i: discord.Interaction):
-                if i.user.id != self.user_id:
-                    await i.response.send_message("This isn't your stash.", ephemeral=True)
-                    return
-                self.pending_confirmation.pop(custom_id, None)
-                self._build_vehicle_buttons()
-                await i.response.edit_message(content="Sale cancelled.", view=self)
-
-            confirm_btn.callback = confirm_callback
-            cancel_btn.callback = cancel_callback
-
+        async def cancel_callback(i: discord.Interaction):
+            if i.user.id != self.user_id:
+                await i.response.send_message("This isn't your stash.", ephemeral=True)
+                return
+            self.pending_item = None
             self.clear_items()
-            self.add_item(confirm_btn)
-            self.add_item(cancel_btn)
+            for vehicle in self.vehicles:
+                self.add_item(SellButton(vehicle, self))
+            await i.response.edit_message(content="Sale cancelled.", view=self)
 
-            await interaction.response.edit_message(
-                content=f"Are you sure you want to sell your {item.get('type')} ({item.get('color', 'Unknown')}, {item.get('condition', 'Unknown')})?",
-                view=self
-            )
-        return callback
+        confirm_btn.callback = confirm_callback
+        cancel_btn.callback = cancel_callback
 
-    async def confirm_sale(self, interaction: discord.Interaction, item, custom_id):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("This isn't your stash.", ephemeral=True)
+        self.add_item(confirm_btn)
+        self.add_item(cancel_btn)
+
+        await interaction.response.edit_message(
+            content=f"Are you sure you want to sell your {item.get('type')} ({item.get('color', 'Unknown')}, {item.get('condition', 'Unknown')})?",
+            view=self
+        )
+
+    async def confirm_sale(self, interaction: discord.Interaction):
+        if not self.pending_item:
+            await interaction.response.send_message("❌ No item pending confirmation.", ephemeral=True)
             return
 
         user = await get_user(pool, self.user_id)
@@ -161,7 +158,7 @@ class SellFromStashView(View):
             await interaction.response.send_message("You don’t have an account yet.", ephemeral=True)
             return
 
-        plate = item.get("plate")
+        plate = self.pending_item.get("plate")
         if not plate:
             await interaction.response.send_message("❌ Cannot find vehicle plate to remove.", ephemeral=True)
             return
@@ -173,7 +170,7 @@ class SellFromStashView(View):
         )
 
         # Calculate resale value
-        condition = item.get("condition", "Unknown")
+        condition = self.pending_item.get("condition", "Unknown")
         base_prices = {
             "Bike": 2000,
             "Beater Car": 10000,
@@ -187,7 +184,7 @@ class SellFromStashView(View):
             "Heavily Used": 0.25,
             "Rusted": 0.10
         }
-        base_price = base_prices.get(item.get("type"), 0)
+        base_price = base_prices.get(self.pending_item.get("type"), 0)
         percent = resale_percent.get(condition, 0.10)
         resale = int(base_price * percent)
 
@@ -195,11 +192,11 @@ class SellFromStashView(View):
         user["checking_account"] += resale
         await upsert_user(pool, self.user_id, user)
 
-        self.pending_confirmation.pop(custom_id, None)
+        self.pending_item = None
         self.clear_items()
 
         await interaction.response.edit_message(
-            content=f"✅ You sold your {item.get('type')} for ${resale:,} ({condition}).",
+            content=f"✅ You sold your {self.pending_item.get('type')} for ${resale:,} ({condition}).",
             view=None
         )
 
@@ -250,4 +247,3 @@ class GroceryStashPaginationView(View):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # TODO: Add your pagination logic here later
-
