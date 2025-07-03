@@ -41,9 +41,9 @@ class Bank(commands.Cog):
             embed=embed_message(
                 "💰 Account Balances",
                 f"> {interaction.user.display_name}, your account balances are:\n"
-                f"> \u200B 💰 Checking: ${checking:,}\n"
-                f"> \u200B 🏦 Savings: ${savings:,}"
-                COLOR_GREEN
+                f">\u200B 💰 Checking: ${checking:,}\n"
+                f">\u200B 🏦 Savings: ${savings:,}",
+                COLOR_GREEN,
             )
         )
 
