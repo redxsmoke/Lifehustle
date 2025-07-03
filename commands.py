@@ -7,6 +7,7 @@ import defaults
 import discord
 from discord import app_commands, Interaction
 import category_loader
+import globals
 
 from datetime import datetime, timezone, timedelta   
 from db_user import get_user_finances, upsert_user_finances  
