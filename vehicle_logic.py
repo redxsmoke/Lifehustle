@@ -120,7 +120,7 @@ CONDITION_TO_PERCENT = {
     "Broken Down": 0.10
 }
 
-
+# Purchase Handler
 async def handle_vehicle_purchase(
     interaction: discord.Interaction,
     item: dict,
@@ -141,7 +141,9 @@ async def handle_vehicle_purchase(
         await interaction.response.send_message("🚫 Internal error: No vehicle_type_id provided.", ephemeral=True)
         return
 
-    # Restriction: only 1 bike, or 1 car/truck
+    vehicle_type_name = VEHICLE_TYPE_MAP.get(vehicle_type_id, "Beater Car")
+
+    # Enforce ownership limits
     if vehicle_type_id in (5, 6):  # Bike
         exists = await pool.fetchrow(
             "SELECT 1 FROM user_vehicle_inventory WHERE user_id = $1 AND vehicle_type_id IN (5, 6) LIMIT 1",
@@ -150,7 +152,7 @@ async def handle_vehicle_purchase(
         if exists:
             await interaction.response.send_message("🚲 You already own a bike. You can't buy another one.", ephemeral=True)
             return
-    else:  # Cars and trucks
+    else:
         exists = await pool.fetchrow(
             "SELECT 1 FROM user_vehicle_inventory WHERE user_id = $1 AND vehicle_type_id NOT IN (5, 6) LIMIT 1",
             user_id
@@ -163,16 +165,16 @@ async def handle_vehicle_purchase(
     user["checking_account"] -= cost
     await upsert_user(pool, user_id, user)
 
-    # Generate license plate
+    # Generate random plate
     plate = generate_random_plate()
 
-    # Set condition and appearance
-    if vehicle_type_id == 1:  # Beater Car
+    # Set condition + description
+    if vehicle_type_name == "Beater Car":
         condition = "Poor Condition"
         color = random.choice(CAR_COLORS)
         appearance_description = random.choice(CAR_DESCRIPTIONS[condition])
         commute_count = random.randint(151, 195)
-    elif vehicle_type_id in (5, 6):  # Bikes
+    elif vehicle_type_name in ("Bike", "Motorcycle"):
         condition = "Brand New"
         color = random.choice(BIKE_COLORS)
         appearance_description = random.choice(BIKE_DESCRIPTIONS[condition])
@@ -183,12 +185,11 @@ async def handle_vehicle_purchase(
         appearance_description = random.choice(CAR_DESCRIPTIONS[condition])
         commute_count = 0
 
-    vehicle_type_name = VEHICLE_TYPE_MAP.get(vehicle_type_id, "Beater Car")
     base_price = BASE_PRICES.get(vehicle_type_name, cost)
     resale_percent = CONDITION_TO_PERCENT.get(condition, 0.10)
     resale_value = int(base_price * resale_percent)
 
-    # Insert vehicle into inventory
+    # Insert into inventory
     await pool.execute(
         """
         INSERT INTO user_vehicle_inventory (
@@ -206,6 +207,7 @@ async def handle_vehicle_purchase(
     )
 
 
+# Fetch user vehicles
 async def get_user_vehicles(pool, user_id: int) -> list:
     query = """
     SELECT
@@ -225,11 +227,11 @@ async def get_user_vehicles(pool, user_id: int) -> list:
     """
     return await pool.fetch(query, user_id)
 
-
+# Delete vehicle by ID
 async def remove_vehicle_by_id(pool, vehicle_id: int):
     async with pool.acquire() as conn:
         await conn.execute("DELETE FROM user_vehicle_inventory WHERE id = $1", vehicle_id)
 
-
+# License plate generator
 def generate_random_plate() -> str:
     return ''.join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", k=8))
