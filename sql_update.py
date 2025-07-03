@@ -12,7 +12,8 @@ async def update_vehicle_types():
     try:
         # Remove Blue Car and Red Car
         await conn.execute("""
-            DELETE FROM cd_vehicle_type WHERE name IN ('Blue Car', 'Red Car');
+            ALTER TABLE cd_vehicle_Type
+            DROP COLUMN motorcycle;
         """)
         print("Removed Blue Car and Red Car")
 
