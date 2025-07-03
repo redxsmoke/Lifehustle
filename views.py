@@ -155,3 +155,62 @@ class SellFromStashView(View):
                     "❌ Something went wrong while selling your vehicle. Please try again later.",
                     ephemeral=True
                 )
+
+
+class CommuteButtons(View):
+    def __init__(self):
+        super().__init__(timeout=60)
+        self.message = None  # Will hold the message with buttons
+
+    async def disable_all_items(self, interaction: Interaction):
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except Exception as e:
+                print(f"[ERROR] Failed to edit message when disabling buttons: {e}")
+
+    @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="commute_drive")
+    async def drive_button(self, interaction: Interaction, button: Button):
+        await self.disable_all_items(interaction)
+        await handle_commute(interaction, "drive")  # Make sure handle_commute is imported
+
+    @discord.ui.button(label="Bike 🚴 (+$10)", style=discord.ButtonStyle.success, custom_id="commute_bike")
+    async def bike_button(self, interaction: Interaction, button: Button):
+        await self.disable_all_items(interaction)
+        await handle_commute(interaction, "bike")
+
+    @discord.ui.button(label="Subway 🚇 ($10)", style=discord.ButtonStyle.primary, custom_id="commute_subway")
+    async def subway_button(self, interaction: Interaction, button: Button):
+        await self.disable_all_items(interaction)
+        await handle_commute(interaction, "subway")
+
+    @discord.ui.button(label="Bus 🚌 ($5)", style=discord.ButtonStyle.secondary, custom_id="commute_bus")
+    async def bus_button(self, interaction: Interaction, button: Button):
+        await self.disable_all_items(interaction)
+        await handle_commute(interaction, "bus")
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(
+                    content="⌛ Commute selection timed out. Please try again.",
+                    view=self
+                )
+            except Exception as e:
+                print(f"[ERROR] Failed to edit message on timeout: {e}")
+
+
+class GroceryCategoryView(View):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Implement grocery category view buttons or logic here if needed
+
+
+class GroceryStashPaginationView(View):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Implement grocery stash pagination buttons or logic here if needed
