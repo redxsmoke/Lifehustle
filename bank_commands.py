@@ -43,6 +43,7 @@ class Bank(commands.Cog):
                 f"> {interaction.user.display_name}, your account balances are:\n"
                 f"> \u200B 💰 Checking: ${checking:,}\n"
                 f"> \u200B 🏦 Savings: ${savings:,}"
+                COLOR_GREEN
             )
         )
 
@@ -88,8 +89,8 @@ class Bank(commands.Cog):
             embed=embed_message(
                 "✅ Withdrawal Complete",
                 f"> Moved ${amount_int:,} from savings to checking.\n"
-                f"> \u200B 💰 Checking: ${user['checking_account_balance']:,}\n"
-                f"> \u200B 🏦 Savings: ${user['savings_account_balance']:,}",
+                f">\u200B 💰 Checking: ${user['checking_account_balance']:,}\n"
+                f">\u200B 🏦 Savings: ${user['savings_account_balance']:,}",
                 COLOR_GREEN
             )
         )
