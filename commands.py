@@ -1,7 +1,8 @@
 from collections import defaultdict, Counter
 import random
+import traceback
 import asyncio
-import time
+import datetime
 import defaults
 import discord
 from discord import app_commands, Interaction
@@ -53,60 +54,68 @@ class PurchaseVehicleView(discord.ui.View):
 
     # Placeholder for the purchase handler - implement your actual purchase logic here
     async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, cost: int):
-        user_id = interaction.user.id
-        from globals import pool
+        try:
+            user_id = interaction.user.id
 
-        # Use get_user_finances() to get the correct balance info
-        finances = await get_user_finances(pool, user_id)
-        if finances is None:
-            # If no finances record, create one with zero balances
-            finances = {
-                "checking_account_balance": 0,
-                "savings_account_balance": 0,
-                "debt_balance": 0,
-                "last_paycheck_claimed": datetime.fromtimestamp(0, tz=timezone.utc)
-            }
+            # Use get_user_finances() to get the correct balance info
+            finances = await get_user_finances(pool, user_id)
+            if finances is None:
+                # If no finances record, create one with zero balances
+                finances = {
+                    "checking_account_balance": 0,
+                    "savings_account_balance": 0,
+                    "debt_balance": 0,
+                    "last_paycheck_claimed": datetime.fromtimestamp(0, tz=timezone.utc)
+                }
 
-        checking = finances.get("checking_account_balance", 0)
-        if checking < cost:
+            checking = finances.get("checking_account_balance", 0)
+            if checking < cost:
+                await interaction.response.send_message(
+                    embed=embed_message(
+                        "❌ Insufficient Funds",
+                        f"You need ${cost:,} but only have ${checking:,} in checking.",
+                        COLOR_RED
+                    ),
+                    ephemeral=True
+                )
+                return
+
+            # Deduct cost
+            finances["checking_account_balance"] -= cost
+            await upsert_user_finances(pool, user_id, finances)
+
+            # Determine condition and resale percent
+            if item["type"] == "Beater Car":
+                condition = "Poor"
+                resale_percent = 0.3
+            else:
+                condition = "Brand New"
+                resale_percent = 0.85
+
+            # Add vehicle to inventory
+            async with pool.acquire() as conn:
+                await conn.execute("""
+                    INSERT INTO user_vehicle_inventory (user_id, vehicle_type_id, color, appearance_description, condition, created_at, resale_percent)
+                    VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+                """, user_id, item["vehicle_type_id"], "Random Color", "Purchased vehicle", condition, resale_percent)
+
             await interaction.response.send_message(
                 embed=embed_message(
-                    "❌ Insufficient Funds",
-                    f"You need ${cost:,} but only have ${checking:,} in checking.",
-                    COLOR_RED
+                    "✅ Purchase Successful",
+                    f"You bought a **{item['type']}** for ${cost:,}.\n"
+                    f"💰 Remaining Checking Balance: ${finances['checking_account_balance']:,}",
+                    COLOR_GREEN
                 ),
                 ephemeral=True
             )
-            return
-
-        # Deduct cost
-        finances["checking_account_balance"] -= cost
-        await upsert_user_finances(pool, user_id, finances)
-
-        # Determine condition and resale percent
-        if item["type"] == "Beater Car":
-            condition = "Poor"
-            resale_percent = 0.3
-        else:
-            condition = "Brand New"
-            resale_percent = .85
-
-        # Add vehicle to inventory
-        async with pool.acquire() as conn:
-            await conn.execute("""
-                INSERT INTO user_vehicle_inventory (user_id, vehicle_type_id, color, appearance_description, condition, created_at, resale_percent)
-                VALUES ($1, $2, $3, $4, $5, NOW(), $6)
-            """, user_id, item["vehicle_type_id"], "Random Color", "Purchased vehicle", condition, resale_percent)
-
-        await interaction.response.send_message(
-            embed=embed_message(
-                "✅ Purchase Successful",
-                f"You bought a **{item['type']}** for ${cost:,}.\n"
-                f"💰 Remaining Checking Balance: ${finances['checking_account_balance']:,}",
-                COLOR_GREEN
-            ),
-            ephemeral=True
-        )
+        except Exception as e:
+            print("Error in handle_vehicle_purchase:", e)
+            traceback.print_exc()
+            if not interaction.response.is_done():
+                await interaction.response.send_message(
+                    "❌ An error occurred during purchase. Please try again later.",
+                    ephemeral=True
+                )
 
 
 def register_commands(tree: app_commands.CommandTree):
