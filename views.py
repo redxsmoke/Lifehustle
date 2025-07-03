@@ -113,52 +113,58 @@ class SellFromStashView(View):
         )
 
     async def confirm_sale(self, interaction: Interaction):
-        try:
-            if not self.pending_vehicle or not self.pending_vehicle_id:
-                await interaction.response.send_message("❌ No vehicle pending confirmation.", ephemeral=True)
-                return
+            try:
+                if not self.pending_vehicle or not self.pending_vehicle_id:
+                    await interaction.response.send_message("❌ No vehicle pending confirmation.", ephemeral=True)
+                    return
 
-            user = await get_user(globals.pool, self.user_id)
-            if not user:
-                await interaction.response.send_message("You don’t have an account yet.", ephemeral=True)
-                return
-
-            # Delete vehicle by ID
-            await globals.pool.execute(
-                "DELETE FROM user_vehicle_inventory WHERE id = $1",
-                self.pending_vehicle_id
-            )
-
-            # Remove vehicle from local stash list
-            self.vehicles = [v for v in self.vehicles if v.get("id") != self.pending_vehicle_id]
-
-            base_price = BASE_PRICES.get(self.pending_vehicle.get("type"), 0)
-            resale_percent = self.pending_vehicle.get("resale_percent", 0.10)
-            resale = int(base_price * resale_percent)
-
-            current_balance = user.get("checking_account_balance", 0)
-            user["checking_account_balance"] = current_balance + resale
-            await upsert_user(globals.pool, self.user_id, user)
-
-            sold_type = self.pending_vehicle.get("type", "vehicle")
-            condition = self.pending_vehicle.get("condition", "Unknown")
-
-            self.pending_vehicle = None
-            self.pending_vehicle_id = None
-            self.clear_items()
-
-            await interaction.response.edit_message(
-                content=f"✅ You sold your {sold_type} for ${resale:,} ({condition}).",
-                view=None
-            )
-        except Exception:
-            print("Error in confirm_sale:")
-            traceback.print_exc()
-            if not interaction.response.is_done():
-                await interaction.response.send_message(
-                    "❌ Something went wrong while selling your vehicle. Please try again later.",
-                    ephemeral=True
+                # Delete vehicle by ID
+                await globals.pool.execute(
+                    "DELETE FROM user_vehicle_inventory WHERE id = $1",
+                    self.pending_vehicle_id
                 )
+
+                # Remove vehicle from local stash list
+                self.vehicles = [v for v in self.vehicles if v.get("id") != self.pending_vehicle_id]
+
+                base_price = BASE_PRICES.get(self.pending_vehicle.get("type"), 0)
+                resale_percent = self.pending_vehicle.get("resale_percent", 0.10)
+                resale = int(base_price * resale_percent)
+
+                from db_user import get_user_finances, upsert_user_finances
+                from datetime import datetime, timezone
+
+                finances = await get_user_finances(globals.pool, self.user_id)
+                if finances is None:
+                    finances = {
+                        "checking_account_balance": 0,
+                        "savings_account_balance": 0,
+                        "debt_balance": 0,
+                        "last_paycheck_claimed": datetime.fromtimestamp(0, tz=timezone.utc)
+                    }
+
+                finances["checking_account_balance"] += resale
+                await upsert_user_finances(globals.pool, self.user_id, finances)
+
+                sold_type = self.pending_vehicle.get("type", "vehicle")
+                condition = self.pending_vehicle.get("condition", "Unknown")
+
+                self.pending_vehicle = None
+                self.pending_vehicle_id = None
+                self.clear_items()
+
+                await interaction.response.edit_message(
+                    content=f"✅ You sold your {sold_type} for ${resale:,} ({condition}).",
+                    view=None
+                )
+            except Exception:
+                print("Error in confirm_sale:")
+                traceback.print_exc()
+                if not interaction.response.is_done():
+                    await interaction.response.send_message(
+                        "❌ Something went wrong while selling your vehicle. Please try again later.",
+                        ephemeral=True
+                    )
 
 
 class CommuteButtons(View):
