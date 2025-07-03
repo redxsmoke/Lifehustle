@@ -109,7 +109,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             appearance_row = await conn.fetchrow("""
                 SELECT description
                 FROM cd_vehicle_appearance
-                WHERE vehicle_type_id = $1 AND condition = $2
+                WHERE vehicle_type_id = $1 AND condition_id = $2
                 ORDER BY random()
                 LIMIT 1
             """, item["vehicle_type_id"], condition)
