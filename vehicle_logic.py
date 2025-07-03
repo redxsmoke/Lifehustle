@@ -111,9 +111,10 @@ async def handle_vehicle_purchase(
         return
 
     # Check ownership restrictions: only one bike or one car/truck allowed
-    if vehicle_type_id == 1:  # Bike
+    # Adjusted for your IDs: bike is 5 or 6, beater car is 1
+    if vehicle_type_id in (5, 6):  # Bike
         exists = await pool.fetchrow(
-            "SELECT 1 FROM user_vehicle_inventory WHERE user_id = $1 AND vehicle_type_id = 1 LIMIT 1",
+            "SELECT 1 FROM user_vehicle_inventory WHERE user_id = $1 AND vehicle_type_id IN (5, 6) LIMIT 1",
             user_id
         )
         if exists:
@@ -121,7 +122,7 @@ async def handle_vehicle_purchase(
             return
     else:
         exists = await pool.fetchrow(
-            "SELECT 1 FROM user_vehicle_inventory WHERE user_id = $1 AND vehicle_type_id != 1 LIMIT 1",
+            "SELECT 1 FROM user_vehicle_inventory WHERE user_id = $1 AND vehicle_type_id NOT IN (5, 6) LIMIT 1",
             user_id
         )
         if exists:
@@ -136,12 +137,17 @@ async def handle_vehicle_purchase(
     plate = generate_random_plate()
 
     # Assign attributes based on vehicle type
-    if vehicle_type_id == 1:  # Bike
-        condition = "Poor Condition"  # This can be randomized or adjusted as needed
+    if vehicle_type_id == 1:  # Beater Car
+        condition = "Poor Condition"
+        color = random.choice(CAR_COLORS)
+        appearance_description = random.choice(CAR_DESCRIPTIONS.get(condition, [""]))
+        commute_count = random.randint(151, 195)
+    elif vehicle_type_id in (5, 6):  # Bikes
+        condition = "Brand New"
         color = random.choice(BIKE_COLORS)
         appearance_description = random.choice(BIKE_DESCRIPTIONS.get(condition, [""]))
-        commute_count = 151  # Magic number - consider defining a constant or commenting meaning
-    else:
+        commute_count = 0
+    else:  # Other cars/trucks
         condition = "Brand New"
         color = random.choice(CAR_COLORS)
         appearance_description = random.choice(CAR_DESCRIPTIONS.get(condition, [""]))
