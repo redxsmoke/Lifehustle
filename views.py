@@ -1,4 +1,21 @@
-from discord.ui import Button, View
+import discord
+from discord.ui import View, Button
+from discord import Interaction, Embed
+import traceback
+
+import utilities
+import vehicle_logic
+from db_user import get_user, upsert_user
+import globals  # Make sure pool is initialized here
+
+# Fixed base prices by vehicle type
+BASE_PRICES = {
+    "Bike": 2000,
+    "Beater Car": 10000,
+    "Sedan Car": 25000,
+    "Sports Car": 100000,
+    "Pickup Truck": 75000
+}
 
 class SellButton(Button):
     def __init__(self, vehicle, parent_view):
