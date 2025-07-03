@@ -104,13 +104,18 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             # Get random color from code table
             color_row = await conn.fetchrow("SELECT description FROM cd_vehicle_colors ORDER BY random() LIMIT 1")
             color = color_row["description"] if color_row else "Unknown"
+
+            # Convert condition to int before querying
+            condition_int = int(condition)
+
+            # Query using condition_id with correct column name
             condition_row = await conn.fetchrow(
-                "SELECT condition_id FROM cd_vehicle_condition WHERE condition_id = $1", condition
+                "SELECT condition_id FROM cd_vehicle_condition WHERE condition_id = $1", condition_int
             )
             if not condition_row:
                 condition_id = 1  # fallback to default condition ID if not found
             else:
-                condition_id = int(condition_row["id"])  # convert to int explicitly
+                condition_id = condition_row["condition_id"]
 
             # Get random appearance description for that vehicle type + condition
             appearance_row = await conn.fetchrow("""
@@ -126,10 +131,11 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             # Insert new vehicle record
             await conn.execute("""
                 INSERT INTO user_vehicle_inventory (
-                    user_id, vehicle_type_id, color, appearance_description, condition, commute_count, created_at, resale_percent
+                    user_id, vehicle_type_id, color, appearance_description, condition_id, commute_count, created_at, resale_percent
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7)
-            """, user_id, item["vehicle_type_id"], color, appearance_description, condition, commute_count, resale_percent)
+            """, user_id, item["vehicle_type_id"], color, appearance_description, condition_id, commute_count, resale_percent)
+
 
         await interaction.followup.send(
             embed=embed_message(
