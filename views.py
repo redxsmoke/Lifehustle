@@ -23,12 +23,15 @@ class SellButton(Button):
         super().__init__(label=label, style=discord.ButtonStyle.danger)
         self.vehicle = vehicle
         self.parent_view = parent_view
+        # Store plate on the button for easy access
+        self.plate = vehicle.get("plate", "").upper()
 
     async def callback(self, interaction: Interaction):
         if interaction.user.id != self.parent_view.user_id:
             await interaction.response.send_message("This isn't your stash.", ephemeral=True)
             return
-        await self.parent_view.start_sell_flow(interaction, self.vehicle)
+        # Pass the vehicle and plate explicitly
+        await self.parent_view.start_sell_flow(interaction, self.vehicle, self.plate)
 
 class SellFromStashView(View):
     def __init__(self, user_id: int, vehicles: list):
@@ -36,6 +39,7 @@ class SellFromStashView(View):
         self.user_id = user_id
         self.vehicles = vehicles
         self.pending_vehicle = None
+        self.pending_plate = None  # Store plate for confirmation
 
         for vehicle in vehicles:
             self.add_item(SellButton(vehicle, self))
@@ -58,9 +62,10 @@ class SellFromStashView(View):
 
         return f"Sell {emoji} {desc} ({condition}) - ${resale:,}"
 
-    async def start_sell_flow(self, interaction: Interaction, vehicle):
+    async def start_sell_flow(self, interaction: Interaction, vehicle, plate):
         self.clear_items()
         self.pending_vehicle = vehicle
+        self.pending_plate = plate  # Save plate for sale confirmation
 
         confirm_btn = Button(label="Confirm Sale", style=discord.ButtonStyle.success)
         cancel_btn = Button(label="Cancel", style=discord.ButtonStyle.secondary)
@@ -76,6 +81,7 @@ class SellFromStashView(View):
                 await i.response.send_message("This isn't your stash.", ephemeral=True)
                 return
             self.pending_vehicle = None
+            self.pending_plate = None
             self.clear_items()
             for v in self.vehicles:
                 self.add_item(SellButton(v, self))
@@ -95,7 +101,7 @@ class SellFromStashView(View):
 
     async def confirm_sale(self, interaction: Interaction):
         try:
-            if not self.pending_vehicle:
+            if not self.pending_vehicle or not self.pending_plate:
                 await interaction.response.send_message("❌ No vehicle pending confirmation.", ephemeral=True)
                 return
 
@@ -104,12 +110,12 @@ class SellFromStashView(View):
                 await interaction.response.send_message("You don’t have an account yet.", ephemeral=True)
                 return
 
-            plate = self.pending_vehicle.get("plate", "").upper()
+            plate = self.pending_plate
             if not plate:
                 await interaction.response.send_message("❌ Cannot find vehicle plate to remove.", ephemeral=True)
                 return
 
-            # Delete vehicle from DB
+            # Delete vehicle from DB using user_id and plate_number
             await globals.pool.execute(
                 "DELETE FROM user_vehicle_inventory WHERE user_id = $1 AND plate_number = $2",
                 self.user_id,
@@ -130,6 +136,7 @@ class SellFromStashView(View):
             condition = self.pending_vehicle.get("condition", "Unknown")
 
             self.pending_vehicle = None
+            self.pending_plate = None
             self.clear_items()
 
             await interaction.response.edit_message(
