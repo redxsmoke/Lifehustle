@@ -134,7 +134,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             # Insert new vehicle record with condition description string
             await conn.execute("""
                 INSERT INTO user_vehicle_inventory (
-                    user_id, vehicle_type_id, color, appearance_description, plant_number, condition, commute_count, created_at, resale_percent
+                    user_id, vehicle_type_id, color, appearance_description, plate_number, condition, commute_count, created_at, resale_percent
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7)
             """, user_id, item["vehicle_type_id"], color, appearance_description, plate_number, condition_desc, commute_count, resale_percent)
