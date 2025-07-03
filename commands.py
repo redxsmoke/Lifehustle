@@ -100,7 +100,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             commute_count = 0
             resale_percent = 0.85
 
-        print(f"[handle_vehicle_purchase] Inserting vehicle with condition '{condition}', resale_percent {resale_percent}")
+        print(f"[handle_vehicle_purchase] Inserting vehicle with condition '{condition}', commute_count '{commute_count}', resale_percent {resale_percent}")
 
         # Pick a random color (you can replace with your color list)
         car_colors = ["Red", "Blue", "Green", "Black", "White", "Yellow", "Silver"]
