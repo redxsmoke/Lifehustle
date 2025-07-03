@@ -77,6 +77,27 @@ async def seed_grocery_categories(pool):
     print("✅ Seeded grocery categories with emojis.")
 
 
+async def drop_vehicle_appearence_table(pool):
+    async with pool.acquire() as conn:
+        await conn.execute("DROP TABLE IF EXISTS cd_vehicle_appearence;")
+        print("✅ Dropped cd_vehicle_appearence table.")
+
+
+async def create_vehicle_appearance_table(pool):
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS cd_vehicle_appearance (
+                cd_vehicle_appearance_id SERIAL PRIMARY KEY,
+                description TEXT NOT NULL,
+                condition_id INT NOT NULL REFERENCES cd_vehicle_condition(condition_id),
+                vehicle_type_id INT NOT NULL REFERENCES cd_vehicle_type(vehicle_type_id)
+            );
+        """)
+        print("✅ Created cd_vehicle_appearance table.")
+
+
+
+
 async def seed_vehicle_appearance(pool):
     vehicle_descriptions = {
         1: {  # Beater Car
