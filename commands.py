@@ -56,7 +56,7 @@ class PurchaseVehicleView(discord.ui.View):
 # Moved outside the class
 async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, cost: int):
     print(f"[handle_vehicle_purchase] Start purchase attempt: user={interaction.user.id}, item={item}, cost={cost}")
-
+    pool = globals.pool
     try:
         # Defer to avoid interaction timeout if logic takes time
         await interaction.response.defer(ephemeral=True)
