@@ -8,7 +8,7 @@ import utilities
 import vehicle_logic
 from db_user import get_user, upsert_user
 from globals import pool
-from some_module import handle_commute  # <-- Make sure to import handle_commute from your actual module
+
 
 
 # COMMUTE BUTTONS VIEW
