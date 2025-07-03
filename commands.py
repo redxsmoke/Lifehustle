@@ -82,8 +82,7 @@ def register_commands(tree: app_commands.CommandTree):
             description = "Choose a vehicle to purchase:\n\n" + "\n".join(desc_lines) + "\n\nEach vehicle has unique perks!"
             embed = discord.Embed(title="🛒 Transportation Shop", description=description, color=discord.Color.blue())
 
-            view = TransportationShopButtons(pool)
-            await view.setup_buttons()
+            view = PurchaseVehicleView(vehicles, interaction.user.id)
             await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
         elif category.value == "groceries":

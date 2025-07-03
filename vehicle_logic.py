@@ -1,8 +1,7 @@
 import random
-from db_user import get_user, upsert_user
 import discord
+from db_user import get_user, upsert_user
 from globals import pool
-
 
 # Base prices for resale calculation
 BASE_PRICES = {
@@ -23,17 +22,20 @@ CONDITION_TO_PERCENT = {
     "Broken Down": 0.10
 }
 
+
 async def get_vehicle_type_name(conn, vehicle_type_id: int) -> str:
     row = await conn.fetchrow(
         "SELECT name FROM cd_vehicle_type WHERE id = $1", vehicle_type_id
     )
     return row["name"] if row else "Unknown Vehicle"
 
+
 async def get_condition_name(conn, condition_id: int) -> str:
     row = await conn.fetchrow(
         "SELECT name FROM cd_vehicle_condition WHERE id = $1", condition_id
     )
     return row["name"] if row else "Unknown Condition"
+
 
 async def fetch_random_color(conn, vehicle_type_id: int) -> str:
     row = await conn.fetchrow(
@@ -47,6 +49,7 @@ async def fetch_random_color(conn, vehicle_type_id: int) -> str:
     )
     return row['name'] if row else "Unknown Color"
 
+
 async def fetch_appearance_description(conn, vehicle_type_id: int, condition_id: int) -> str:
     row = await conn.fetchrow(
         """
@@ -58,6 +61,7 @@ async def fetch_appearance_description(conn, vehicle_type_id: int, condition_id:
         vehicle_type_id, condition_id
     )
     return row['description'] if row else "has an indescribable look"
+
 
 def generate_random_plate() -> str:
     return ''.join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", k=8))
@@ -165,3 +169,16 @@ async def get_user_vehicles(pool, user_id: int) -> list:
 
 async def remove_vehicle_by_id(pool, vehicle_id: int):
     await pool.execute("DELETE FROM user_vehicle_inventory WHERE id = $1", vehicle_id)
+
+
+# ✅ View + Button to Trigger Purchase
+class PurchaseVehicleView(discord.ui.View):
+    def __init__(self, item: dict, cost: int):
+        super().__init__(timeout=180)
+        self.item = item
+        self.cost = cost
+
+    @discord.ui.button(label="Buy Vehicle", style=discord.ButtonStyle.success)
+    async def buy_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        print(f"[DEBUG] Buy button clicked by {interaction.user.id}")
+        await handle_vehicle_purchase(interaction, self.item, self.cost)
