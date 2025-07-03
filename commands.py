@@ -26,7 +26,7 @@ from config import PAYCHECK_AMOUNT, PAYCHECK_COOLDOWN_SECONDS, COLOR_RED, COLOR_
 from category_loader import categories, category_autocomplete
 from defaults import DEFAULT_USER
 
-from globals import pool  # <--- Make sure pool is imported for DB usage
+ 
 
 # PurchaseVehicleView with buy buttons only
 class PurchaseVehicleView(discord.ui.View):
