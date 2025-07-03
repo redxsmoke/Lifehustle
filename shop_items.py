@@ -61,7 +61,7 @@ class VehicleButton(Button):
 
             # Fetch vehicle details
             vehicle = await conn.fetchrow(
-                "SELECT condition, resale_value_range FROM cd_vehicle_type WHERE id = $1",
+                "SELECT condition, resale_value_range FROM cd_vehicle_type cvt join cd_vehicle_condition cvc on cvc.vehicle_type_id = cvt.id WHERE cvt.id = $1",
                 self.vehicle_id
             )
 
