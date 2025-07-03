@@ -231,6 +231,16 @@ async def rename_username_column(pool):
 async def on_ready():
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
+# --- setup_hook to safely sync commands ---
+@bot.event
+async def setup_hook():
+    await bot.wait_until_ready()
+    try:
+        await tree.sync()
+        print("✅ Slash commands synced.")
+    except Exception as e:
+        print(f"❌ Error syncing commands in setup_hook: {e}")
+
 # --- DB Pool creation & setup ---
 async def create_pool():
     ssl_context = ssl.create_default_context()
@@ -258,12 +268,6 @@ async def main():
 
     register_commands(tree)
     print("✅ Commands registered.")
-
-    try:
-        await tree.sync()
-        print("✅ Slash commands synced.")
-    except Exception as e:
-        print(f"❌ Error syncing commands: {e}")
 
     print("✅ Starting bot...")
     await bot.start(DISCORD_BOT_TOKEN)
