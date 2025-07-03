@@ -1,9 +1,12 @@
 import discord
 from discord.ui import View, Button
-from discord import Interaction
+from discord import Interaction, Embed
 import traceback
+
+import utilities
+import vehicle_logic
 from db_user import get_user, upsert_user
-import globals  # for the db pool
+import globals  # Make sure pool is initialized here
 
 # Fixed base prices by vehicle type
 BASE_PRICES = {
@@ -14,6 +17,26 @@ BASE_PRICES = {
     "Sports Car": 100000,
     "Pickup Truck": 75000
 }
+
+class SellButton(Button):
+    def __init__(self, vehicle, parent_view):
+        vehicle_id = vehicle.get("id")
+        if not vehicle_id:
+            raise ValueError(f"Vehicle missing valid 'id': {vehicle}")
+
+        label = parent_view.make_button_label(vehicle)  # call the method on the parent view
+        super().__init__(label=label, style=discord.ButtonStyle.danger)
+
+        self.vehicle = vehicle
+        self.parent_view = parent_view
+        self.vehicle_id = vehicle_id
+
+    async def callback(self, interaction: Interaction):
+        if interaction.user.id != self.parent_view.user_id:
+            await interaction.response.send_message("This isn't your stash.", ephemeral=True)
+            return
+        await self.parent_view.start_sell_flow(interaction, self.vehicle, self.vehicle_id)
+
 
 class SellFromStashView(View):
     def __init__(self, user_id: int, vehicles: list):
@@ -137,21 +160,61 @@ class SellFromStashView(View):
                     ephemeral=True
                 )
 
-class SellButton(Button):
-    def __init__(self, vehicle, parent_view):
-        vehicle_id = vehicle.get("id")
-        if not vehicle_id:
-            raise ValueError(f"Vehicle missing valid 'id': {vehicle}")
 
-        label = parent_view.make_button_label(vehicle)
-        super().__init__(label=label, style=discord.ButtonStyle.danger)
+class CommuteButtons(View):
+    def __init__(self):
+        super().__init__(timeout=60)
+        self.message = None  # Will hold the message with buttons
 
-        self.vehicle = vehicle
-        self.parent_view = parent_view
-        self.vehicle_id = vehicle_id
+    async def disable_all_items(self, interaction: Interaction):
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except Exception as e:
+                print(f"[ERROR] Failed to edit message when disabling buttons: {e}")
 
-    async def callback(self, interaction: Interaction):
-        if interaction.user.id != self.parent_view.user_id:
-            await interaction.response.send_message("This isn't your stash.", ephemeral=True)
-            return
-        await self.parent_view.start_sell_flow(interaction, self.vehicle, self.vehicle_id)
+    @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="commute_drive")
+    async def drive_button(self, interaction: Interaction, button: Button):
+        await self.disable_all_items(interaction)
+        await handle_commute(interaction, "drive")  # Make sure handle_commute is imported
+
+    @discord.ui.button(label="Bike 🚴 (+$10)", style=discord.ButtonStyle.success, custom_id="commute_bike")
+    async def bike_button(self, interaction: Interaction, button: Button):
+        await self.disable_all_items(interaction)
+        await handle_commute(interaction, "bike")
+
+    @discord.ui.button(label="Subway 🚇 ($10)", style=discord.ButtonStyle.primary, custom_id="commute_subway")
+    async def subway_button(self, interaction: Interaction, button: Button):
+        await self.disable_all_items(interaction)
+        await handle_commute(interaction, "subway")
+
+    @discord.ui.button(label="Bus 🚌 ($5)", style=discord.ButtonStyle.secondary, custom_id="commute_bus")
+    async def bus_button(self, interaction: Interaction, button: Button):
+        await self.disable_all_items(interaction)
+        await handle_commute(interaction, "bus")
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(
+                    content="⌛ Commute selection timed out. Please try again.",
+                    view=self
+                )
+            except Exception as e:
+                print(f"[ERROR] Failed to edit message on timeout: {e}")
+
+
+class GroceryCategoryView(View):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Implement grocery category view buttons or logic here if needed
+
+
+class GroceryStashPaginationView(View):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Implement grocery stash pagination buttons or logic here if needed
