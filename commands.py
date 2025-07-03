@@ -436,7 +436,7 @@ def register_commands(tree: app_commands.CommandTree):
                             cvt.name AS type, plate_number, cvt.emoji
                         FROM user_vehicle_inventory uvi
                         JOIN cd_vehicle_type cvt ON uvi.vehicle_type_id = cvt.id
-                        JOIN cd_vehicle_condition cvc on cvc.vehicle_type_id = cvt.id
+                        JOIN cd_vehicle_condition cvc on uvi.vehicle_type_id = cvt.id
                         WHERE uvi.user_id = $1
                         ORDER BY uvi.created_at DESC
                     """, user_id)
