@@ -17,7 +17,7 @@ from config import DISCORD_BOT_TOKEN, DATABASE_URL
 from db_user import reset_user_finances_table
 from db_pool import init_db
 from commands import register_commands
-from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_condition_table
+from data_tier import seed_grocery_types, seed_grocery_categories
 from data_tier import seed_vehicle_appearance
 import globals
 
@@ -60,7 +60,6 @@ async def create_pool():
 
 async def setup_database():
     await init_db(globals.pool)
-    await drop_vehicle_condition_table(globals.pool)  # 🔥 Drop the table here
     await seed_grocery_categories(globals.pool)
     await seed_grocery_types(globals.pool)
     await reset_user_finances_table(globals.pool)
