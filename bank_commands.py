@@ -133,4 +133,3 @@ class Bank(commands.Cog):
 async def setup(bot):
     bank_cog = Bank(bot)
     await bot.add_cog(bank_cog)
-    bot.tree.add_command(bank_cog.bank_group)
