@@ -58,7 +58,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
         user = DEFAULT_USER.copy()
         await upsert_user(pool, user_id, user)
 
-    checking = user.get("checking_account", 0)
+    checking = user.get("checking_account_balance", 0)
     if checking < cost:
         await interaction.response.send_message(
             embed=embed_message(
@@ -71,7 +71,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
         return
 
     # Deduct cost
-    user["checking_account"] -= cost
+    user["checking_account_balance"] -= cost
     await upsert_user(pool, user_id, user)
 
     # Add vehicle to inventory - implement actual DB insert logic here
@@ -85,7 +85,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
         embed=embed_message(
             "✅ Purchase Successful",
             f"You bought a **{item['type']}** for ${cost:,}.\n"
-            f"💰 Remaining Checking Balance: ${user['checking_account']:,}",
+            f"💰 Remaining Checking_Balance: ${user['checking_account_balance']:,}",
             COLOR_GREEN
         ),
         ephemeral=True
@@ -118,7 +118,7 @@ def register_commands(tree: app_commands.CommandTree):
             embed=embed_message(
                 "💰 Account Balances",
                 f"> {interaction.user.display_name}, your account balances are:\n"
-                f"> 💰 Checking: ${user['checking_account']:,}\n"
+                f"> 💰 Checking: ${user['checking_account_balance']:,}\n"
                 f"> 🏦 Savings: ${user['savings_account']:,}"
             )
         )
