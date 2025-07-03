@@ -7,8 +7,7 @@ from discord import Interaction, Embed
 import utilities
 import vehicle_logic
 from db_user import get_user, upsert_user
-from globals import pool
-
+from globals import pool  # Make sure this is the same module where pool is initialized
 
 # Fixed base prices by vehicle type
 BASE_PRICES = {
@@ -18,7 +17,6 @@ BASE_PRICES = {
     "Sports Car": 100000,
     "Pickup Truck": 75000
 }
-
 
 # COMMUTE BUTTONS VIEW
 class CommuteButtons(View):
@@ -68,7 +66,6 @@ class CommuteButtons(View):
             except Exception as e:
                 print(f"[ERROR] Failed to edit message on timeout: {e}")
 
-
 # SELL FROM STASH VIEW
 class SellButton(Button):
     def __init__(self, item, parent_view):
@@ -83,7 +80,6 @@ class SellButton(Button):
             return
 
         await self.parent_view.start_sell_flow(interaction, self.item)
-
 
 class SellFromStashView(View):
     def __init__(self, user_id: int, vehicles: list):
@@ -151,6 +147,8 @@ class SellFromStashView(View):
         import traceback
 
         try:
+            print(f"DEBUG: globals.pool = {pool}")  # Debug print to check pool availability
+
             if not self.pending_item:
                 await interaction.response.send_message("❌ No item pending confirmation.", ephemeral=True)
                 return
@@ -200,7 +198,6 @@ class SellFromStashView(View):
                     ephemeral=True
                 )
 
-
 # ConfirmSellButton and SellVehicleView (using SQL vehicle id and resale_value)
 class ConfirmSellButton(Button):
     def __init__(self, vehicle_id: int, resale_value: int):
@@ -231,18 +228,15 @@ class ConfirmSellButton(Button):
             ephemeral=True
         )
 
-
 class SellVehicleView(View):
     def __init__(self, vehicle_id: int, resale_value: int):
         super().__init__(timeout=None)
         self.add_item(ConfirmSellButton(vehicle_id, resale_value))
 
-
 class GroceryCategoryView(View):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Minimal stub, add your real code here later
-
 
 class GroceryStashPaginationView(View):
     def __init__(self, *args, **kwargs):
