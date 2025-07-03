@@ -90,7 +90,7 @@ async def create_vehicle_appearance_table(pool):
                 cd_vehicle_appearance_id SERIAL PRIMARY KEY,
                 description TEXT NOT NULL,
                 condition_id INT NOT NULL REFERENCES cd_vehicle_condition(condition_id),
-                vehicle_type_id INT NOT NULL REFERENCES cd_vehicle_type(vehicle_type_id)
+                vehicle_type_id INT NOT NULL REFERENCES cd_vehicle_type(id)
             );
         """)
         print("✅ Created cd_vehicle_appearance table.")
