@@ -1,10 +1,20 @@
 import discord
+from discord.ui import Button, View
+from discord import ButtonStyle
 import random
 import string
 import time
 
+# Placeholder functions/constants — replace with your real implementations
+def embed_message(title, description, color=None):
+    embed = discord.Embed(title=title, description=description, color=color)
+    return embed
 
-class TransportationShopButtons(discord.ui.View):
+COLOR_RED = discord.Color.red()
+COLOR_GREEN = discord.Color.green()
+
+
+class TransportationShopButtons(View):
     def __init__(self, pool):
         super().__init__(timeout=None)
         self.pool = pool  # save pool for use later
@@ -22,8 +32,7 @@ class TransportationShopButtons(discord.ui.View):
                 self.add_item(VehicleButton(vehicle_id, name, emoji, cost, self.pool))
 
 
-
-class VehicleButton(discord.ui.Button):
+class VehicleButton(Button):
     def __init__(self, vehicle_id, name, emoji, cost, pool):
         super().__init__(
             label=f"Buy {name} - ${cost:,}",
