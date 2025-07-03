@@ -4,6 +4,7 @@ from discord import ButtonStyle
 import random
 import string
 import time
+from datetime import datetime
 
 # Placeholder functions/constants — replace with your real implementations
 def embed_message(title, description, color=None):
@@ -93,7 +94,7 @@ class VehicleButton(Button):
             plate = ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
             condition = "pristine" if vehicle["condition"] == "new" else vehicle["condition"]
             commute_count = 0 if condition != "beater" else random.randint(25, 100)
-            created_at = int(time.time())
+            created_at = datetime.utcnow()
 
             # Deduct money
             await conn.execute(
