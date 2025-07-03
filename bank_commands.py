@@ -61,7 +61,7 @@ class Bank(commands.Cog):
             await interaction.response.send_message(
                 embed=embed_message(
                     "❌ Invalid Amount",
-                    ">The bank laughed at you hysterically for attempting to withdraw more from your savings than you actually have. Try again.",
+                    ">\u200B 😂The bank laughed at you hysterically for attempting to withdraw more from your savings than you actually have. Try again.",
                     COLOR_RED
                 ),
                 ephemeral=True
@@ -76,8 +76,8 @@ class Bank(commands.Cog):
             embed=embed_message(
                 "✅ Withdrawal Complete",
                 f"> Moved ${amount_int:,} from savings to checking.\n"
-                f"> 💰 Checking: ${user['checking_account_balance']:,}\n"
-                f"> 🏦 Savings: ${user['savings_account_balance']:,}",
+                f">\u200B 💰 Checking: ${user['checking_account_balance']:,}\n"
+                f">\u200B 🏦 Savings: ${user['savings_account_balance']:,}",
                 COLOR_GREEN
             )
         )
@@ -109,7 +109,7 @@ class Bank(commands.Cog):
             await interaction.response.send_message(
                 embed=embed_message(
                     "❌ Invalid Amount",
-                    "> You don't have that much money in your checking account to deposit.Try again when your deposit amount is higher than your IQ ",
+                    "> \u200B😢 You don't have that much money in your checking account to deposit.Try again when your deposit amount is higher than your IQ ",
                     COLOR_RED
                 ),
                 ephemeral=True
@@ -124,8 +124,8 @@ class Bank(commands.Cog):
             embed=embed_message(
                 "✅ Deposit Complete",
                 f"> Moved ${amount_int:,} to savings.\n"
-                f"> 💰 Checking: ${user['checking_account_balance']:,}\n"
-                f"> 🏦 Savings: ${user['savings_account_balance']:,}",
+                f">\u200B 💰 Checking: ${user['checking_account_balance']:,}\n"
+                f">\u200B 🏦 Savings: ${user['savings_account_balance']:,}",
                 COLOR_GREEN
             )
         )
