@@ -369,7 +369,7 @@ def register_commands(tree: app_commands.CommandTree):
                         SELECT DISTINCT
                             uvi.id, uvi.color, uvi.appearance_description, uvi.condition,
                             uvi.commute_count, uvi.created_at, uvi.resale_percent,
-                            cvt.name AS type, cvt.emoji
+                            cvt.name AS type, plant_number, cvt.emoji
                         FROM user_vehicle_inventory uvi
                         JOIN cd_vehicle_type cvt ON uvi.vehicle_type_id = cvt.id
                         JOIN cd_vehicle_condition cvc on cvc.vehicle_type_id = cvt.id
