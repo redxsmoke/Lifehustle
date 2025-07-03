@@ -10,15 +10,7 @@ import category_loader
 from datetime import datetime, timezone, timedelta   
 from db_user import get_user_finances, upsert_user_finances  
 from utilities import embed_message  
-from views import GroceryCategoryView, GroceryStashPaginationView
 from shop_items import TransportationShopButtons
-# CONSTANTS IMPORTS
-from constants import (
-    PAYCHECK_AMOUNT,
-    PAYCHECK_COOLDOWN_SECONDS,
-    COLOR_GREEN,
-    COLOR_RED,
-)
 
 from views import (
     CommuteButtons,
@@ -374,8 +366,9 @@ def register_commands(tree: app_commands.CommandTree):
             async with pool.acquire() as conn:
                 vehicles = await conn.fetch("""
                     SELECT 
-                        uvi.color, uvi.appearance_description, uvi.plate_number, uvi.condition,
-                        uvi.commute_count, uvi.created_at, cvt.name AS vehicle_type, cvt.emoji
+                        uvi.id, uvi.color, uvi.appearance_description, uvi.condition,
+                        uvi.commute_count, uvi.created_at, uvi.resale_percent,
+                        cvt.name AS type, cvt.emoji
                     FROM user_vehicle_inventory uvi
                     JOIN cd_vehicle_type cvt ON uvi.vehicle_type_id = cvt.id
                     WHERE uvi.user_id = $1
@@ -386,18 +379,18 @@ def register_commands(tree: app_commands.CommandTree):
                 await interaction.followup.send("You don’t own any transportation items yet.")
                 return
 
+            vehicles = [dict(v) for v in vehicles]  # Make records usable with buttons
+
             desc_lines = []
             for item in vehicles:
-                vehicle_type = item["vehicle_type"] or "Unknown"
-                plate = item["plate_number"] or "N/A"
-                condition = item["condition"] or "Unknown"
+                vehicle_type = item.get("type", "Unknown")
+                condition = item.get("condition", "Unknown")
                 description = item.get("appearance_description", "No description")
-                commute_count = item["commute_count"] or 0
-                emoji = item["emoji"] or "🚗"
+                commute_count = item.get("commute_count", 0)
+                emoji = item.get("emoji", "🚗")
 
-                # Option 1 style formatting
                 desc_lines.append(
-                    f"> {emoji} **{vehicle_type}** (Plate `{plate}`)\n"
+                    f"> {emoji} **{vehicle_type}**\n"
                     f"> \u200b    Condition: {condition}\n"
                     f"> \u200b    Description: {description}\n"
                     f"> \u200b    Commute Count: {commute_count}"
@@ -427,14 +420,12 @@ def register_commands(tree: app_commands.CommandTree):
                 await interaction.followup.send(embed=embed)
                 return
 
-            # Group groceries by category
             categorized = defaultdict(list)
             for row in groceries:
                 line = f"> {row['item_emoji']} **{row['item_name']}** — {row['quantity']}x (exp: {row['expiration_date']})"
                 key = f"{row['category_emoji']} {row['category']}"
                 categorized[key].append(line)
 
-            # Create paginated embeds
             embeds = []
             for category_name, lines in categorized.items():
                 embed = discord.Embed(
@@ -449,6 +440,7 @@ def register_commands(tree: app_commands.CommandTree):
             else:
                 view = GroceryStashPaginationView(interaction.user.id, embeds)
                 await view.send(interaction)
+
 
     @tree.command(name="purge", description="Delete last 100 messages to clear clutter")
     async def purge(interaction: discord.Interaction):
