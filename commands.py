@@ -397,10 +397,10 @@ def register_commands(tree: app_commands.CommandTree):
 
                 # Option 1 style formatting
                 desc_lines.append(
-                    f"{emoji} **{vehicle_type}** (Plate `{plate}`)\n"
-                    f"    - Condition: {condition}\n"
-                    f"    - Description: {description}\n"
-                    f"    - Commute Count: {commute_count}"
+                    f"> {emoji} **{vehicle_type}** (Plate `{plate}`)\n"
+                    f"> "\u200b"    Condition: {condition}\n"
+                    f"> "\u200b"    Description: {description}\n"
+                    f"> "\u200b"    Commute Count: {commute_count}"
                 )
 
             embed = discord.Embed(

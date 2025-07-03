@@ -10,7 +10,6 @@ from db_user import get_user, upsert_user
 from globals import pool
 
 
-
 # COMMUTE BUTTONS VIEW
 class CommuteButtons(View):
     def __init__(self):
@@ -93,7 +92,6 @@ class SellFromStashView(View):
         desc = item.get("tag") or item.get("color", "Unknown")
         cond = item.get("condition", "Unknown")
 
-        # You might want to fetch resale_value from DB here instead for consistency
         base_prices = {
             "Bike": 2000,
             "Beater Car": 10000,
@@ -174,7 +172,7 @@ class SellFromStashView(View):
             self.user_id, plate
         )
 
-        # Calculate resale value — consider syncing this with your DB data for consistency
+        # Calculate resale value
         condition = item.get("condition", "Unknown")
         base_prices = {
             "Bike": 2000,
@@ -252,3 +250,4 @@ class GroceryStashPaginationView(View):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # TODO: Add your pagination logic here later
+
