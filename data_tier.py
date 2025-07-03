@@ -61,18 +61,12 @@ async def seed_grocery_categories(pool):
         ("Beverages", "🥤"),
     ]
 
-    async with pool.acquire() as conn:
-        for name, emoji in grocery_categories:
-            await conn.execute(
-                """
-                INSERT INTO cd_grocery_category (name, emoji)
-                VALUES ($1, $2)
-                ON CONFLICT (name) DO NOTHING
-                """,
-                name,
-                emoji,
-            )
-    print("✅ Seeded grocery categories with emojis.")
+async with pool.acquire() as conn:
+    await conn.execute("""
+        DROP TABLE IF EXISTS cd_vehicle_condition;
+    """)
+    print("✅ Dropped cd_vehicle_condition table.")
+
 
 
 
