@@ -370,40 +370,34 @@ def register_commands(tree: app_commands.CommandTree):
             await interaction.followup.send("❌ You don’t have an account yet. Use `/start` first.")
             return
 
-        inventory = user.get("inventory", [])
-
         if category.value == "transportation":
-            vehicles = [
-                item for item in inventory
-                if isinstance(item, dict) and item.get("type") in {
-                    "Bike", "Beater Car", "Sedan Car", "Sports Car", "Pickup Truck"
-                }
-            ]
+            async with pool.acquire() as conn:
+                vehicles = await conn.fetch("""
+                    SELECT 
+                        uvi.color, uvi.appearance_description, uvi.plate_number, uvi.condition,
+                        uvi.commute_count, uvi.created_at, cvt.name AS vehicle_type, cvt.emoji
+                    FROM user_vehicle_inventory uvi
+                    JOIN cd_vehicle_type cvt ON uvi.vehicle_type_id = cvt.id
+                    WHERE uvi.user_id = $1
+                    ORDER BY uvi.created_at DESC
+                """, user_id)
+
             if not vehicles:
                 await interaction.followup.send("You don’t own any transportation items yet.")
                 return
 
             desc_lines = []
             for item in vehicles:
-                vehicle_type = item.get("type", "Unknown")
-                color = item.get("color", "Unknown")
-                condition = item.get("condition", "Unknown")
-                commute_count = item.get("commute_count", 0)
-                purchase_date_str = item.get("purchase_date")
-                purchase_date = datetime.date.fromisoformat(purchase_date_str) if purchase_date_str else datetime.date.today()
+                vehicle_type = item["vehicle_type"] or "Unknown"
+                color = item["color"] or "Unknown"
+                condition = item["condition"] or "Unknown"
+                commute_count = item["commute_count"] or 0
+                plate = item["plate_number"] or "N/A"
+                emoji = item["emoji"] or "🚗"
 
-                if vehicle_type == "Bike":
-                    description = bike_description(purchase_date, condition)
-                    desc_lines.append(f"🚴 **{vehicle_type}** — {color} — {description} ({condition})")
-                else:
-                    tag = item.get("tag", "N/A")
-                    emoji = {
-                        "Beater Car": "🚙",
-                        "Sedan Car": "🚗",
-                        "Sports Car": "🏎️",
-                        "Pickup Truck": "🛻"
-                    }.get(vehicle_type, "🚗")
-                    desc_lines.append(f"{emoji} **{vehicle_type}** — {color} — Tag: {tag} — {condition}")
+                desc_lines.append(
+                    f"{emoji} **{vehicle_type}** — {color} — Plate: `{plate}` — Condition: {condition} — Commutes: {commute_count}"
+                )
 
             embed = discord.Embed(
                 title="🚗 Your Vehicles",
