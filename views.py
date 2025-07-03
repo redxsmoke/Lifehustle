@@ -1,3 +1,5 @@
+from discord.ui import Button, View
+
 class SellButton(Button):
     def __init__(self, vehicle, parent_view):
         vehicle_id = vehicle.get("id")
