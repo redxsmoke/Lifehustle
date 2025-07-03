@@ -17,9 +17,18 @@ class Bank(commands.Cog):
     @bank_group.command(name="view", description="View your checking and savings balances")
     async def view(self, interaction: Interaction):
         user_id = interaction.user.id
+
+        # Check if user finances exist
         user = await get_user_finances(globals.pool, user_id)
+
         if user is None:
-            user = DEFAULT_USER.copy()
+            # Create a full default structure with required finance fields
+            user = {
+                'checking_account_balance': 0,
+                'savings_account_balance': 0,
+                'debt_balance': 0,
+                'last_paycheck_claimed': None
+            }
             await upsert_user_finances(globals.pool, user_id, user)
 
         checking = user.get('checking_account_balance', 0)
@@ -29,8 +38,8 @@ class Bank(commands.Cog):
             embed=embed_message(
                 "💰 Account Balances",
                 f"> {interaction.user.display_name}, your account balances are:\n"
-                f"> \u200B  💰 Checking: ${checking:,}\n"
-                f"> \u200B  🏦 Savings: ${savings:,}"
+                f"> \u200B 💰 Checking: ${checking:,}\n"
+                f"> \u200B 🏦 Savings: ${savings:,}"
             )
         )
 
