@@ -103,7 +103,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
         async with pool.acquire() as conn:
             # Get random color from code table
             color_row = await conn.fetchrow("SELECT name FROM cd_vehicle_colors ORDER BY random() LIMIT 1")
-            color = color_row["color_name"] if color_row else "Unknown"
+            color = color_row["name"] if color_row else "Unknown"
 
             # Get random appearance description for that vehicle type + condition
             appearance_row = await conn.fetchrow("""
