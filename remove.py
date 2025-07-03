@@ -1,14 +1,14 @@
 import asyncio
-from globals import pool  # Assumes your pool is defined and initialized here
+from globals import pool  # This assumes your pool is initialized before calling
 
-async def delete_red_and_blue_cars():
+async def remove_vehicle_by_id(vehicle_names: list[str]):
     async with pool.acquire() as conn:
         await conn.execute("""
             DELETE FROM cd_vehicle_type
-            WHERE name IN ('Red Car', 'Blue Car');
-        """)
-        print("✅ Red Car and Blue Car deleted from cd_vehicle_type")
+            WHERE name = ANY($1)
+        """, vehicle_names)
+        print(f"✅ Removed vehicles: {', '.join(vehicle_names)}")
 
-# Optional: to run immediately when script is executed
+# Optional: Run directly
 if __name__ == "__main__":
-    asyncio.run(delete_red_and_blue_cars())
+    asyncio.run(remove_vehicle_by_id(["Red Car", "Blue Car"]))
