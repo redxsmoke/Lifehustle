@@ -7,7 +7,7 @@ import time
 class TransportationShopButtons(discord.ui.View):
     def __init__(self, pool):
         super().__init__(timeout=None)
-        self.pool = pool
+        self.pool = pool  # save pool for use later
 
     async def setup_buttons(self):
         async with self.pool.acquire() as conn:
@@ -20,6 +20,7 @@ class TransportationShopButtons(discord.ui.View):
                 cost = row["cost"]
 
                 self.add_item(VehicleButton(vehicle_id, name, emoji, cost, self.pool))
+
 
 
 class VehicleButton(discord.ui.Button):
