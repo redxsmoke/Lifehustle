@@ -14,6 +14,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from db_user import reset_user_finances_table
+from remove import remove_vehicle_by_id
 
 
 
@@ -183,25 +184,7 @@ async def reset_vehicle_condition_table(pool):
         await conn.execute(RESET_VEHICLE_CONDITION_SQL)
     print("✅ Vehicle condition table reset.")
 
-async def seed_vehicle_types(pool):
-    vehicle_types = [
-        ("Blue Car", 10000, "🚙"),
-        ("Red Car", 25000, "🚗"),
-        ("Sports Car", 100000, "🏎️"),
-        ("Pickup Truck", 30000, "🛻"),
-        ("Bike", 1500, "🚲"),
-    ]
-    async with pool.acquire() as conn:
-        for name, cost, emoji in vehicle_types:
-            await conn.execute(
-                """
-                INSERT INTO cd_vehicle_type (name, cost, emoji)
-                VALUES ($1, $2, $3)
-                ON CONFLICT (name) DO NOTHING
-                """,
-                name, cost, emoji
-            )
-    print("✅ Seeded vehicle types.")
+
 
 async def seed_vehicle_conditions(pool):
     async with pool.acquire() as conn:
@@ -267,13 +250,13 @@ async def on_ready():
         await create_inventory_tables(globals.pool)
         await reset_vehicle_condition_table(globals.pool)
         await alter_inventory_tables(globals.pool)
-        await seed_vehicle_types(globals.pool)
         await seed_vehicle_conditions(globals.pool)
         await seed_grocery_categories(globals.pool)
         await seed_grocery_types(globals.pool)
         await setup_user_finances_table(globals.pool)
         await reset_user_finances_table(globals.pool)
         await rename_username_column(globals.pool)
+        await remove_vehicle_by_id(globals.pool)
              
 
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
