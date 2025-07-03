@@ -10,6 +10,16 @@ from db_user import get_user, upsert_user
 from globals import pool
 
 
+# Fixed base prices by vehicle type
+BASE_PRICES = {
+    "Bike": 2000,
+    "Beater Car": 10000,
+    "Sedan Car": 25000,
+    "Sports Car": 100000,
+    "Pickup Truck": 75000
+}
+
+
 # COMMUTE BUTTONS VIEW
 class CommuteButtons(View):
     def __init__(self):
@@ -62,7 +72,8 @@ class CommuteButtons(View):
 # SELL FROM STASH VIEW
 class SellButton(Button):
     def __init__(self, item, parent_view):
-        super().__init__(label=parent_view.make_button_label(item), style=discord.ButtonStyle.danger)
+        label = parent_view.make_button_label(item)
+        super().__init__(label=label, style=discord.ButtonStyle.danger)
         self.item = item
         self.parent_view = parent_view
 
@@ -92,27 +103,15 @@ class SellFromStashView(View):
             "Sports Car": "🏎️",
             "Pickup Truck": "🛻"
         }.get(item.get("type"), "❓")
+
         desc = item.get("tag") or item.get("color", "Unknown")
-        cond = item.get("condition", "Unknown")
+        condition = item.get("condition", "Unknown")
 
-        base_prices = {
-            "Bike": 2000,
-            "Beater Car": 10000,
-            "Sedan Car": 25000,
-            "Sports Car": 100000,
-            "Pickup Truck": 75000
-        }
-        resale_percent = {
-            "Pristine": 0.85,
-            "Lightly Used": 0.50,
-            "Heavily Used": 0.25,
-            "Rusted": 0.10
-        }
-        base_price = base_prices.get(item.get("type"), 0)
-        percent = resale_percent.get(cond, 0.10)
-        resale = int(base_price * percent)
+        base_price = BASE_PRICES.get(item.get("type"), 0)
+        resale_percent = item.get("resale_percent", 0.10)  # e.g. 0.85
+        resale = int(base_price * resale_percent)
 
-        return f"Sell {emoji} {desc} ({cond}) - ${resale:,}"
+        return f"Sell {emoji} {desc} ({condition}) - ${resale:,}"
 
     async def start_sell_flow(self, interaction: discord.Interaction, item):
         self.clear_items()
@@ -169,34 +168,22 @@ class SellFromStashView(View):
             self.user_id, plate
         )
 
-        # Calculate resale value
-        condition = self.pending_item.get("condition", "Unknown")
-        base_prices = {
-            "Bike": 2000,
-            "Beater Car": 10000,
-            "Sedan Car": 25000,
-            "Sports Car": 100000,
-            "Pickup Truck": 75000
-        }
-        resale_percent = {
-            "Pristine": 0.85,
-            "Lightly Used": 0.50,
-            "Heavily Used": 0.25,
-            "Rusted": 0.10
-        }
-        base_price = base_prices.get(self.pending_item.get("type"), 0)
-        percent = resale_percent.get(condition, 0.10)
-        resale = int(base_price * percent)
+        base_price = BASE_PRICES.get(self.pending_item.get("type"), 0)
+        resale_percent = self.pending_item.get("resale_percent", 0.10)
+        resale = int(base_price * resale_percent)
 
         # Credit user
         user["checking_account"] += resale
         await upsert_user(pool, self.user_id, user)
 
+        sold_type = self.pending_item.get("type", "vehicle")
+        condition = self.pending_item.get("condition", "Unknown")
+
         self.pending_item = None
         self.clear_items()
 
         await interaction.response.edit_message(
-            content=f"✅ You sold your {self.pending_item.get('type')} for ${resale:,} ({condition}).",
+            content=f"✅ You sold your {sold_type} for ${resale:,} ({condition}).",
             view=None
         )
 
