@@ -52,13 +52,18 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
     user_id = interaction.user.id
     from globals import pool
 
-    # Get user data
-    user = await get_user(pool, user_id)
-    if user is None:
-        user = DEFAULT_USER.copy()
-        await upsert_user(pool, user_id, user)
+    # Use get_user_finances() to get the correct balance info
+    finances = await get_user_finances(pool, user_id)
+    if finances is None:
+        # If no finances record, create one with zero balances
+        finances = {
+            "checking_account_balance": 0,
+            "savings_account_balance": 0,
+            "debt_balance": 0,
+            "last_paycheck_claimed": datetime.fromtimestamp(0, tz=timezone.utc)
+        }
 
-    checking = user.get("checking_account_balance", 0)
+    checking = finances.get("checking_account_balance", 0)
     if checking < cost:
         await interaction.response.send_message(
             embed=embed_message(
@@ -71,10 +76,10 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
         return
 
     # Deduct cost
-    user["checking_account_balance"] -= cost
-    await upsert_user(pool, user_id, user)
+    finances["checking_account_balance"] -= cost
+    await upsert_user_finances(pool, user_id, finances)
 
-    # Add vehicle to inventory - implement actual DB insert logic here
+    # Add vehicle to inventory
     async with pool.acquire() as conn:
         await conn.execute("""
             INSERT INTO user_vehicle_inventory (user_id, vehicle_type_id, color, appearance_description, condition, created_at, resale_percent)
@@ -85,11 +90,12 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
         embed=embed_message(
             "✅ Purchase Successful",
             f"You bought a **{item['type']}** for ${cost:,}.\n"
-            f"💰 Remaining Checking_Balance: ${user['checking_account_balance']:,}",
+            f"💰 Remaining Checking Balance: ${finances['checking_account_balance']:,}",
             COLOR_GREEN
         ),
         ephemeral=True
     )
+
 
 def register_commands(tree: app_commands.CommandTree):
     @tree.command(name="submitword", description="Submit a new word to a category")
