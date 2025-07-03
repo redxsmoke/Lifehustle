@@ -21,7 +21,7 @@ class TransportationShopButtons(View):
 
     async def setup_buttons(self):
         async with self.pool.acquire() as conn:
-            rows = await conn.fetch("SELECT id, emoji, name, cost FROM cd_vehicle_type")
+            rows = await conn.fetch("SELECT id, emoji, name, cost FROM cd_vehicle_type order by cost ASC")
 
             for row in rows:
                 vehicle_id = row["id"]
@@ -52,7 +52,7 @@ class VehicleButton(Button):
         async with self.pool.acquire() as conn:
             user = await conn.fetchrow("SELECT checking_account_balance FROM user_finances WHERE user_id = $1", user_id)
 
-            if not user or user["checking_balance"] < self.cost:
+            if not user or user["checking_account_balance"] < self.cost:
                 return await interaction.followup.send(embed=embed_message(
                     "❌ Not Enough Funds",
                     f"You need ${self.cost:,} to buy this {self.name}.",

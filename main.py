@@ -14,7 +14,6 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from db_user import reset_user_finances_table
-from remove import remove_vehicle_by_id
 
 
 
@@ -256,8 +255,7 @@ async def on_ready():
         await setup_user_finances_table(globals.pool)
         await reset_user_finances_table(globals.pool)
         await rename_username_column(globals.pool)
-        await remove_vehicle_by_id(globals.pool)
-             
+
 
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
