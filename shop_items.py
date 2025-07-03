@@ -21,7 +21,7 @@ class TransportationShopButtons(View):
 
     async def setup_buttons(self):
         async with self.pool.acquire() as conn:
-            rows = await conn.fetch("SELECT id, emoji, name, cost FROM cd_vehicle_type order by cost ASC")
+            rows = await conn.fetch("SELECT id, emoji, name, cost FROM cd_vehicle_type ORDER BY cost ASC")
 
             for row in rows:
                 vehicle_id = row["id"]
@@ -37,7 +37,7 @@ class VehicleButton(Button):
         super().__init__(
             label=f"Buy {name} - ${cost:,}",
             style=ButtonStyle.green,
-            custom_id=f"shop_vehicle_buy_{vehicle_id}"  # Updated custom ID format
+            custom_id=f"shop_vehicle_buy_{vehicle_id}"
         )
         self.vehicle_id = vehicle_id
         self.name = name
@@ -46,7 +46,7 @@ class VehicleButton(Button):
         self.pool = pool
 
     async def callback(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)  # Prevent double-spam
+        await interaction.response.defer(ephemeral=True)
         user_id = interaction.user.id
 
         async with self.pool.acquire() as conn:
@@ -61,7 +61,12 @@ class VehicleButton(Button):
 
             # Fetch vehicle details
             vehicle = await conn.fetchrow(
-                "SELECT cvc.description as condition, resale_value_range FROM cd_vehicle_type cvt join cd_vehicle_condition cvc on cvc.vehicle_type_id = cvt.id WHERE cvt.id = $1",
+                """
+                SELECT cvc.description AS condition, cvt.resale_percent
+                FROM cd_vehicle_type cvt
+                JOIN cd_vehicle_condition cvc ON cvc.vehicle_type_id = cvt.id
+                WHERE cvt.id = $1
+                """,
                 self.vehicle_id
             )
 
@@ -72,15 +77,9 @@ class VehicleButton(Button):
                     COLOR_RED
                 ), ephemeral=True)
 
-            # Parse resale range safely
-            resale_range = vehicle["resale_value_range"]
-            if not resale_range or "-" not in resale_range:
-                resale_min, resale_max = 1000, 3000
-            else:
-                try:
-                    resale_min, resale_max = map(int, resale_range.split("-"))
-                except ValueError:
-                    resale_min, resale_max = 1000, 3000
+            # Compute resale value
+            resale_percent = vehicle["resale_percent"] or 0.25
+            resale_value = int(self.cost * resale_percent)
 
             # Randomized attributes
             color = random.choice(["Red", "Blue", "Black", "White", "Green", "Silver"])
@@ -94,7 +93,6 @@ class VehicleButton(Button):
             plate = ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
             condition = "pristine" if vehicle["condition"] == "new" else vehicle["condition"]
             commute_count = 0 if condition != "beater" else random.randint(25, 100)
-            resale_value = random.randint(resale_min, resale_max)
             created_at = int(time.time())
 
             # Deduct money
