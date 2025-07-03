@@ -50,7 +50,7 @@ class VehicleButton(Button):
         user_id = interaction.user.id
 
         async with self.pool.acquire() as conn:
-            user = await conn.fetchrow("SELECT checking_balance FROM user_finances WHERE user_id = $1", user_id)
+            user = await conn.fetchrow("SELECT checking_account_balance FROM user_finances WHERE user_id = $1", user_id)
 
             if not user or user["checking_balance"] < self.cost:
                 return await interaction.followup.send(embed=embed_message(
@@ -99,7 +99,7 @@ class VehicleButton(Button):
 
             # Deduct money
             await conn.execute(
-                "UPDATE user_finances SET checking_balance = checking_balance - $1 WHERE user_id = $2",
+                "UPDATE user_finances SET checking_account_balance = checking_account_balance - $1 WHERE user_id = $2",
                 self.cost, user_id
             )
 
