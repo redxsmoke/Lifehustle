@@ -20,7 +20,7 @@ class Bank(commands.Cog):
         user = await get_user(globals.pool, user_id)
         if user is None:
             user = DEFAULT_USER.copy()
-            await upsert_user(pool, user_id, user)
+            await upsert_user(globals.pool, user_id, user)
 
         checking = user.get('checking_account_balance', 0)
         savings = user.get('savings_account_balance', 0)
