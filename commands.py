@@ -353,110 +353,97 @@ def register_commands(tree: app_commands.CommandTree):
     ])
     async def stash(interaction: discord.Interaction, category: app_commands.Choice[str]):
         from globals import pool
-        print(f"[DEBUG] stash command started for user {interaction.user.id}, category: {category.value}")
         await interaction.response.defer()
 
-        user_id = interaction.user.id
-        user = await get_user(pool, user_id)
-        print(f"[DEBUG] User fetched: {user}")
+        try:
+            user_id = interaction.user.id
+            user = await get_user(pool, user_id)
 
-        if not user:
-            print("[DEBUG] No user found, sending message.")
-            await interaction.followup.send("❌ You don’t have an account yet. Use `/start` first.")
-            return
-
-        if category.value == "transportation":
-            async with pool.acquire() as conn:
-                print("[DEBUG] Querying vehicles for user:", user_id)
-                vehicles = await conn.fetch("""
-                    SELECT 
-                        uvi.id, uvi.color, uvi.appearance_description, uvi.condition,
-                        uvi.commute_count, uvi.created_at, uvi.resale_percent,
-                        cvt.name AS type, cvt.emoji
-                    FROM user_vehicle_inventory uvi
-                    JOIN cd_vehicle_type cvt ON uvi.vehicle_type_id = cvt.id
-                    WHERE uvi.user_id = $1
-                    ORDER BY uvi.created_at DESC
-                """, user_id)
-                print(f"[DEBUG] Retrieved {len(vehicles)} vehicles")
-
-            if not vehicles:
-                print("[DEBUG] User has no vehicles, sending message.")
-                await interaction.followup.send("You don’t own any transportation items yet.")
+            if not user:
+                await interaction.followup.send("❌ You don’t have an account yet. Use `/start` first.")
                 return
 
-            vehicles = [dict(v) for v in vehicles]  # Convert records to dicts
+            if category.value == "transportation":
+                async with pool.acquire() as conn:
+                    vehicles = await conn.fetch("""
+                        SELECT 
+                            uvi.id, uvi.color, uvi.appearance_description, uvi.condition,
+                            uvi.commute_count, uvi.created_at, uvi.resale_percent,
+                            cvt.name AS type, cvt.emoji
+                        FROM user_vehicle_inventory uvi
+                        JOIN cd_vehicle_type cvt ON uvi.vehicle_type_id = cvt.id
+                        WHERE uvi.user_id = $1
+                        ORDER BY uvi.created_at DESC
+                    """, user_id)
 
-            desc_lines = []
-            for item in vehicles:
-                vehicle_type = item.get("type", "Unknown")
-                condition = item.get("condition", "Unknown")
-                description = item.get("appearance_description", "No description")
-                commute_count = item.get("commute_count", 0)
-                emoji = item.get("emoji", "🚗")
+                if not vehicles:
+                    await interaction.followup.send("You don’t own any transportation items yet.")
+                    return
 
-                desc_lines.append(
-                    f"> {emoji} **{vehicle_type}**\n"
-                    f"> \u200b    Condition: {condition}\n"
-                    f"> \u200b    Description: {description}\n"
-                    f"> \u200b    Commute Count: {commute_count}"
+                vehicles = [dict(v) for v in vehicles]
+
+                desc_lines = []
+                for item in vehicles:
+                    vehicle_type = item.get("type", "Unknown")
+                    condition = item.get("condition", "Unknown")
+                    description = item.get("appearance_description", "No description")
+                    commute_count = item.get("commute_count", 0)
+                    emoji = item.get("emoji", "🚗")
+
+                    desc_lines.append(
+                        f"> {emoji} **{vehicle_type}**\n"
+                        f"> \u200b    Condition: {condition}\n"
+                        f"> \u200b    Description: {description}\n"
+                        f"> \u200b    Commute Count: {commute_count}"
+                    )
+
+                embed = discord.Embed(
+                    title="🚗 Your Vehicles",
+                    description="\n\n".join(desc_lines),
+                    color=discord.Color.teal()
                 )
-
-            embed = discord.Embed(
-                title="🚗 Your Vehicles",
-                description="\n\n".join(desc_lines),
-                color=discord.Color.teal()
-            )
-
-            try:
-                # Check for vehicles with missing 'id' and warn
-                for v in vehicles:
-                    if not v.get("id"):
-                        print(f"[WARNING] Vehicle missing id: {v}")
 
                 view = SellFromStashView(user_id, vehicles)
                 await interaction.followup.send(embed=embed, view=view)
-                print("[DEBUG] Sent embed and view with vehicles")
-            except Exception as e:
-                print(f"[ERROR] Exception sending vehicles with view: {e}")
-                # Fallback: send embed only (no buttons) so it won't hang
-                await interaction.followup.send(embed=embed)
-            return
-
-        elif category.value == "groceries":
-            from db_user import get_grocery_stash
-
-            groceries = await get_grocery_stash(pool, user_id)
-
-            if not groceries:
-                embed = discord.Embed(
-                    title="🛒 Your Groceries",
-                    description="You don’t have any groceries yet.",
-                    color=discord.Color.green()
-                )
-                await interaction.followup.send(embed=embed)
                 return
 
-            categorized = defaultdict(list)
-            for row in groceries:
-                line = f"> {row['item_emoji']} **{row['item_name']}** — {row['quantity']}x (exp: {row['expiration_date']})"
-                key = f"{row['category_emoji']} {row['category']}"
-                categorized[key].append(line)
+            elif category.value == "groceries":
+                from db_user import get_grocery_stash
 
-            embeds = []
-            for category_name, lines in categorized.items():
-                embed = discord.Embed(
-                    title=category_name,
-                    description="\n".join(lines),
-                    color=discord.Color.green()
-                )
-                embeds.append(embed)
+                groceries = await get_grocery_stash(pool, user_id)
 
-            if len(embeds) == 1:
-                await interaction.followup.send(embed=embeds[0])
-            else:
-                view = GroceryStashPaginationView(interaction.user.id, embeds)
-                await view.send(interaction)
+                if not groceries:
+                    embed = discord.Embed(
+                        title="🛒 Your Groceries",
+                        description="You don’t have any groceries yet.",
+                        color=discord.Color.green()
+                    )
+                    await interaction.followup.send(embed=embed)
+                    return
+
+                categorized = defaultdict(list)
+                for row in groceries:
+                    line = f"> {row['item_emoji']} **{row['item_name']}** — {row['quantity']}x (exp: {row['expiration_date']})"
+                    key = f"{row['category_emoji']} {row['category']}"
+                    categorized[key].append(line)
+
+                embeds = []
+                for category_name, lines in categorized.items():
+                    embed = discord.Embed(
+                        title=category_name,
+                        description="\n".join(lines),
+                        color=discord.Color.green()
+                    )
+                    embeds.append(embed)
+
+                if len(embeds) == 1:
+                    await interaction.followup.send(embed=embeds[0])
+                else:
+                    view = GroceryStashPaginationView(interaction.user.id, embeds)
+                    await view.send(interaction)
+
+        except Exception as e:
+            await interaction.followup.send(f"❌ An error occurred: {e}")
 
 
     @tree.command(name="purge", description="Delete last 100 messages to clear clutter")
