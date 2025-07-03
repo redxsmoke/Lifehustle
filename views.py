@@ -160,7 +160,7 @@ class SellFromStashView(View):
                 await interaction.response.send_message("You don’t have an account yet.", ephemeral=True)
                 return
 
-            plate = self.pending_item.get("plate")
+            plate = self.pending_item.get("plate", "").upper()
             if not plate:
                 await interaction.response.send_message("❌ Cannot find vehicle plate to remove.", ephemeral=True)
                 return
@@ -175,8 +175,10 @@ class SellFromStashView(View):
             resale_percent = self.pending_item.get("resale_percent", 0.10)
             resale = int(base_price * resale_percent)
 
-            # Credit user
-            user["checking_account"] += resale
+            # Credit user using correct key
+            current_balance = user.get("checking_account_balance", 0)
+            user["checking_account_balance"] = current_balance + resale
+
             await upsert_user(pool, self.user_id, user)
 
             sold_type = self.pending_item.get("type", "vehicle")
@@ -216,7 +218,8 @@ class ConfirmSellButton(Button):
 
         await remove_vehicle_by_id(pool, self.vehicle_id)
 
-        user["checking_account"] += self.resale_value
+        current_balance = user.get("checking_account_balance", 0)
+        user["checking_account_balance"] = current_balance + self.resale_value
         await upsert_user(pool, user_id, user)
 
         await interaction.response.send_message(
