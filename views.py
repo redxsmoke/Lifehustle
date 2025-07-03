@@ -113,49 +113,6 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
     )
 
 
-# TRANSPORTATION SHOP BUTTONS VIEW
-class TransportationShopButtons(View):
-    def __init__(self):
-        super().__init__(timeout=60)
-
-    @discord.ui.button(label="Buy Bike 🚴", style=discord.ButtonStyle.success, custom_id="buy_bike")
-    async def buy_bike(self, interaction: discord.Interaction, button: Button):
-        try:
-            color = random.choice(BIKE_COLORS)
-            condition = "Pristine"
-            bike_item = {
-                "type": "Bike",
-                "vehicle_type_id": 1,  # Must match your DB vehicle_type_id for bike
-                "color": color,
-                "condition": condition,
-                "purchase_date": datetime.date.today().isoformat(),
-                "commute_count": 0
-            }
-            await handle_vehicle_purchase(interaction, item=bike_item, cost=2000)
-        except Exception:
-            await interaction.response.send_message("🚫 Failed to buy Bike. Try again later.", ephemeral=True)
-
-    @discord.ui.button(label="Buy Beater Car 🚙", style=discord.ButtonStyle.primary, custom_id="buy_blue_car")
-    async def buy_blue_car(self, interaction: discord.Interaction, button: Button):
-        try:
-            plate = generate_random_plate()
-            color = random.choice(CAR_COLORS)
-            car_item = {
-                "type": "Beater Car",
-                "vehicle_type_id": 2,  # Replace with your actual ID for Beater Car
-                "plate": plate,
-                "color": color,
-                "condition": "Heavily Used",
-                "commute_count": 0,
-                "purchase_date": datetime.date.today().isoformat()
-            }
-            await handle_vehicle_purchase(interaction, item=car_item, cost=10000)
-        except Exception:
-            await interaction.response.send_message("🚫 Failed to buy Beater Car. Try again later.", ephemeral=True)
-
-    # Add other car buttons similarly, setting vehicle_type_id accordingly
-
-
 # SELL FROM STASH VIEW
 class SellFromStashView(View):
     def __init__(self, user_id: int, vehicles: list):
