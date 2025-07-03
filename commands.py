@@ -353,17 +353,21 @@ def register_commands(tree: app_commands.CommandTree):
     ])
     async def stash(interaction: discord.Interaction, category: app_commands.Choice[str]):
         from globals import pool
+        print(f"[DEBUG] stash command started for user {interaction.user.id}, category: {category.value}")
         await interaction.response.defer()
 
         user_id = interaction.user.id
         user = await get_user(pool, user_id)
+        print(f"[DEBUG] User fetched: {user}")
 
         if not user:
+            print("[DEBUG] No user found, sending message.")
             await interaction.followup.send("❌ You don’t have an account yet. Use `/start` first.")
             return
 
         if category.value == "transportation":
             async with pool.acquire() as conn:
+                print("[DEBUG] Querying vehicles for user:", user_id)
                 vehicles = await conn.fetch("""
                     SELECT 
                         uvi.id, uvi.color, uvi.appearance_description, uvi.condition,
@@ -374,12 +378,14 @@ def register_commands(tree: app_commands.CommandTree):
                     WHERE uvi.user_id = $1
                     ORDER BY uvi.created_at DESC
                 """, user_id)
+                print(f"[DEBUG] Retrieved {len(vehicles)} vehicles")
 
             if not vehicles:
+                print("[DEBUG] User has no vehicles, sending message.")
                 await interaction.followup.send("You don’t own any transportation items yet.")
                 return
 
-            vehicles = [dict(v) for v in vehicles]  # Make records usable with buttons
+            vehicles = [dict(v) for v in vehicles]  # Convert records to dicts
 
             desc_lines = []
             for item in vehicles:
@@ -402,8 +408,19 @@ def register_commands(tree: app_commands.CommandTree):
                 color=discord.Color.teal()
             )
 
-            view = SellFromStashView(user_id, vehicles)
-            await interaction.followup.send(embed=embed, view=view)
+            try:
+                # Check for vehicles with missing 'id' and warn
+                for v in vehicles:
+                    if not v.get("id"):
+                        print(f"[WARNING] Vehicle missing id: {v}")
+
+                view = SellFromStashView(user_id, vehicles)
+                await interaction.followup.send(embed=embed, view=view)
+                print("[DEBUG] Sent embed and view with vehicles")
+            except Exception as e:
+                print(f"[ERROR] Exception sending vehicles with view: {e}")
+                # Fallback: send embed only (no buttons) so it won't hang
+                await interaction.followup.send(embed=embed)
             return
 
         elif category.value == "groceries":
