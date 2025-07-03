@@ -1,7 +1,8 @@
+import discord
 import random
 import string
 import time
-from discord import ui, ButtonStyle
+
 
 class TransportationShopButtons(discord.ui.View):
     def __init__(self, pool):
