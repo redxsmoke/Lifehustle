@@ -18,6 +18,7 @@ from db_user import reset_user_finances_table
 from db_pool import init_db
 from commands import register_commands
 from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_condition_table
+from data_tier import seed_vehicle_appearance
 import globals
 
 # --- Load JSON Data ---
@@ -63,6 +64,7 @@ async def setup_database():
     await seed_grocery_categories(globals.pool)
     await seed_grocery_types(globals.pool)
     await reset_user_finances_table(globals.pool)
+    await seed_vehicle_appearance(globals.pool) 
 
 # --- Entrypoint ---
 async def main():
