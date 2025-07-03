@@ -6,7 +6,7 @@ import traceback
 import utilities
 import vehicle_logic
 from db_user import get_user, upsert_user
-import globals  # import the global pool correctly
+import globals  # Make sure pool is initialized here
 
 # Fixed base prices by vehicle type
 BASE_PRICES = {
@@ -16,7 +16,6 @@ BASE_PRICES = {
     "Sports Car": 100000,
     "Pickup Truck": 75000
 }
-
 
 class SellButton(Button):
     def __init__(self, vehicle, parent_view):
@@ -30,7 +29,6 @@ class SellButton(Button):
             await interaction.response.send_message("This isn't your stash.", ephemeral=True)
             return
         await self.parent_view.start_sell_flow(interaction, self.vehicle)
-
 
 class SellFromStashView(View):
     def __init__(self, user_id: int, vehicles: list):
@@ -55,7 +53,7 @@ class SellFromStashView(View):
         condition = vehicle.get("condition", "Unknown")
 
         base_price = BASE_PRICES.get(vehicle.get("type"), 0)
-        resale_percent = vehicle.get("resale_percent", 0.10)  # e.g. 0.85
+        resale_percent = vehicle.get("resale_percent", 0.10)  # default 10%
         resale = int(base_price * resale_percent)
 
         return f"Sell {emoji} {desc} ({condition}) - ${resale:,}"
@@ -156,8 +154,6 @@ class GroceryStashPaginationView(View):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-import discord
-from discord.ui import View
 
 class CommuteButtons(View):
     def __init__(self):
@@ -176,7 +172,7 @@ class CommuteButtons(View):
     @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="commute_drive")
     async def drive_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.disable_all_items(interaction)
-        await handle_commute(interaction, "drive")  # Ensure handle_commute is defined/imported
+        await handle_commute(interaction, "drive")  # Make sure handle_commute is imported/defined
 
     @discord.ui.button(label="Bike 🚴 (+$10)", style=discord.ButtonStyle.success, custom_id="commute_bike")
     async def bike_button(self, interaction: discord.Interaction, button: discord.ui.Button):
