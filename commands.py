@@ -59,7 +59,6 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
     print(f"[handle_vehicle_purchase] Start purchase attempt: user={interaction.user.id}, item={item}, cost={cost}")
     pool = globals.pool
     try:
-        # Defer to avoid interaction timeout if logic takes time
         await interaction.response.defer(ephemeral=True)
 
         user_id = interaction.user.id
@@ -102,25 +101,36 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
 
         print(f"[handle_vehicle_purchase] Inserting vehicle with condition '{condition}', commute_count '{commute_count}', resale_percent {resale_percent}")
 
-        # Pick a random color (you can replace with your color list)
-        car_colors = ["Red", "Blue", "Green", "Black", "White", "Yellow", "Silver"]
-        color = random.choice(car_colors)
-
-        # Pick a random appearance description based on condition and vehicle type
-        # You should implement your logic here or load descriptions accordingly
-        # For now, just a placeholder string:
-        appearance_description = f"A {condition} condition {item['type']}"
-
         async with pool.acquire() as conn:
+            # Get random color from code table
+            color_row = await conn.fetchrow("SELECT color_name FROM cd_vehicle_colors ORDER BY random() LIMIT 1")
+            color = color_row["color_name"] if color_row else "Unknown"
+
+            # Get random appearance description for that vehicle type + condition
+            appearance_row = await conn.fetchrow("""
+                SELECT description
+                FROM cd_vehicle_appearance
+                WHERE vehicle_type_id = $1 AND condition = $2
+                ORDER BY random()
+                LIMIT 1
+            """, item["vehicle_type_id"], condition)
+
+            appearance_description = appearance_row["description"] if appearance_row else "No description available"
+
+            # Insert new vehicle record
             await conn.execute("""
-                INSERT INTO user_vehicle_inventory (user_id, vehicle_type_id, color, appearance_description, condition, commut_count, created_at, resale_percent)
-                VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+                INSERT INTO user_vehicle_inventory (
+                    user_id, vehicle_type_id, color, appearance_description, condition, commute_count, created_at, resale_percent
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7)
             """, user_id, item["vehicle_type_id"], color, appearance_description, condition, commute_count, resale_percent)
 
         await interaction.followup.send(
             embed=embed_message(
                 "✅ Purchase Successful",
                 f"You bought a **{item['type']}** for ${cost:,}.\n"
+                f"🎨 Color: {color}\n"
+                f"📝 Description: {appearance_description}\n"
                 f"💰 Remaining Checking Balance: ${finances['checking_account_balance']:,}",
                 COLOR_GREEN
             ),
