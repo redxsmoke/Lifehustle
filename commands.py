@@ -389,20 +389,22 @@ def register_commands(tree: app_commands.CommandTree):
             desc_lines = []
             for item in vehicles:
                 vehicle_type = item["vehicle_type"] or "Unknown"
-                color = item["color"] or "Unknown"
-                condition = item["condition"] or "Unknown"
-                commute_count = item["commute_count"] or 0
                 plate = item["plate_number"] or "N/A"
+                condition = item["condition"] or "Unknown"
+                description = item.get("appearance_description", "No description")
+                commute_count = item["commute_count"] or 0
                 emoji = item["emoji"] or "🚗"
-                description = item.get("appearance_description", "")
 
                 desc_lines.append(
-                    f"{emoji} **{vehicle_type}** — {color} — Plate: `{plate}` — {description} — Condition: {condition} — Commutes: {commute_count}"
+                    f"{emoji} **{vehicle_type}**: PLATE `{plate}`\n"
+                    f"    Condition: {condition}\n"
+                    f"    Description: {description}\n"
+                    f"    Commute Count: {commute_count}"
                 )
 
             embed = discord.Embed(
                 title="🚗 Your Vehicles",
-                description="\n".join(desc_lines),
+                description="\n\n".join(desc_lines),
                 color=discord.Color.teal()
             )
 
