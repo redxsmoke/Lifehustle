@@ -146,3 +146,12 @@ class SellFromStashView(View):
                     "❌ Something went wrong while selling your vehicle. Please try again later.",
                     ephemeral=True
                 )
+
+
+class GroceryCategoryView(View):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+class GroceryStashPaginationView(View):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
