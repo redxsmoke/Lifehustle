@@ -62,7 +62,7 @@ class VehicleButton(Button):
             # Fetch vehicle details
             vehicle = await conn.fetchrow(
                 """
-                SELECT cvc.description AS condition, cvt.resale_percent
+                SELECT cvc.description AS condition, cvc.resale_percent
                 FROM cd_vehicle_type cvt
                 JOIN cd_vehicle_condition cvc ON cvc.vehicle_type_id = cvt.id
                 WHERE cvt.id = $1
