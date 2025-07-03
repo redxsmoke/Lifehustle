@@ -394,9 +394,10 @@ def register_commands(tree: app_commands.CommandTree):
                 commute_count = item["commute_count"] or 0
                 plate = item["plate_number"] or "N/A"
                 emoji = item["emoji"] or "🚗"
+                description = item.get("appearance_description", "")
 
                 desc_lines.append(
-                    f"{emoji} **{vehicle_type}** — {color} — Plate: `{plate}` — Condition: {condition} — Commutes: {commute_count}"
+                    f"{emoji} **{vehicle_type}** — {color} — Plate: `{plate}` — {description} — Condition: {condition} — Commutes: {commute_count}"
                 )
 
             embed = discord.Embed(
