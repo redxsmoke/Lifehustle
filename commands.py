@@ -2,7 +2,6 @@ from collections import defaultdict, Counter
 import random
 import traceback
 import asyncio
-import datetime
 import defaults
 import discord
 from discord import app_commands, Interaction
@@ -40,17 +39,17 @@ class PurchaseVehicleView(discord.ui.View):
             button = discord.ui.Button(label=label, style=discord.ButtonStyle.success)
 
             # Attach vehicle data to the callback
-            button.callback = self.make_callback(vehicle)
+            button.callback = self.make_callback(vehicle, handle_vehicle_purchase)
             self.add_item(button)
 
-    def make_callback(self, vehicle):
+    def make_callback(self, vehicle, purchase_fn):
         async def callback(interaction: discord.Interaction):
             item = {
                 "type": vehicle["name"],
                 "vehicle_type_id": vehicle["id"]
             }
             cost = vehicle["cost"]
-            await handle_vehicle_purchase(interaction, item, cost)
+            await purchase_fn(interaction, item, cost)
         return callback
 
 
