@@ -368,7 +368,7 @@ def register_commands(tree: app_commands.CommandTree):
                     vehicles = await conn.fetch("""
                         SELECT 
                             uvi.id, uvi.color, uvi.appearance_description, uvi.condition,
-                            uvi.commute_count, uvi.created_at, cvc.resale_percent,
+                            uvi.commute_count, uvi.created_at, uvi.resale_percent,
                             cvt.name AS type, cvt.emoji
                         FROM user_vehicle_inventory uvi
                         JOIN cd_vehicle_type cvt ON uvi.vehicle_type_id = cvt.id

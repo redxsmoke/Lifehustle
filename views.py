@@ -11,6 +11,7 @@ import globals  # Make sure pool is initialized here
 # Fixed base prices by vehicle type
 BASE_PRICES = {
     "Bike": 2000,
+    "Motorcycle":18000,
     "Beater Car": 10000,
     "Sedan Car": 25000,
     "Sports Car": 100000,
@@ -23,7 +24,7 @@ class SellButton(Button):
         if not vehicle_id:
             raise ValueError(f"Vehicle missing valid 'id': {vehicle}")
 
-        label = parent_view.make_button_label(vehicle)
+        label = parent_view.make_button_label(vehicle)  # call the method on the parent view
         super().__init__(label=label, style=discord.ButtonStyle.danger)
 
         self.vehicle = vehicle
@@ -37,37 +38,28 @@ class SellButton(Button):
         await self.parent_view.start_sell_flow(interaction, self.vehicle, self.vehicle_id)
 
 
-class SellFromStashView(View):
-    def __init__(self, user_id: int, vehicles: list):
-        super().__init__(timeout=None)
-        self.user_id = user_id
-        self.vehicles = vehicles
-        self.pending_vehicle = None
-        self.pending_vehicle_id = None
 
-        for vehicle in vehicles:
-            if vehicle.get("id"):
-                self.add_item(SellButton(vehicle, self))
-            else:
-                print(f"[WARNING] Vehicle without valid ID skipped: {vehicle}")
+def make_button_label(self, vehicle):
+    emoji = {
+        "Bike": "🚴",
+        "Beater Car": "🚙",
+        "Sedan Car": "🚗",
+        "Sports Car": "🏎️",
+        "Pickup Truck": "🛻"
+    }.get(vehicle.get("type"), "❓")
 
-    def make_button_label(self, vehicle):
-        emoji = {
-            "Bike": "🚴",
-            "Beater Car": "🚙",
-            "Sedan Car": "🚗",
-            "Sports Car": "🏎️",
-            "Pickup Truck": "🛻"
-        }.get(vehicle.get("type"), "❓")
+    desc = vehicle.get("tag") or vehicle.get("color", "Unknown")
+    condition = vehicle.get("condition", "Unknown")
 
-        desc = vehicle.get("tag") or vehicle.get("color", "Unknown")
-        condition = vehicle.get("condition", "Unknown")
+    base_price = BASE_PRICES.get(vehicle.get("type"), 0)
+    resale_percent = vehicle.get("resale_percent")
+    if resale_percent is None:
+        resale_percent = 0.10  # fallback to 10%
 
-        base_price = BASE_PRICES.get(vehicle.get("type"), 0)
-        resale_percent = vehicle.get("resale_percent", 0.10)
-        resale = int(base_price * resale_percent)
+    resale = int(base_price * resale_percent)
 
-        return f"Sell {emoji} {desc} ({condition}) - ${resale:,}"
+    return f"Sell {emoji} {desc} ({condition}) - ${resale:,}"
+
 
     async def start_sell_flow(self, interaction: Interaction, vehicle, vehicle_id):
         self.pending_vehicle = vehicle
