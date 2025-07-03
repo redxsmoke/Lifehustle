@@ -366,7 +366,7 @@ def register_commands(tree: app_commands.CommandTree):
             if category.value == "transportation":
                 async with pool.acquire() as conn:
                     vehicles = await conn.fetch("""
-                        SELECT 
+                        SELECT DISTINCT
                             uvi.id, uvi.color, uvi.appearance_description, uvi.condition,
                             uvi.commute_count, uvi.created_at, uvi.resale_percent,
                             cvt.name AS type, cvt.emoji
