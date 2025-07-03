@@ -20,6 +20,9 @@ from commands import register_commands
 from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_appearence_table, create_vehicle_appearance_table, seed_vehicle_appearance
 import globals
 
+# Import your bank_commands cog extension (do not import the file as a module directly)
+# We'll load it as an extension via bot.load_extension("bank_commands")
+
 # --- Load JSON Data ---
 with open("commute_outcomes.json", "r") as f:
     COMMUTE_OUTCOMES = json.load(f)
@@ -41,12 +44,19 @@ async def on_ready():
 @bot.event
 async def setup_hook():
     print("🛠️ setup_hook starting...")
+
+    # Register your other commands (non-cog)
     register_commands(tree)
+
+    # Load the bank_commands cog extension
+    await bot.load_extension("bank_commands")
+
     try:
         synced = await tree.sync()
         print(f"✅ Synced {len(synced)} slash commands.")
     except Exception as e:
         print(f"❌ Error syncing commands in setup_hook: {e}")
+
     print("🛠️ setup_hook finished.")
 
 # --- DB Setup ---

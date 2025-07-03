@@ -184,23 +184,7 @@ def register_commands(tree: app_commands.CommandTree):
         modal = SubmitWordModal(category)
         await interaction.response.send_modal(modal)
 
-    @tree.command(name="bank", description="View your checking and savings account balances")
-    async def bank(interaction: Interaction):
-        user_id = interaction.user.id
-        user = await get_user(pool, user_id)
-        if user is None:
-            user = DEFAULT_USER.copy()
-            await upsert_user(pool, user_id, user)
-
-        await interaction.response.send_message(
-            embed=embed_message(
-                "💰 Account Balances",
-                f"> {interaction.user.display_name}, your account balances are:\n"
-                f"> 💰 Checking: ${user['checking_account_balance']:,}\n"
-                f"> 🏦 Savings: ${user['savings_account']:,}"
-            )
-        )
-
+    
     @tree.command(name="shop", description="Shop for items by category")
     @app_commands.describe(category="Which category to browse?")
     @app_commands.choices(category=[
@@ -249,73 +233,6 @@ def register_commands(tree: app_commands.CommandTree):
     # ... rest of your commands unchanged, omitted here for brevity ...
 
 
-    @tree.command(name="deposit", description="Deposit money from checking to savings")
-    @app_commands.describe(amount="Amount to deposit")
-    async def deposit(interaction: Interaction, amount: str):
-        parsed_amount = parse_amount(amount)
-        if parsed_amount is None:
-            await interaction.response.send_message(embed=embed_message(
-                "❌ Invalid Format", "Use numbers like 1000, or 'all'.", COLOR_RED), ephemeral=True)
-            return
-
-        user_id = interaction.user.id
-        user = await get_user(pool, user_id)
-        if user is None:
-            user = DEFAULT_USER.copy()
-
-        checking = user.get('checking_account', 0)
-        amount_int = checking if parsed_amount == -1 else parsed_amount
-
-        if amount_int <= 0 or amount_int > checking:
-            await interaction.response.send_message(embed=embed_message(
-                "❌ Invalid Amount", "You don't have enough in checking.", COLOR_RED), ephemeral=True)
-            return
-
-        user['checking_account'] -= amount_int
-        user['savings_account'] += amount_int
-        await upsert_user(pool, user_id, user)
-
-        await interaction.response.send_message(embed=embed_message(
-            "✅ Deposit Complete",
-            f"> Moved ${amount_int:,} to savings.\n"
-            f"> 💰 Checking: ${user['checking_account']:,}\n"
-            f"> 🏦 Savings: ${user['savings_account']:,}",
-            COLOR_GREEN
-        ))
-
-    @tree.command(name="withdraw", description="Withdraw money from savings to checking")
-    @app_commands.describe(amount="Amount to withdraw")
-    async def withdraw(interaction: Interaction, amount: str):
-        parsed_amount = parse_amount(amount)
-        if parsed_amount is None:
-            await interaction.response.send_message(embed=embed_message(
-                "❌ Invalid Format", "Use numbers like 1000, or 'all'.", COLOR_RED), ephemeral=True)
-            return
-
-        user_id = interaction.user.id
-        user = await get_user(pool, user_id)
-        if user is None:
-            user = DEFAULT_USER.copy()
-
-        savings = user.get('savings_account', 0)
-        amount_int = savings if parsed_amount == -1 else parsed_amount
-
-        if amount_int <= 0 or amount_int > savings:
-            await interaction.response.send_message(embed=embed_message(
-                "❌ Invalid Amount", "You don't have enough in savings.", COLOR_RED), ephemeral=True)
-            return
-
-        user['savings_account'] -= amount_int
-        user['checking_account'] += amount_int
-        await upsert_user(pool, user_id, user)
-
-        await interaction.response.send_message(embed=embed_message(
-            "✅ Withdrawal Complete",
-            f"> Moved ${amount_int:,} to checking.\n"
-            f"> 💰 Checking: ${user['checking_account']:,}\n"
-            f"> 🏦 Savings: ${user['savings_account']:,}",
-            COLOR_GREEN
-        ))
 
     @tree.command(name="commute", description="Commute to work using buttons")
     async def commute(interaction: Interaction):
