@@ -6,6 +6,7 @@ import defaults
 import discord
 from discord import app_commands, Interaction
 import category_loader
+from vehicle_logic import generate_random_plate
 import globals
 
 from datetime import datetime, timezone, timedelta   
@@ -104,6 +105,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             # Get random color from code table
             color_row = await conn.fetchrow("SELECT description FROM cd_vehicle_colors ORDER BY random() LIMIT 1")
             color = color_row["description"] if color_row else "Unknown"
+            plate_number = generate_random_plate()
 
             # Convert condition to int
             condition_int = int(condition)
@@ -132,10 +134,10 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             # Insert new vehicle record with condition description string
             await conn.execute("""
                 INSERT INTO user_vehicle_inventory (
-                    user_id, vehicle_type_id, color, appearance_description, condition, commute_count, created_at, resale_percent
+                    user_id, vehicle_type_id, color, appearance_description, plant_number, condition, commute_count, created_at, resale_percent
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7)
-            """, user_id, item["vehicle_type_id"], color, appearance_description, condition_desc, commute_count, resale_percent)
+            """, user_id, item["vehicle_type_id"], color, appearance_description, plate_number, condition_desc, commute_count, resale_percent)
 
 
         await interaction.followup.send(
