@@ -25,6 +25,71 @@ from config import PAYCHECK_AMOUNT, PAYCHECK_COOLDOWN_SECONDS, COLOR_RED, COLOR_
 from category_loader import categories, category_autocomplete
 from defaults import DEFAULT_USER
 
+# PurchaseVehicleView with buy buttons only
+class PurchaseVehicleView(discord.ui.View):
+    def __init__(self, vehicles: list):
+        super().__init__(timeout=180)
+        for vehicle in vehicles:
+            label = f"Buy {vehicle['name']} - ${vehicle['cost']:,}"
+            button = discord.ui.Button(label=label, style=discord.ButtonStyle.success)
+
+            # Attach vehicle data to the callback
+            button.callback = self.make_callback(vehicle)
+            self.add_item(button)
+
+    def make_callback(self, vehicle):
+        async def callback(interaction: discord.Interaction):
+            item = {
+                "type": vehicle["name"],
+                "vehicle_type_id": vehicle["id"]
+            }
+            cost = vehicle["cost"]
+            await handle_vehicle_purchase(interaction, item, cost)
+        return callback
+
+# Placeholder for the purchase handler - implement your actual purchase logic here
+async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, cost: int):
+    user_id = interaction.user.id
+    from globals import pool
+
+    # Get user data
+    user = await get_user(pool, user_id)
+    if user is None:
+        user = DEFAULT_USER.copy()
+        await upsert_user(pool, user_id, user)
+
+    checking = user.get("checking_account", 0)
+    if checking < cost:
+        await interaction.response.send_message(
+            embed=embed_message(
+                "❌ Insufficient Funds",
+                f"You need ${cost:,} but only have ${checking:,} in checking.",
+                COLOR_RED
+            ),
+            ephemeral=True
+        )
+        return
+
+    # Deduct cost
+    user["checking_account"] -= cost
+    await upsert_user(pool, user_id, user)
+
+    # Add vehicle to inventory - implement actual DB insert logic here
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            INSERT INTO user_vehicle_inventory (user_id, vehicle_type_id, color, appearance_description, condition, created_at, resale_percent)
+            VALUES ($1, $2, $3, $4, $5, NOW(), $6)
+        """, user_id, item["vehicle_type_id"], "Random Color", "Purchased vehicle", "Brand New", 100)
+
+    await interaction.response.send_message(
+        embed=embed_message(
+            "✅ Purchase Successful",
+            f"You bought a **{item['type']}** for ${cost:,}.\n"
+            f"💰 Remaining Checking Balance: ${user['checking_account']:,}",
+            COLOR_GREEN
+        ),
+        ephemeral=True
+    )
 
 def register_commands(tree: app_commands.CommandTree):
     @tree.command(name="submitword", description="Submit a new word to a category")
@@ -82,7 +147,7 @@ def register_commands(tree: app_commands.CommandTree):
             description = "Choose a vehicle to purchase:\n\n" + "\n".join(desc_lines) + "\n\nEach vehicle has unique perks!"
             embed = discord.Embed(title="🛒 Transportation Shop", description=description, color=discord.Color.blue())
 
-            view = PurchaseVehicleView(vehicles, interaction.user.id)
+            view = PurchaseVehicleView(vehicles)
             await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
         elif category.value == "groceries":
@@ -444,7 +509,6 @@ def register_commands(tree: app_commands.CommandTree):
 
         except Exception as e:
             await interaction.followup.send(f"❌ An error occurred: {e}")
-
 
     @tree.command(name="purge", description="Delete last 100 messages to clear clutter")
     async def purge(interaction: discord.Interaction):
