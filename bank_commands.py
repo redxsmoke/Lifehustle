@@ -1,6 +1,6 @@
 import discord
 from discord import app_commands, Interaction
-from db_user import get_user, upsert_user
+from db_user import get_user_finances, upsert_user_finances
 from utilities import embed_message, parse_amount
 from defaults import DEFAULT_USER
 from config import COLOR_RED, COLOR_GREEN
@@ -17,10 +17,10 @@ class Bank(commands.Cog):
     @bank_group.command(name="view", description="View your checking and savings balances")
     async def view(self, interaction: Interaction):
         user_id = interaction.user.id
-        user = await get_user(globals.pool, user_id)
+        user = await get_user_finances(globals.pool, user_id)
         if user is None:
             user = DEFAULT_USER.copy()
-            await upsert_user(globals.pool, user_id, user)
+            await upsert_user_finances(globals.pool, user_id, user)
 
         checking = user.get('checking_account_balance', 0)
         savings = user.get('savings_account_balance', 0)
@@ -42,7 +42,7 @@ class Bank(commands.Cog):
             await interaction.response.send_message(
                 embed=embed_message(
                     "❌ Invalid Format",
-                    "Use numbers like 1000, or 'all'.",
+                    "Use numbers like 1000, or 'all'. You can also say 10.5k to deposit 10,500 or 10m to deposit 10 million.",
                     COLOR_RED
                 ),
                 ephemeral=True
@@ -50,7 +50,7 @@ class Bank(commands.Cog):
             return
 
         user_id = interaction.user.id
-        user = await get_user(globals.pool, user_id)
+        user = await get_user_finances(globals.pool, user_id)
         if user is None:
             user = DEFAULT_USER.copy()
 
@@ -70,7 +70,7 @@ class Bank(commands.Cog):
 
         user['savings_account_balance'] -= amount_int
         user['checking_account_balance'] = user.get('checking_account_balance', 0) + amount_int
-        await upsert_user(pool, user_id, user)
+        await upsert_user_finances(globals.pool, user_id, user)
 
         await interaction.response.send_message(
             embed=embed_message(
@@ -98,7 +98,7 @@ class Bank(commands.Cog):
             return
 
         user_id = interaction.user.id
-        user = await get_user(globals.pool, user_id)
+        user = await get_user_finances(globals.pool, user_id)
         if user is None:
             user = DEFAULT_USER.copy()
 
@@ -118,7 +118,7 @@ class Bank(commands.Cog):
 
         user['checking_account_balance'] -= amount_int
         user['savings_account_balance'] = user.get('savings_account_balance', 0) + amount_int
-        await upsert_user(pool, user_id, user)
+        await upsert_user_finances(globals.pool, user_id, user)
 
         await interaction.response.send_message(
             embed=embed_message(
