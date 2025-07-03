@@ -61,7 +61,7 @@ class Bank(commands.Cog):
             await interaction.response.send_message(
                 embed=embed_message(
                     "❌ Invalid Amount",
-                    ">\u200B 😂The bank laughed at you hysterically for attempting to withdraw more from your savings than you actually have. Try again.",
+                    "> \u200B 😂The bank laughed at you hysterically for attempting to withdraw more from your savings than you actually have. Try again.",
                     COLOR_RED
                 ),
                 ephemeral=True
