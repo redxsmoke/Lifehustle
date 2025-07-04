@@ -78,6 +78,34 @@ async def update_vehicle_condition_and_description(pool, user_id: int, vehicle_i
     return new_condition, description
 
 # ───────────────────────────────────────────────
+# Parse amount strings like '1000', '1k', '2.5m', or 'all'.
+# Returns:
+#   - int amount if valid
+#   - -1 if 'all' (special flag)
+#   - None if invalid input
+# ───────────────────────────────────────────────
+
+def parse_amount(amount_str: str) -> int | None:
+    s = amount_str.strip().lower()
+    if s == "all":
+        return -1  # special flag meaning "all funds"
+
+    # Remove commas
+    s = s.replace(',', '')
+
+    try:
+        # Check for suffixes
+        if s.endswith('k'):
+            return int(float(s[:-1]) * 1_000)
+        elif s.endswith('m'):
+            return int(float(s[:-1]) * 1_000_000)
+        else:
+            # Just a plain integer number
+            return int(float(s))
+    except ValueError:
+        return None
+
+# ───────────────────────────────────────────────
 # Other helper functions for balance update
 # ───────────────────────────────────────────────
 
@@ -94,7 +122,7 @@ async def update_balance(pool, user_id, delta):
             SET checking_account = checking_account + $1
             WHERE user_id = $2
         """, delta, user_id)
-
+        
 # ───────────────────────────────────────────────
 # Fetch user's vehicles from DB
 # ───────────────────────────────────────────────
