@@ -16,29 +16,29 @@ from embeds import embed_message
 # VEHICLE CONDITION THRESHOLDS
 # ───────────────────────────────────────────────
 
-def condition_from_usage(commute_count: int) -> str:
-    if commute_count < 50:
+def condition_from_usage(travel_count: int) -> str:
+    if travel_count < 50:
         return "Brand New"
-    elif commute_count < 100:
+    elif travel_count < 100:
         return "Good Condition"
-    elif commute_count < 150:
+    elif travel_count < 150:
         return "Fair Condition"
-    elif commute_count < 200:
+    elif travel_count < 200:
         return "Poor Condition"
     else:
         return "Broken Down"
 
 # ───────────────────────────────────────────────
-# COMMUTE UTILITIES
+# TRAVEL UTILITIES
 # ───────────────────────────────────────────────
 
-async def update_vehicle_condition_and_description(pool, user_id: int, vehicle_id: int, vehicle_type_id: int, commute_count: int):
+async def update_vehicle_condition_and_description(pool, user_id: int, vehicle_id: int, vehicle_type_id: int, travel_count: int):
     """
-    Increment commute_count, recalculate condition_id, pick a random new appearance,
+    Increment travel_count, recalculate condition_id, pick a random new appearance,
     update the user_vehicle_inventory record, and return the new state.
     """
     # Determine new human-readable condition
-    new_cond_str = condition_from_usage(commute_count)
+    new_cond_str = condition_from_usage(travel_count)
     # Map to numeric condition_id
     condition_map = {
         "Brand New": 1,
@@ -76,16 +76,16 @@ async def update_vehicle_condition_and_description(pool, user_id: int, vehicle_i
             """
             UPDATE user_vehicle_inventory
             SET
-              commute_count          = $1,
+              travel_count          = $1,
               condition_id           = $2,
               appearance_description = $3
             WHERE id = $4 AND user_id = $5
             """,
-            commute_count, new_cond_id, description, vehicle_id, user_id
+            travel_count, new_cond_id, description, vehicle_id, user_id
         )
 
     return {
-        "commute_count": commute_count,
+        "travel_count": travel_count,
         "condition_id": new_cond_id,
         "condition": new_cond_str,
         "description": description

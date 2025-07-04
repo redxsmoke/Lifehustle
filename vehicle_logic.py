@@ -113,13 +113,13 @@ async def handle_vehicle_purchase(
 
     plate = generate_random_plate()
 
-    # Condition and commute_count logic
+    # Condition and travel count logic
     if vehicle_type_id == 1:  # Beater Car always poor condition
         condition_id = 4  # Poor Condition
-        commute_count = 151
+        travel_count = 151
     else:
         condition_id = 1  # Brand New
-        commute_count = 0
+        travel_count = 0
 
     async with pool.acquire() as conn:
         vehicle_type_name = await get_vehicle_type_name(conn, vehicle_type_id)
@@ -134,11 +134,11 @@ async def handle_vehicle_purchase(
             """
             INSERT INTO user_vehicle_inventory (
                 user_id, vehicle_type_id, plate_number, color, appearance_description,
-                condition, commute_count, resale_value, resale_percent, created_at, sold_at
+                condition, travel_count, resale_value, resale_percent, created_at, sold_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, EXTRACT(EPOCH FROM NOW())::int, NULL)
             """,
             user_id, vehicle_type_id, plate, color, appearance_description,
-            condition_name, commute_count, resale_value, resale_percent
+            condition_name, travel_count, resale_value, resale_percent
         )
 
     await interaction.response.send_message(
@@ -156,7 +156,7 @@ async def get_user_vehicles(pool, user_id: int) -> list:
         uvi.appearance_description,
         uvi.plate_number,
         uvi.condition,
-        uvi.commute_count,
+        uvi.travel_count,
         uvi.resale_value,
         uvi.resale_percent,
         uvi.id

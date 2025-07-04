@@ -18,11 +18,13 @@ from db_user import reset_user_finances_table
 from db_pool import init_db
 from embeds import embed_message
 from embeds import COLOR_RED
-from views import CommuteButtons
+from views import TravelButtons  # renamed import to match change
+
+from dropuvi import drop_and_recreate_uvi
 
 # Rename imports to avoid name conflicts
 from commands import register_commands as register_general_commands
-from commute_command import register_commands as register_commute_commands
+from travel_command import register_commands as register_travel_commands  # renamed import
 
 from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_appearence_table, create_vehicle_appearance_table, seed_vehicle_appearance
 
@@ -30,8 +32,8 @@ from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_
 import globals
 
 # Load JSON Data
-with open("commute_outcomes.json", "r") as f:
-    COMMUTE_OUTCOMES = json.load(f)
+with open("travel_outcomes.json", "r") as f:
+    TRAVEL_OUTCOMES = json.load(f)
 with open("shop_items.json", "r", encoding="utf-8") as f:
     SHOP_ITEMS = json.load(f)
 with open("categories.json", "r") as f:
@@ -64,11 +66,11 @@ async def setup_hook():
 
     # Register commands from both modules
     register_general_commands(tree)
-    register_commute_commands(tree)
+    register_travel_commands(tree)  # renamed call
     
     # Load your cog extensions
     await bot.load_extension("bank_commands")
-    bot.add_view(CommuteButtons())
+    bot.add_view(TravelButtons())  # renamed to match change
     try:
         synced = await tree.sync()
         print(f"✅ Synced {len(synced)} slash commands.")
@@ -93,7 +95,7 @@ async def setup_database():
     await drop_vehicle_appearence_table(globals.pool)
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool) 
-    
+    await drop_and_recreate_uvi()
 # Entrypoint
 async def main():
     await create_pool()

@@ -17,21 +17,21 @@ from utilities import (
 from vehicle_logic import get_user_vehicles
 from embeds import embed_message, COLOR_GREEN
 
-def condition_from_usage(commute_count: int) -> str:
-    if commute_count < 50:
+def condition_from_usage(travel_count: int) -> str:
+    if travel_count < 50:
         return "Brand New"
-    elif commute_count < 100:
+    elif travel_count < 100:
         return "Good Condition"
-    elif commute_count < 150:
+    elif travel_count < 150:
         return "Fair Condition"
-    elif commute_count < 200:
+    elif travel_count < 200:
         return "Poor Condition"
     else:
         return "Broken Down"
 
 def register_commands(tree: app_commands.CommandTree):
-    @tree.command(name="commute", description="Commute to work using buttons")
-    async def commute(interaction: Interaction):
+    @tree.command(name="travel", description="Travel to work using buttons")
+    async def travel(interaction: Interaction):
         pool = globals.pool
         if pool is None:
             await interaction.response.send_message(
@@ -50,13 +50,13 @@ def register_commands(tree: app_commands.CommandTree):
             )
             return
 
-        from views import CommuteButtons
-        view = CommuteButtons()
+        from views import TravelButtons
+        view = TravelButtons()
         await interaction.response.defer(ephemeral=True)
         msg = await interaction.followup.send(
             embed=embed_message(
-                "🚗 Commute",
-                "Choose your commute method:",
+                "🚗 Travel",
+                "> Choose your travel method:",
                 discord.Color.blue()
             ),
             view=view,
@@ -64,7 +64,7 @@ def register_commands(tree: app_commands.CommandTree):
         )
         view.message = msg
 
-async def handle_commute(interaction: Interaction, method: str):
+async def handle_travel(interaction: Interaction, method: str):
     pool = globals.pool
     user_id = interaction.user.id
     user = await get_user(pool, user_id)
@@ -73,7 +73,7 @@ async def handle_commute(interaction: Interaction, method: str):
         await interaction.followup.send(
             embed=embed_message(
                 "❌ **No Account Found**",
-                "Uh-oh! You don’t have an account yet. Try `/start` and join the cool kids club!",
+                "> Uh-oh! You don’t have an account yet. Try `/start` and join the cool kids club!",
                 discord.Color.red()
             ),
             ephemeral=True
@@ -91,7 +91,7 @@ async def handle_commute(interaction: Interaction, method: str):
             await interaction.followup.send(
                 embed=embed_message(
                     "❌🔧 **No Available Vehicle**",
-                    "Looks like your cars are on vacation or broken down. No joyrides today!",
+                    "> Looks like your cars are on vacation or broken down. No joyrides today!",
                     discord.Color.red()
                 ),
                 ephemeral=True
@@ -104,14 +104,26 @@ async def handle_commute(interaction: Interaction, method: str):
         if vehicle_type_id is None:
             raise ValueError(f"Missing vehicle_type_id in vehicle: {vehicle}")
 
-        await charge_user(pool, user_id, 10)
-        new_commute_count = vehicle.get("commute_count", 0) + 1
+        cost = 10
+        if user.get("checking_account_balance", 0) < cost:
+            await interaction.followup.send(
+                embed=embed_message(
+                    "⛽ Empty Tank!",
+                    f"> You tried to drive your **{vehicle['vehicle_type']}**, but your wallet is emptier than the gas tank! Need ${cost} for gas, but you only have ${user.get('checking_account_balance', 0)}.",
+                    discord.Color.red()
+                ),
+                ephemeral=True
+            )
+            return
+
+        await charge_user(pool, user_id, cost)
+        new_travel_count = vehicle.get("travel_count", 0) + 1
         await update_vehicle_condition_and_description(
             pool,
             user_id,
             vehicle["id"],
             vehicle_type_id,
-            new_commute_count
+            new_travel_count
         )
 
         updated_user = await get_user(pool, user_id)
@@ -119,9 +131,9 @@ async def handle_commute(interaction: Interaction, method: str):
 
         await interaction.followup.send(
             embed=embed_message(
-                "🚗 Drive Commute",
-                f"You drove your **{vehicle['vehicle_type']}**! Total commutes: **{new_commute_count}**.\n"
-                f"Your updated balance is: **${updated_balance}**.",
+                "🚗 Drive Travel",
+                f"> You drove your **{vehicle['vehicle_type']}**! Total travels: **{new_travel_count}**.\n"
+                f"> Your updated balance is: **${updated_balance}**.",
                 COLOR_GREEN
             ),
             ephemeral=True
@@ -133,7 +145,7 @@ async def handle_commute(interaction: Interaction, method: str):
             await interaction.followup.send(
                 embed=embed_message(
                     "❌🔧 **No Available Vehicle**",
-                    "No bike? No fun! Get one or fix that broken two-wheeler first.",
+                    "> No bike? No fun! Get one or fix that broken two-wheeler first.",
                     discord.Color.red()
                 ),
                 ephemeral=True
@@ -146,14 +158,13 @@ async def handle_commute(interaction: Interaction, method: str):
         if vehicle_type_id is None:
             raise ValueError(f"Missing vehicle_type_id in vehicle: {vehicle}")
 
-        await charge_user(pool, user_id, 10)
-        new_commute_count = vehicle.get("commute_count", 0) + 1
+        new_travel_count = vehicle.get("travel_count", 0) + 1
         await update_vehicle_condition_and_description(
             pool,
             user_id,
             vehicle["id"],
             vehicle_type_id,
-            new_commute_count
+            new_travel_count
         )
         await reward_user(pool, user_id, 10)
 
@@ -162,9 +173,9 @@ async def handle_commute(interaction: Interaction, method: str):
 
         await interaction.followup.send(
             embed=embed_message(
-                "🚴 Bike Commute",
-                f"You biked on your **Bike**! Total commutes: **{new_commute_count}**.\n"
-                f"Your updated balance is: **${updated_balance}**. +$10 biking bonus!",
+                "🚴 Bike Travel",
+                f"> You biked on your **Bike**! Total travels: **{new_travel_count}**.\n"
+                f"> Your updated balance is: **${updated_balance}**. +$10 biking bonus!",
                 COLOR_GREEN
             ),
             ephemeral=True
@@ -173,24 +184,25 @@ async def handle_commute(interaction: Interaction, method: str):
     elif method in ('subway', 'bus'):
         cost = 10 if method == 'subway' else 5
 
-        # Check user balance
         if user.get("checking_account_balance", 0) < cost:
             await interaction.followup.send(
                 embed=embed_message(
                     "❌ Insufficient Funds",
-                    f"Yikes! You need ${cost} to ride the {method}, but your wallet says only ${user.get('checking_account_balance', 0)}. Maybe find some couch change?",
+                    f"> Yikes! You need ${cost} to ride the {method}, but your wallet says only ${user.get('checking_account_balance', 0)}. Maybe find some couch change?",
                     discord.Color.red()
                 ),
                 ephemeral=True
             )
             return
 
-        # Deduct fare
         await charge_user(pool, user_id, cost)
+        updated_user = await get_user(pool, user_id)
+        updated_balance = updated_user.get("checking_account_balance", 0)
         await interaction.followup.send(
             embed=embed_message(
-                f"{'🚇' if method == 'subway' else '🚌'} Commute Summary",
-                f"You commuted by **{method.title()}** for ${cost}.",
+                f"{'🚇' if method == 'subway' else '🚌'} Travel Summary",
+                f"> You traveled by **{method.title()}** for ${cost}.\n"
+                f"> Your updated balance is: **${updated_balance}**.",
                 COLOR_GREEN
             ),
             ephemeral=True
@@ -199,8 +211,8 @@ async def handle_commute(interaction: Interaction, method: str):
     else:
         await interaction.followup.send(
             embed=embed_message(
-                "❌ Invalid Commute Method",
-                "Oops! That’s not a valid commute option. Pick one of: drive, bike, subway, or bus.",
+                "❌ Invalid Travel Method",
+                "> Are you hacking us?! How did you select this as a travel option 🤔? Pick one of: drive, bike, subway, or bus.",
                 discord.Color.red()
             ),
             ephemeral=True

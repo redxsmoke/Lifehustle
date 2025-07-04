@@ -19,7 +19,7 @@ async def category_autocomplete(
 
     return choices
 
-async def commute_method_autocomplete(
+async def travel_method_autocomplete(
     interaction: discord.Interaction,
     current: str
 ) -> list[app_commands.Choice[str]]:
@@ -33,7 +33,7 @@ async def commute_method_autocomplete(
     ]
     return choices
 
-async def commute_direction_autocomplete(
+async def travel_direction_autocomplete(
     interaction: discord.Interaction,
     current: str
 ) -> list[app_commands.Choice[str]]:

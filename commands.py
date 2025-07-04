@@ -15,7 +15,7 @@ from utilities import embed_message
 from shop_items import TransportationShopButtons
 
 from views import (
-    CommuteButtons,
+    TravelButtons, 
     SellFromStashView,
     GroceryCategoryView,
     GroceryStashPaginationView,
@@ -92,14 +92,14 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
 
         if item["type"] == "Beater Car":
             condition = "4"
-            commute_count = random.randint(151, 195)
+            travel_count = random.randint(151, 195)
             resale_percent = 0.3
         else:
             condition = "1"
-            commute_count = 0
+            travel_count = 0
             resale_percent = 0.85
 
-        print(f"[handle_vehicle_purchase] Inserting vehicle with condition '{condition}', commute_count '{commute_count}', resale_percent {resale_percent}")
+        print(f"[handle_vehicle_purchase] Inserting vehicle with condition '{condition}', travel_count '{travel_count}', resale_percent {resale_percent}")
 
         async with pool.acquire() as conn:
             # Get random color from code table
@@ -134,10 +134,10 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             # Insert new vehicle record with condition description string
             await conn.execute("""
                 INSERT INTO user_vehicle_inventory (
-                    user_id, vehicle_type_id, color, appearance_description, plate_number, condition, commute_count, created_at, resale_percent
+                    user_id, vehicle_type_id, color, appearance_description, plate_number, condition, travel_count, created_at, resale_percent
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(),$8)
-            """, user_id, item["vehicle_type_id"], color, appearance_description, plate_number, condition_desc, commute_count, resale_percent)
+            """, user_id, item["vehicle_type_id"], color, appearance_description, plate_number, condition_desc, travel_count, resale_percent)
 
 
         await interaction.followup.send(
@@ -418,7 +418,7 @@ def register_commands(tree: app_commands.CommandTree):
                     vehicles = await conn.fetch("""
                         SELECT DISTINCT
                             uvi.id, uvi.color, uvi.appearance_description, uvi.condition,
-                            uvi.commute_count, uvi.created_at, uvi.resale_percent,
+                            uvi.travel_count, uvi.created_at, uvi.resale_percent,
                             cvt.name AS type, plate_number, cvt.emoji
                         FROM user_vehicle_inventory uvi
                         JOIN cd_vehicle_type cvt ON uvi.vehicle_type_id = cvt.id
@@ -438,14 +438,14 @@ def register_commands(tree: app_commands.CommandTree):
                     vehicle_type = item.get("type", "Unknown")
                     condition = item.get("condition", "Unknown")
                     description = item.get("appearance_description", "No description")
-                    commute_count = item.get("commute_count", 0)
+                    travel_count = item.get("travel_count", 0) #renamed
                     emoji = item.get("emoji", "🚗")
 
                     desc_lines.append(
                         f"> {emoji} **{vehicle_type}** | Plate: {item['plate_number']}\n"
                         f"> \u200b\u200b    Condition: {condition}\n"
                         f"> \u200b\u200b    Description: {description}\n"
-                        f"> \u200b\u200b    Commute Count: {commute_count}"
+                        f"> \u200b\u200b    Travel Count: {Travel_count}"
                     )
 
 

@@ -93,7 +93,7 @@ class VehicleButton(Button):
             ])
             plate = ''.join(random.choices(string.ascii_uppercase + string.digits, k=7))
             condition = "pristine" if vehicle["condition"] == "new" else vehicle["condition"]
-            commute_count = 0 if condition != "beater" else random.randint(25, 100)
+            travel_count = 0 if condition != "beater" else random.randint(25, 100)
             created_at = datetime.utcnow()
 
             # Deduct money
@@ -105,10 +105,10 @@ class VehicleButton(Button):
             # Add to inventory
             await conn.execute("""
                 INSERT INTO user_vehicle_inventory 
-                    (user_id, vehicle_type_id, color, appearance_description, plate_number, condition, commute_count, resale_value, created_at, sold_at)
+                    (user_id, vehicle_type_id, color, appearance_description, plate_number, condition, travel_count, resale_value, created_at, sold_at)
                 VALUES 
                     ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULL)
-            """, user_id, self.vehicle_id, color, appearance, plate, condition, commute_count, resale_value, created_at)
+            """, user_id, self.vehicle_id, color, appearance, plate, condition, travel_count, resale_value, created_at)
 
         await interaction.followup.send(embed=embed_message(
             "✅ Vehicle Purchased!",
