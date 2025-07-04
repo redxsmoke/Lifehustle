@@ -93,7 +93,7 @@ async def setup_database():
     await drop_vehicle_appearence_table(globals.pool)
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool) 
-    await drop_and_recreate_user_vehicle_inventory(globals.pool)
+    await drop_and_recreate_user_vehicle_inventory()
 # Entrypoint
 async def main():
     await create_pool()
