@@ -58,32 +58,30 @@ def register_commands(tree: app_commands.CommandTree):
             "Choose your commute method:",
             discord.Color.blue()
         ), view=view, ephemeral=True)
+
 # ───────────────────────────────────────────────
 # COMMUTE LOGIC
 # ───────────────────────────────────────────────
-
-import globals
-async def handle_commute(interaction: discord.Interaction, method: str):
-# In your commute command file (the file with handle_commute):
 
 async def handle_commute(interaction: discord.Interaction, method: str):
     pool = globals.pool
     user_id = interaction.user.id
     user = await get_user(pool, user_id)
     if user is None:
-        await interaction.followup.send(
+        await interaction.response.send_message(
             "❌ Oops! You don’t have an account yet. Maybe create one before trying to teleport to work? Use `/start`!",
             ephemeral=True
         )
         return
 
+    # Make sure you have this function imported or defined somewhere:
     vehicles = await get_user_vehicles(pool, user_id)
     working_vehicles = [v for v in vehicles if v["condition"] != "Broken Down"]
 
     if method == 'drive':
         cars = [v for v in working_vehicles if v["type"] in ("Beater Car", "Sedan", "Sports Car", "Pickup Truck", "Motorcycle")]
         if not cars:
-            await interaction.followup.send(
+            await interaction.response.send_message(
                 "❌ Your car is more 'carcass' than 'car' right now. No working car or motorcycle found!",
                 ephemeral=True
             )
@@ -94,7 +92,7 @@ async def handle_commute(interaction: discord.Interaction, method: str):
     elif method == 'bike':
         bikes = [v for v in working_vehicles if v["type"] == "Bike"]
         if not bikes:
-            await interaction.followup.send(
+            await interaction.response.send_message(
                 "❌ Your bike seems to have taken a permanent vacation. No working bike found!",
                 ephemeral=True
             )
@@ -105,35 +103,14 @@ async def handle_commute(interaction: discord.Interaction, method: str):
     elif method in ('subway', 'bus'):
         cost = 10 if method == 'subway' else 5
         await charge_user(pool, user_id, cost)
-        await interaction.followup.send(embed=embed_message(
+        await interaction.response.send_message(embed=embed_message(
             f"{'🚇' if method == 'subway' else '🚌'} Commute Summary",
             f"You bravely commuted using the **{method.title()}** for just ${cost}. Don't forget to hold onto the strap!"),
             ephemeral=True
         )
-    else:
-        await interaction.followup.send(
-            "❌ You tried to invent a new commute method? Nice try, but that’s not a thing. Pick subway, bus, bike, or drive!",
-            ephemeral=True
-        )
 
-    elif method == 'bike':
-        bikes = [v for v in working_vehicles if v["type"] == "Bike"]
-        if not bikes:
-            await interaction.response.send_message(
-                "❌ Your bike seems to have taken a permanent vacation. No working bike found!", ephemeral=True
-            )
-            return
-        vehicle = bikes[0]
-        await process_vehicle_commute(interaction, pool, user_id, vehicle, earn_bonus=True)
-
-    elif method in ('subway', 'bus'):
-        cost = 10 if method == 'subway' else 5
-        await charge_user(pool, user_id, cost)
-        await interaction.response.send_message(embed=embed_message(
-            f"{'🚇' if method == 'subway' else '🚌'} Commute Summary",
-            f"You bravely commuted using the **{method.title()}** for just ${cost}. Don't forget to hold onto the strap!"), ephemeral=True
-        )
     else:
         await interaction.response.send_message(
-            "❌ You tried to invent a new commute method? Nice try, but that’s not a thing. Pick subway, bus, bike, or drive!", ephemeral=True
+            "❌ You tried to invent a new commute method? Nice try, but that’s not a thing. Pick subway, bus, bike, or drive!",
+            ephemeral=True
         )
