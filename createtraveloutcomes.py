@@ -2,6 +2,7 @@ import os
 import asyncio
 import asyncpg
 
+# Create the table if it doesn't exist
 CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS cd_travel_summaries (
     id SERIAL PRIMARY KEY,
@@ -15,12 +16,12 @@ CREATE TABLE IF NOT EXISTS cd_travel_summaries (
 );
 """
 
+# Set probabilities per effect_type
 weight_map = {
     "neutral": 0.5,
     "negative": 0.25,
     "positive": 0.25
 }
-
 seed_data = {
     "car": {
         "negative": [
@@ -176,26 +177,30 @@ seed_data = {
     },
 }
 
-async def main():
-    db_user = os.getenv("PGUSER") or os.getenv("DATABASE_USER") or "postgres"
-    db_pass = os.getenv("PGPASSWORD") or os.getenv("DATABASE_PASSWORD") or ""
-    db_name = os.getenv("PGDATABASE") or os.getenv("DATABASE_NAME") or "yourdb"
-    db_host = os.getenv("PGHOST") or os.getenv("DATABASE_HOST") or "localhost"
-    db_port = os.getenv("PGPORT") or os.getenv("DATABASE_PORT") or "5432"
+async def main(pool=None):
+    created_pool = False
 
-    pool = await asyncpg.create_pool(
-        user=db_user,
-        password=db_pass,
-        database=db_name,
-        host=db_host,
-        port=int(db_port)
-    )
+    if pool is None:
+        db_user = os.getenv("PGUSER") or os.getenv("DATABASE_USER") or "postgres"
+        db_pass = os.getenv("PGPASSWORD") or os.getenv("DATABASE_PASSWORD") or ""
+        db_name = os.getenv("PGDATABASE") or os.getenv("DATABASE_NAME") or "yourdb"
+        db_host = os.getenv("PGHOST") or os.getenv("DATABASE_HOST") or "localhost"
+        db_port = os.getenv("PGPORT") or os.getenv("DATABASE_PORT") or "5432"
+
+        pool = await asyncpg.create_pool(
+            user=db_user,
+            password=db_pass,
+            database=db_name,
+            host=db_host,
+            port=int(db_port)
+        )
+        created_pool = True
 
     async with pool.acquire() as conn:
-        print("Creating table cd_travel_summaries...")
+        print("✅ Creating table cd_travel_summaries...")
         await conn.execute(CREATE_TABLE_SQL)
 
-        print("Seeding data into cd_travel_summaries...")
+        print("✅ Seeding data into cd_travel_summaries...")
 
         insert_query = """
             INSERT INTO cd_travel_summaries 
@@ -207,10 +212,20 @@ async def main():
             for effect_cat, entries in categories.items():
                 prob = weight_map.get(effect_cat, 1.0)
                 for desc, amount, eff_type in entries:
-                    await conn.execute(insert_query, travel_type, desc, amount, eff_type, prob)
+                    await conn.execute(
+                        insert_query,
+                        travel_type,
+                        desc,
+                        amount,
+                        eff_type,
+                        prob
+                    )
 
-    print("Done seeding cd_travel_summaries!")
-    await pool.close()
+        print("✅ Done seeding cd_travel_summaries!")
 
+    if created_pool:
+        await pool.close()
+
+# Allows the script to be run directly
 if __name__ == "__main__":
     asyncio.run(main())
