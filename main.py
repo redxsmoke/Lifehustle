@@ -19,7 +19,7 @@ from db_user import reset_user_finances_table
 from db_pool import init_db
 from commands import register_commands
 from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_appearence_table, create_vehicle_appearance_table, seed_vehicle_appearance
-import commute_command 
+from commute_command import register_commands
 
 import globals
 
