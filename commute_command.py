@@ -64,12 +64,16 @@ def register_commands(tree: app_commands.CommandTree):
 
 import globals
 async def handle_commute(interaction: discord.Interaction, method: str):
+# In your commute command file (the file with handle_commute):
+
+async def handle_commute(interaction: discord.Interaction, method: str):
     pool = globals.pool
     user_id = interaction.user.id
     user = await get_user(pool, user_id)
     if user is None:
-        await interaction.response.send_message(
-            "❌ Oops! You don’t have an account yet. Maybe create one before trying to teleport to work? Use `/start`!", ephemeral=True
+        await interaction.followup.send(
+            "❌ Oops! You don’t have an account yet. Maybe create one before trying to teleport to work? Use `/start`!",
+            ephemeral=True
         )
         return
 
@@ -79,12 +83,38 @@ async def handle_commute(interaction: discord.Interaction, method: str):
     if method == 'drive':
         cars = [v for v in working_vehicles if v["type"] in ("Beater Car", "Sedan", "Sports Car", "Pickup Truck", "Motorcycle")]
         if not cars:
-            await interaction.response.send_message(
-                "❌ Your car is more 'carcass' than 'car' right now. No working car or motorcycle found!", ephemeral=True
+            await interaction.followup.send(
+                "❌ Your car is more 'carcass' than 'car' right now. No working car or motorcycle found!",
+                ephemeral=True
             )
             return
         vehicle = cars[0]
         await process_vehicle_commute(interaction, pool, user_id, vehicle)
+
+    elif method == 'bike':
+        bikes = [v for v in working_vehicles if v["type"] == "Bike"]
+        if not bikes:
+            await interaction.followup.send(
+                "❌ Your bike seems to have taken a permanent vacation. No working bike found!",
+                ephemeral=True
+            )
+            return
+        vehicle = bikes[0]
+        await process_vehicle_commute(interaction, pool, user_id, vehicle, earn_bonus=True)
+
+    elif method in ('subway', 'bus'):
+        cost = 10 if method == 'subway' else 5
+        await charge_user(pool, user_id, cost)
+        await interaction.followup.send(embed=embed_message(
+            f"{'🚇' if method == 'subway' else '🚌'} Commute Summary",
+            f"You bravely commuted using the **{method.title()}** for just ${cost}. Don't forget to hold onto the strap!"),
+            ephemeral=True
+        )
+    else:
+        await interaction.followup.send(
+            "❌ You tried to invent a new commute method? Nice try, but that’s not a thing. Pick subway, bus, bike, or drive!",
+            ephemeral=True
+        )
 
     elif method == 'bike':
         bikes = [v for v in working_vehicles if v["type"] == "Bike"]

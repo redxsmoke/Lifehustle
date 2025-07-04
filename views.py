@@ -167,12 +167,14 @@ class SellFromStashView(View):
                     )
 
 
+# In your views.py (or wherever CommuteButtons is defined):
+
 class CommuteButtons(View):
     def __init__(self):
         super().__init__(timeout=None)
         self.message = None  # Will hold the message with buttons
 
-    async def disable_all_items(self, interaction: Interaction):
+    async def disable_all_items(self):
         for child in self.children:
             child.disabled = True
         if self.message:
@@ -183,23 +185,27 @@ class CommuteButtons(View):
 
     @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="commute_drive")
     async def drive_button(self, interaction: Interaction, button: Button):
-        await self.disable_all_items(interaction)
-        await handle_commute(interaction, "drive")  # Make sure handle_commute is imported
+        await interaction.response.defer()  # Defer interaction first
+        await handle_commute(interaction, "drive")
+        await self.disable_all_items()
 
     @discord.ui.button(label="Bike 🚴 (+$10)", style=discord.ButtonStyle.success, custom_id="commute_bike")
     async def bike_button(self, interaction: Interaction, button: Button):
-        await self.disable_all_items(interaction)
+        await interaction.response.defer()
         await handle_commute(interaction, "bike")
+        await self.disable_all_items()
 
     @discord.ui.button(label="Subway 🚇 ($10)", style=discord.ButtonStyle.primary, custom_id="commute_subway")
     async def subway_button(self, interaction: Interaction, button: Button):
-        await self.disable_all_items(interaction)
+        await interaction.response.defer()
         await handle_commute(interaction, "subway")
+        await self.disable_all_items()
 
     @discord.ui.button(label="Bus 🚌 ($5)", style=discord.ButtonStyle.secondary, custom_id="commute_bus")
     async def bus_button(self, interaction: Interaction, button: Button):
-        await self.disable_all_items(interaction)
+        await interaction.response.defer()
         await handle_commute(interaction, "bus")
+        await self.disable_all_items()
 
     async def on_timeout(self):
         for child in self.children:
@@ -212,6 +218,7 @@ class CommuteButtons(View):
                 )
             except Exception as e:
                 print(f"[ERROR] Failed to edit message on timeout: {e}")
+
 
 
 class GroceryCategoryView(View):
