@@ -117,14 +117,14 @@ async def handle_travel(interaction: Interaction, method: str):
             # Auto use the only bike - send confirmation
             await handle_travel_with_vehicle(interaction, bikes[0], method)
         else:
-                view = VehicleUseView(user_id=user_id, vehicles=bikes, method=method)
-                embed = embed_message(
-                    "🚴 Your Bikes",
-                    "> You have multiple bikes. Please choose one to travel with:",
-                    discord.Color.green()
-                )
-                msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
-                view.message = msg
+            view = VehicleUseView(user_id=user_id, vehicles=bikes, method=method)
+            embed = embed_message(
+                "🚴 Your Bikes",
+                "> You have multiple bikes. Please choose one to travel with:",
+                discord.Color.green()
+            )
+            msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+            view.message = msg
 
     elif method in ('subway', 'bus'):
         cost = 10 if method == 'subway' else 5
@@ -143,7 +143,7 @@ async def handle_travel(interaction: Interaction, method: str):
 
         await charge_user(pool, user_id, cost)
 
-        # --- NEW CODE: select outcome and apply effect ---
+        # --- Outcome and effect ---
         outcome = await select_weighted_travel_outcome(pool, method)
 
         updated_finances = await get_user_finances(pool, user_id)
@@ -191,7 +191,6 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
     pool = globals.pool
     user_id = interaction.user.id
 
-    # Example cost logic, adjust as needed
     cost = 10 if method == "drive" else 5 if method == "bike" else 0
 
     finances = await get_user_finances(pool, user_id)
@@ -207,14 +206,35 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
         return
 
     await charge_user(pool, user_id, cost)
+    current_balance = finances.get("checking_account_balance", 0) - cost
 
-    # TODO: Optionally update vehicle condition here
+    outcome = await select_weighted_travel_outcome(pool, method)
+    outcome_desc = "No special events today."
+    effect = 0
+
+    if outcome:
+        effect = outcome.get("effect_amount", 0)
+        outcome_desc = outcome.get("description", "")
+
+        if effect < 0 and current_balance >= -effect:
+            await charge_user(pool, user_id, -effect)
+            current_balance -= -effect
+        elif effect > 0:
+            await reward_user(pool, user_id, effect)
+            current_balance += effect
 
     await interaction.followup.send(
-        embed=embed_message(
-            f"🚗 Travel Success" if method == "drive" else "🚴 Travel Success",
-            f"You successfully traveled by {method} using your {vehicle.get('vehicle_type', 'vehicle')}!",
-            discord.Color.green()
+        embed=discord.Embed(
+            title=f"{'🚗' if method == 'drive' else '🚴'} Travel Summary",
+            description=(
+                f"You traveled using your {vehicle.get('vehicle_type', 'vehicle')} "
+                f"(Color: {vehicle.get('color', 'Unknown')}, Plate: {vehicle.get('plate', 'N/A')}).\n"
+                f"Travel Count: {vehicle.get('travel_count', 0) + 1}\n\n"
+                f"🎲 Outcome: {outcome_desc}\n"
+                f"💰 Effect on balance: ${effect}\n\n"
+                f"Your current balance is: ${current_balance:,}."
+            ),
+            color=COLOR_GREEN
         ),
         ephemeral=True
     )
