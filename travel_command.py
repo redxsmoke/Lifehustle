@@ -67,7 +67,7 @@ def register_commands(tree: app_commands.CommandTree):
 async def handle_travel(interaction: Interaction, method: str):
     pool = globals.pool
     user_id = interaction.user.id
-    user = await get_user_F(pool, user_id)
+    user = await get_user(pool, user_id)
 
     if user is None:
         await interaction.followup.send(
