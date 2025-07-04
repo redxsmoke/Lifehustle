@@ -14,6 +14,7 @@ from db_user import get_user, upsert_user
 from embeds import embed_message
 from utilities import charge_user, update_vehicle_condition_and_description, reward_user
 from views import CommuteButtons
+from vehicle_logic import get_user_vehicles, process_vehicle_commute
 
 # ───────────────────────────────────────────────
 # VEHICLE CONDITION THRESHOLDS
