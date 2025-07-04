@@ -105,7 +105,10 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             # Get random color from code table
             color_row = await conn.fetchrow("SELECT description FROM cd_vehicle_colors ORDER BY random() LIMIT 1")
             color = color_row["description"] if color_row else "Unknown"
-            plate_number = generate_random_plate()
+            if item["type"] == "Bike":
+                plate_number = None  # or NULL if your DB requires
+            else:
+                plate_number = generate_random_plate()
 
             # Convert condition to int
             condition_int = int(condition)
