@@ -246,7 +246,10 @@ def register_commands(tree: app_commands.CommandTree):
 
         view = CommuteButtons()
         await interaction.response.send_message(embed=embed_message(
-            "🚗 Commute", "Choose your commute method:"), view=view, ephemeral=True)
+            "🚗 Commute", 
+            "Choose your commute method:", 
+            discord.Color.blue()  # or use COLOR_GREEN or another color constant
+        ), view=view, ephemeral=True)
 
     @tree.command(name="paycheck", description=f"Claim your paycheck (${PAYCHECK_AMOUNT:,}) every 12h")
     async def paycheck(interaction: Interaction):
