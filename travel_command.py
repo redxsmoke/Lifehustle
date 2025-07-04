@@ -8,7 +8,7 @@ import unicodedata
 import globals
 
 from discord import app_commands, Interaction
-from db_user import get_user, upsert_user
+from db_user import get_user, upsert_user, get_user_finances
 from utilities import (
     charge_user,
     update_vehicle_condition_and_description,
@@ -80,6 +80,15 @@ async def handle_travel(interaction: Interaction, method: str):
         )
         return
 
+    finances = await get_user_finances(pool, user_id)
+    if finances is None:
+        finances = {
+            "checking_account_balance": 0,
+            "savings_account_balance": 0,
+            "debt_balance": 0,
+            "last_paycheck_claimed": datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc)
+        }
+
     vehicles = await get_user_vehicles(pool, user_id)
     working_vehicles = [v for v in vehicles if v.get("condition") != "Broken Down"]
 
@@ -105,11 +114,11 @@ async def handle_travel(interaction: Interaction, method: str):
             raise ValueError(f"Missing vehicle_type_id in vehicle: {vehicle}")
 
         cost = 10
-        if user.get("checking_account_balance", 0) < cost:
+        if finances.get("checking_account_balance", 0) < cost:
             await interaction.followup.send(
                 embed=embed_message(
                     "⛽ Empty Tank!",
-                    f"> You tried to drive your **{vehicle['vehicle_type']}**, but your wallet is emptier than the gas tank! Need ${cost} for gas, but you only have ${user.get('checking_account_balance', 0)}.",
+                    f"> You tried to drive your **{vehicle['vehicle_type']}**, but your wallet is emptier than the gas tank! Need ${cost} for gas, but you only have ${finances.get('checking_account_balance', 0)}.",
                     discord.Color.red()
                 ),
                 ephemeral=True
@@ -127,7 +136,8 @@ async def handle_travel(interaction: Interaction, method: str):
         )
 
         updated_user = await get_user(pool, user_id)
-        updated_balance = updated_user.get("checking_account_balance", 0)
+        updated_finances = await get_user_finances(pool, user_id)
+        updated_balance = updated_finances.get("checking_account_balance", 0)
 
         await interaction.followup.send(
             embed=embed_message(
@@ -169,7 +179,8 @@ async def handle_travel(interaction: Interaction, method: str):
         await reward_user(pool, user_id, 10)
 
         updated_user = await get_user(pool, user_id)
-        updated_balance = updated_user.get("checking_account_balance", 0)
+        updated_finances = await get_user_finances(pool, user_id)
+        updated_balance = updated_finances.get("checking_account_balance", 0)
 
         await interaction.followup.send(
             embed=embed_message(
@@ -184,11 +195,11 @@ async def handle_travel(interaction: Interaction, method: str):
     elif method in ('subway', 'bus'):
         cost = 10 if method == 'subway' else 5
 
-        if user.get("checking_account_balance", 0) < cost:
+        if finances.get("checking_account_balance", 0) < cost:
             await interaction.followup.send(
                 embed=embed_message(
                     "❌ Insufficient Funds",
-                    f"> Yikes! You need ${cost} to ride the {method}, but your wallet says only ${user.get('checking_account_balance', 0)}. Maybe find some couch change?",
+                    f"> Yikes! You need ${cost} to ride the {method}, but your wallet says only ${finances.get('checking_account_balance', 0)}. Maybe find some couch change?",
                     discord.Color.red()
                 ),
                 ephemeral=True
@@ -196,8 +207,8 @@ async def handle_travel(interaction: Interaction, method: str):
             return
 
         await charge_user(pool, user_id, cost)
-        updated_user = await get_user(pool, user_id)
-        updated_balance = updated_user.get("checking_account_balance", 0)
+        updated_finances = await get_user_finances(pool, user_id)
+        updated_balance = updated_finances.get("checking_account_balance", 0)
         await interaction.followup.send(
             embed=embed_message(
                 f"{'🚇' if method == 'subway' else '🚌'} Travel Summary",
