@@ -168,9 +168,13 @@ class SellFromStashView(View):
                 )
 
 
-# Updated from CommuteButtons to TravelButtons:
+<<<<<<< HEAD
+class TravelButtons(View):
+=======
+
 
 class TravelButtons(View):
+>>>>>>> bf4fa0b1f816b4df03cb1c565ae57567c893809e
     def __init__(self):
         super().__init__(timeout=None)
         self.message = None  # Will hold the message with buttons
@@ -190,9 +194,13 @@ class TravelButtons(View):
     @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="travel_drive")
     async def drive_button(self, interaction: Interaction, button: Button):
         try:
-            from commute_command import handle_commute  # consider renaming this if desired
+<<<<<<< HEAD
+            from travel_command import handle_travel
+=======
+            from travel_command import handle_travel  # consider renaming this if desired
+>>>>>>> bf4fa0b1f816b4df03cb1c565ae57567c893809e
             await interaction.response.defer()
-            await handle_commute(interaction, "drive")
+            await handle_travel(interaction, "drive")
             await self.disable_all_items()
         except Exception:
             traceback.print_exc()
@@ -205,9 +213,9 @@ class TravelButtons(View):
     @discord.ui.button(label="Bike 🚴 (+$10)", style=discord.ButtonStyle.success, custom_id="travel_bike")
     async def bike_button(self, interaction: Interaction, button: Button):
         try:
-            from commute_command import handle_commute
+            from travel_command import handle_travel
             await interaction.response.defer()
-            await handle_commute(interaction, "bike")
+            await handle_travel(interaction, "bike")
             await self.disable_all_items()
         except Exception:
             traceback.print_exc()
@@ -220,9 +228,9 @@ class TravelButtons(View):
     @discord.ui.button(label="Subway 🚇 ($10)", style=discord.ButtonStyle.primary, custom_id="travel_subway")
     async def subway_button(self, interaction: Interaction, button: Button):
         try:
-            from commute_command import handle_commute
+            from travel_command import handle_travel
             await interaction.response.defer()
-            await handle_commute(interaction, "subway")
+            await handle_travel(interaction, "subway")
             await self.disable_all_items()
         except Exception:
             traceback.print_exc()
@@ -235,9 +243,9 @@ class TravelButtons(View):
     @discord.ui.button(label="Bus 🚌 ($5)", style=discord.ButtonStyle.secondary, custom_id="travel_bus")
     async def bus_button(self, interaction: Interaction, button: Button):
         try:
-            from commute_command import handle_commute
+            from travel_command import handle_travel
             await interaction.response.defer()
-            await handle_commute(interaction, "bus")
+            await handle_travel(interaction, "bus")
             await self.disable_all_items()
         except Exception:
             traceback.print_exc()
