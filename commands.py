@@ -21,7 +21,7 @@ from views import (
     GroceryStashPaginationView,
 )
 from db_user import get_user, upsert_user
-from utilities import parse_amount, embed_message, bike_description, normalize
+from utilities import parse_amount, embed_message, normalize
 
 from config import PAYCHECK_AMOUNT, PAYCHECK_COOLDOWN_SECONDS, COLOR_RED, COLOR_GREEN
 from category_loader import categories, category_autocomplete

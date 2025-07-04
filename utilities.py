@@ -3,6 +3,8 @@ import datetime
 import json
 import random
 import string
+import unicodedata
+import re
 
 import discord
 
@@ -78,14 +80,17 @@ async def update_vehicle_condition_and_description(pool, user_id: int, vehicle_i
     return new_condition, description
 
 # ───────────────────────────────────────────────
-# Parse amount strings like '1000', '1k', '2.5m', or 'all'.
-# Returns:
-#   - int amount if valid
-#   - -1 if 'all' (special flag)
-#   - None if invalid input
+# Parse amount strings like '1000', '1k', '2.5m', or 'all'
 # ───────────────────────────────────────────────
 
 def parse_amount(amount_str: str) -> int | None:
+    """
+    Parse amount strings like '1000', '1k', '2.5m', or 'all'.
+    Returns:
+      - int amount if valid
+      - -1 if 'all' (special flag)
+      - None if invalid input
+    """
     s = amount_str.strip().lower()
     if s == "all":
         return -1  # special flag meaning "all funds"
@@ -131,3 +136,20 @@ async def get_user_vehicles(pool, user_id):
     async with pool.acquire() as conn:
         rows = await conn.fetch("SELECT * FROM user_vehicle_inventory WHERE user_id = $1", user_id)
         return [dict(row) for row in rows]
+
+# ───────────────────────────────────────────────
+# Normalize function for text
+# ───────────────────────────────────────────────
+
+def normalize(text: str) -> str:
+    # Normalize Unicode characters (decompose accents)
+    text = unicodedata.normalize('NFD', text)
+    # Remove accents
+    text = ''.join(ch for ch in text if unicodedata.category(ch) != 'Mn')
+    # Convert to lowercase
+    text = text.lower()
+    # Remove any non-alphanumeric characters except spaces
+    text = re.sub(r'[^a-z0-9\s]', '', text)
+    # Remove leading/trailing whitespace
+    text = text.strip()
+    return text
