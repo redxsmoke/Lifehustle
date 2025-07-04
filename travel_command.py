@@ -16,6 +16,7 @@ from utilities import (
 )
 from vehicle_logic import get_user_vehicles
 from embeds import embed_message, COLOR_GREEN
+from travel_helpers import select_weighted_travel_outcome
 
 def condition_from_usage(travel_count: int) -> str:
     if travel_count < 50:
@@ -135,19 +136,39 @@ async def handle_travel(interaction: Interaction, method: str):
             new_travel_count
         )
 
-        updated_user = await get_user(pool, user_id)
+        # --- NEW CODE: select outcome and apply effect ---
+        outcome = await select_weighted_travel_outcome(pool, "car")
+
         updated_finances = await get_user_finances(pool, user_id)
         updated_balance = updated_finances.get("checking_account_balance", 0)
+
+        embed_text = (
+            f"> You drove your **{vehicle['vehicle_type']}**! Total travels: **{new_travel_count}**.\n"
+            f"> Your updated balance is: **${updated_balance}**."
+        )
+
+        if outcome:
+            desc = outcome.get("description", "")
+            effect = outcome.get("effect_amount", 0)
+
+            if effect < 0 and updated_balance >= -effect:
+                await charge_user(pool, user_id, -effect)
+                updated_balance -= -effect
+            elif effect > 0:
+                await reward_user(pool, user_id, effect)
+                updated_balance += effect
+
+            embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Effect on balance: ${effect}"
 
         await interaction.followup.send(
             embed=embed_message(
                 "🚗 Drive Travel",
-                f"> You drove your **{vehicle['vehicle_type']}**! Total travels: **{new_travel_count}**.\n"
-                f"> Your updated balance is: **${updated_balance}**.",
+                embed_text,
                 COLOR_GREEN
             ),
             ephemeral=True
         )
+        return  # Important: avoid sending another message below
 
     elif method == 'bike':
         bikes = [v for v in working_vehicles if v.get("vehicle_type") == "Bike"]
@@ -178,19 +199,39 @@ async def handle_travel(interaction: Interaction, method: str):
         )
         await reward_user(pool, user_id, 10)
 
-        updated_user = await get_user(pool, user_id)
+        # --- NEW CODE: select outcome and apply effect ---
+        outcome = await select_weighted_travel_outcome(pool, "bike")
+
         updated_finances = await get_user_finances(pool, user_id)
         updated_balance = updated_finances.get("checking_account_balance", 0)
+
+        embed_text = (
+            f"> You biked on your **Bike**! Total travels: **{new_travel_count}**.\n"
+            f"> Your updated balance is: **${updated_balance}**. +$10 biking bonus!"
+        )
+
+        if outcome:
+            desc = outcome.get("description", "")
+            effect = outcome.get("effect_amount", 0)
+
+            if effect < 0 and updated_balance >= -effect:
+                await charge_user(pool, user_id, -effect)
+                updated_balance -= -effect
+            elif effect > 0:
+                await reward_user(pool, user_id, effect)
+                updated_balance += effect
+
+            embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Effect on balance: ${effect}"
 
         await interaction.followup.send(
             embed=embed_message(
                 "🚴 Bike Travel",
-                f"> You biked on your **Bike**! Total travels: **{new_travel_count}**.\n"
-                f"> Your updated balance is: **${updated_balance}**. +$10 biking bonus!",
+                embed_text,
                 COLOR_GREEN
             ),
             ephemeral=True
         )
+        return
 
     elif method in ('subway', 'bus'):
         cost = 10 if method == 'subway' else 5
@@ -207,17 +248,40 @@ async def handle_travel(interaction: Interaction, method: str):
             return
 
         await charge_user(pool, user_id, cost)
+
+        # --- NEW CODE: select outcome and apply effect ---
+        outcome = await select_weighted_travel_outcome(pool, method)
+
         updated_finances = await get_user_finances(pool, user_id)
         updated_balance = updated_finances.get("checking_account_balance", 0)
+
+        embed_text = (
+            f"> You traveled by **{method.title()}** for ${cost}.\n"
+            f"> Your updated balance is: **${updated_balance}**."
+        )
+
+        if outcome:
+            desc = outcome.get("description", "")
+            effect = outcome.get("effect_amount", 0)
+
+            if effect < 0 and updated_balance >= -effect:
+                await charge_user(pool, user_id, -effect)
+                updated_balance -= -effect
+            elif effect > 0:
+                await reward_user(pool, user_id, effect)
+                updated_balance += effect
+
+            embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Effect on balance: ${effect}"
+
         await interaction.followup.send(
             embed=embed_message(
                 f"{'🚇' if method == 'subway' else '🚌'} Travel Summary",
-                f"> You traveled by **{method.title()}** for ${cost}.\n"
-                f"> Your updated balance is: **${updated_balance}**.",
+                embed_text,
                 COLOR_GREEN
             ),
             ephemeral=True
         )
+        return
 
     else:
         await interaction.followup.send(

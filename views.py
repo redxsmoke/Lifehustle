@@ -7,6 +7,8 @@ import utilities
 import vehicle_logic
 from db_user import get_user, upsert_user
 import globals  # Make sure pool is initialized here
+import random
+from datetime import datetime, time
 
 
 # Fixed base prices by vehicle type
@@ -256,6 +258,59 @@ class TravelButtons(View):
                 )
             except Exception as e:
                 print(f"[ERROR] Failed to edit message on timeout: {e}")
+
+
+async def select_weighted_travel_outcome(pool, travel_type):
+    now = datetime.now().time()
+    day_start = time(6, 0)
+    day_end = time(18, 0)
+    is_day = day_start <= now <= day_end
+
+    if is_day:
+        weights = {
+            "neutral": 0.5,
+            "negative": 0.15,
+            "positive": 0.35,
+        }
+    else:
+        weights = {
+            "neutral": 0.5,
+            "negative": 0.35,
+            "positive": 0.15,
+        }
+
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, description, effect_amount, effect_type
+            FROM cd_travel_summaries
+            WHERE travel_type = $1
+            """,
+            travel_type
+        )
+
+    weighted_choices = []
+    for row in rows:
+        eff_type = row["effect_type"]
+        # DB stored probability per row, multiply by adjusted weights
+        base_prob = row.get("probability", 1.0)
+        weight = weights.get(eff_type, 0) * base_prob
+        if weight > 0:
+            weighted_choices.append((row, weight))
+
+    if not weighted_choices:
+        return None
+
+    total_weight = sum(w for _, w in weighted_choices)
+    r = random.uniform(0, total_weight)
+    upto = 0
+    for row, w in weighted_choices:
+        if upto + w >= r:
+            return row
+        upto += w
+    return weighted_choices[-1][0]
+
+
 
 
 class GroceryCategoryView(View):
