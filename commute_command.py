@@ -15,7 +15,7 @@ from utilities import (
     reward_user
 )
 from vehicle_logic import get_user_vehicles
-from embeds import embed_message
+from embeds import embed_message, COLOR_GREEN
 
 # VEHICLE CONDITION THRESHOLDS
 
@@ -48,7 +48,7 @@ def register_commands(tree: app_commands.CommandTree):
         if not user:
             await interaction.response.send_message(
                 embed=embed_message(
-                    "❌ No Account", "Use `/start` to create an account."), ephemeral=True)
+                    "❌ No Account", "Use `/start` to create an account.", discord.Color.red()), ephemeral=True)
             return
 
         from views import CommuteButtons
@@ -94,16 +94,22 @@ async def handle_commute(interaction: Interaction, method: str):
             return
         vehicle = cars[0]
 
-        # Charge user $10 for the drive
         await charge_user(pool, user_id, 10)
-        # Update vehicle's commute count & condition
-        await update_vehicle_condition_and_description(pool, user_id, vehicle["id"])
+        new_commute_count = vehicle.get("commute_count", 0) + 1
+        await update_vehicle_condition_and_description(
+            pool,
+            user_id,
+            vehicle["id"],
+            vehicle["type_id"],
+            new_commute_count
+        )
 
-        new_condition = condition_from_usage(vehicle.get("commute_count", 0) + 1)
+        new_condition = condition_from_usage(new_commute_count)
         await interaction.followup.send(
             embed=embed_message(
                 "🚗 Drive Commute",
-                f"You drove your **{vehicle['vehicle_type']}**! New condition: **{new_condition}**."
+                f"You drove your **{vehicle['vehicle_type']}**! New condition: **{new_condition}**.",
+                COLOR_GREEN
             ),
             ephemeral=True
         )
@@ -118,18 +124,23 @@ async def handle_commute(interaction: Interaction, method: str):
             return
         vehicle = bikes[0]
 
-        # Charge user $10 for biking
         await charge_user(pool, user_id, 10)
-        # Update vehicle's commute count & condition
-        await update_vehicle_condition_and_description(pool, user_id, vehicle["id"])
-        # Reward biking bonus
+        new_commute_count = vehicle.get("commute_count", 0) + 1
+        await update_vehicle_condition_and_description(
+            pool,
+            user_id,
+            vehicle["id"],
+            vehicle["type_id"],
+            new_commute_count
+        )
         await reward_user(pool, user_id, 10)
 
-        new_condition = condition_from_usage(vehicle.get("commute_count", 0) + 1)
+        new_condition = condition_from_usage(new_commute_count)
         await interaction.followup.send(
             embed=embed_message(
                 "🚴 Bike Commute",
-                f"You biked on your **Bike**! New condition: **{new_condition}**. +$10 biking bonus!"
+                f"You biked on your **Bike**! New condition: **{new_condition}**. +$10 biking bonus!",
+                COLOR_GREEN
             ),
             ephemeral=True
         )
@@ -139,8 +150,9 @@ async def handle_commute(interaction: Interaction, method: str):
         await charge_user(pool, user_id, cost)
         await interaction.followup.send(
             embed=embed_message(
-                f"{'🚇' if method == 'subway' else '� bus':^3} Commute Summary",
-                f"You commuted by **{method.title()}** for ${cost}."
+                f"{'🚇' if method == 'subway' else '🚌'} Commute Summary",
+                f"You commuted by **{method.title()}** for ${cost}.",
+                COLOR_GREEN
             ),
             ephemeral=True
         )
