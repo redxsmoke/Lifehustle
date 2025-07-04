@@ -151,6 +151,7 @@ async def get_user_vehicles(pool, user_id: int) -> list:
     query = """
     SELECT
         cvt.name AS vehicle_type,
+        uvi.vehicle_type_id,
         uvi.color,
         uvi.appearance_description,
         uvi.plate_number,
