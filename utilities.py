@@ -8,7 +8,7 @@ import re
 
 import discord
 
-from db_user import get_user, upsert_user
+from db_user import get_user, upsert_user, get_user_finances, upsert_user_finances
 from globals import pool
 from embeds import embed_message
 
