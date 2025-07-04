@@ -81,3 +81,21 @@ async def handle_commute(interaction: discord.Interaction, method: str):
     elif method == 'bike':
         bikes = [v for v in working_vehicles if v["type"] == "Bike"]
         if not bikes:
+            await interaction.response.send_message(
+                "❌ Your bike seems to have taken a permanent vacation. No working bike found!", ephemeral=True
+            )
+            return
+        vehicle = bikes[0]
+        await process_vehicle_commute(interaction, pool, user_id, vehicle, earn_bonus=True)
+
+    elif method in ('subway', 'bus'):
+        cost = 10 if method == 'subway' else 5
+        await charge_user(pool, user_id, cost)
+        await interaction.response.send_message(embed=embed_message(
+            f"{'🚇' if method == 'subway' else '🚌'} Commute Summary",
+            f"You bravely commuted using the **{method.title()}** for just ${cost}. Don't forget to hold onto the strap!"), ephemeral=True
+        )
+    else:
+        await interaction.response.send_message(
+            "❌ You tried to invent a new commute method? Nice try, but that’s not a thing. Pick subway, bus, bike, or drive!", ephemeral=True
+        )
