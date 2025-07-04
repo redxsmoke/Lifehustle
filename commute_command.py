@@ -17,8 +17,6 @@ from utilities import (
 from vehicle_logic import get_user_vehicles
 from embeds import embed_message, COLOR_GREEN
 
-# VEHICLE CONDITION THRESHOLDS
-
 def condition_from_usage(commute_count: int) -> str:
     if commute_count < 50:
         return "Brand New"
@@ -30,8 +28,6 @@ def condition_from_usage(commute_count: int) -> str:
         return "Poor Condition"
     else:
         return "Broken Down"
-
-# Slash command registration
 
 def register_commands(tree: app_commands.CommandTree):
     @tree.command(name="commute", description="Commute to work using buttons")
@@ -68,8 +64,6 @@ def register_commands(tree: app_commands.CommandTree):
         )
         view.message = msg
 
-# COMMUTE LOGIC
-
 async def handle_commute(interaction: Interaction, method: str):
     pool = globals.pool
     user_id = interaction.user.id
@@ -104,6 +98,11 @@ async def handle_commute(interaction: Interaction, method: str):
             )
             return
         vehicle = cars[0]
+        print("VEHICLE DEBUG:", vehicle.keys(), vehicle)
+
+        vehicle_type_id = vehicle.get("vehicle_type_id")
+        if vehicle_type_id is None:
+            raise ValueError(f"Missing vehicle_type_id in vehicle: {vehicle}")
 
         await charge_user(pool, user_id, 10)
         new_commute_count = vehicle.get("commute_count", 0) + 1
@@ -111,7 +110,7 @@ async def handle_commute(interaction: Interaction, method: str):
             pool,
             user_id,
             vehicle["id"],
-            vehicle["vehicle_type_id"],
+            vehicle_type_id,
             new_commute_count
         )
 
@@ -138,6 +137,11 @@ async def handle_commute(interaction: Interaction, method: str):
             )
             return
         vehicle = bikes[0]
+        print("VEHICLE DEBUG:", vehicle.keys(), vehicle)
+
+        vehicle_type_id = vehicle.get("vehicle_type_id")
+        if vehicle_type_id is None:
+            raise ValueError(f"Missing vehicle_type_id in vehicle: {vehicle}")
 
         await charge_user(pool, user_id, 10)
         new_commute_count = vehicle.get("commute_count", 0) + 1
@@ -145,7 +149,7 @@ async def handle_commute(interaction: Interaction, method: str):
             pool,
             user_id,
             vehicle["id"],
-            vehicle["vehicle_type_id"],
+            vehicle_type_id,
             new_commute_count
         )
         await reward_user(pool, user_id, 10)
