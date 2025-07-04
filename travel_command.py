@@ -88,29 +88,16 @@ async def handle_travel(interaction: Interaction, method: str):
             return
 
         if len(cars) == 1:
-            # Auto use the only car - send a simple confirmation
             await handle_travel_with_vehicle(interaction, cars[0], method)
         else:
-            # Instead of old message, send list of all cars with details
-            lines = []
-            for v in cars:
-                color = v.get("color", "Unknown Color")
-                description = v.get("appearance_description", "No description")
-                travel_count = v.get("travel_count", 0)
-                plate = v.get("plate_number", "No Plate")
-
-                lines.append(
-                    f"**{v.get('vehicle_type', 'Car')}** - Color: {color}, Desc: {description}, Travel Count: {travel_count}, Plate: {plate}"
-                )
-            message = "\n".join(lines)
-            await interaction.followup.send(
-                embed=embed_message(
-                    "🚗 Your Cars",
-                    message,
-                    discord.Color.blue()
-                ),
-                ephemeral=True
+            view = VehicleUseView(user_id=user_id, vehicles=cars, method=method)
+            embed = embed_message(
+                "🚗 Your Cars",
+                "> You have multiple vehicles. Please choose one to travel with:",
+                discord.Color.blue()
             )
+            msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+            view.message = msg
         return
 
     elif method == 'bike':
@@ -130,14 +117,14 @@ async def handle_travel(interaction: Interaction, method: str):
             # Auto use the only bike - send confirmation
             await handle_travel_with_vehicle(interaction, bikes[0], method)
         else:
-            # Multiple bikes but dropdown removed: prompt user accordingly
-            embed = embed_message(
-                "🚴 Multiple Bikes Detected",
-                "You have multiple bikes, but vehicle selection UI has been removed. Please use one bike or fix this.",
-                discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
-        return
+                view = VehicleUseView(user_id=user_id, vehicles=bikes, method=method)
+                embed = embed_message(
+                    "🚴 Your Bikes",
+                    "> You have multiple bikes. Please choose one to travel with:",
+                    discord.Color.green()
+                )
+                msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+                view.message = msg
 
     elif method in ('subway', 'bus'):
         cost = 10 if method == 'subway' else 5
