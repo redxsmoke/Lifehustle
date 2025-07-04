@@ -20,7 +20,7 @@ from embeds import embed_message
 from embeds import COLOR_RED
 from views import TravelButtons  # renamed import to match change
 
-from dropuvi import drop_and_recreate_uvi
+
 
 # Rename imports to avoid name conflicts
 from commands import register_commands as register_general_commands
@@ -95,7 +95,7 @@ async def setup_database():
     await drop_vehicle_appearence_table(globals.pool)
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool) 
-    await drop_and_recreate_uvi()
+    
 # Entrypoint
 async def main():
     await create_pool()
