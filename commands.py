@@ -375,8 +375,8 @@ def register_commands(tree: app_commands.CommandTree):
                 if user is None:
                     user = DEFAULT_USER.copy()
 
-                user['checking_account'] += 10
-                await upsert_user(pool, user_id, user)
+                user['checking_account_balance'] += 10
+                await upsert_user_finances(pool, user_id, user)
 
                 await interaction.followup.send(
                     embed=embed_message(
