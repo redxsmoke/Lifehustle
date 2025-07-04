@@ -11,7 +11,6 @@ import re
 from discord import app_commands, Interaction
 
 from db_user import get_user, upsert_user
-from globals import pool
 from embeds import embed_message
 from utilities import charge_user, update_vehicle_condition_and_description, reward_user
 from views import CommuteButtons
@@ -39,6 +38,13 @@ def condition_from_usage(commute_count: int) -> str:
 def register_commands(tree: app_commands.CommandTree):
     @tree.command(name="commute", description="Commute to work using buttons")
     async def commute(interaction: Interaction):
+        pool = globals.pool
+        if pool is None:
+            await interaction.response.send_message(
+                "⚠️ The database isn’t ready yet. Try again in a moment.", ephemeral=True
+            )
+            return
+
         user_id = interaction.user.id
         user = await get_user(pool, user_id)
         if not user:
@@ -52,11 +58,11 @@ def register_commands(tree: app_commands.CommandTree):
             "Choose your commute method:",
             discord.Color.blue()
         ), view=view, ephemeral=True)
-
 # ───────────────────────────────────────────────
 # COMMUTE LOGIC
 # ───────────────────────────────────────────────
 
+import globals
 async def handle_commute(interaction: discord.Interaction, method: str):
     pool = globals.pool
     user_id = interaction.user.id

@@ -16,6 +16,8 @@ from discord import app_commands
 from config import DISCORD_BOT_TOKEN, DATABASE_URL
 from db_user import reset_user_finances_table
 from db_pool import init_db
+from embeds import embed_message
+from embeds import COLOR_RED
 
 # Rename imports to avoid name conflicts
 from commands import register_commands as register_general_commands
