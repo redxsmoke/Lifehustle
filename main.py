@@ -12,21 +12,19 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-
 # --- Local Imports ---
 from config import DISCORD_BOT_TOKEN, DATABASE_URL
 from db_user import reset_user_finances_table
 from db_pool import init_db
-from commands import register_commands
-from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_appearence_table, create_vehicle_appearance_table, seed_vehicle_appearance
-from commute_command import register_commands
 
+# Rename imports to avoid name conflicts
+from commands import register_commands as register_general_commands
+from commute_command import register_commands as register_commute_commands
+
+from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_appearence_table, create_vehicle_appearance_table, seed_vehicle_appearance
 import globals
 
-# Import your bank_commands cog extension (do not import the file as a module directly)
-# We'll load it as an extension via bot.load_extension("bank_commands")
-
-# --- Load JSON Data ---
+# Load JSON Data
 with open("commute_outcomes.json", "r") as f:
     COMMUTE_OUTCOMES = json.load(f)
 with open("shop_items.json", "r", encoding="utf-8") as f:
@@ -34,7 +32,7 @@ with open("shop_items.json", "r", encoding="utf-8") as f:
 with open("categories.json", "r") as f:
     CATEGORIES = json.load(f)
 
-# --- Bot Setup ---
+# Bot Setup
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -59,10 +57,11 @@ async def on_ready():
 async def setup_hook():
     print("🛠️ setup_hook starting...")
 
-    # Register your other commands (non-cog)
-    register_commands(tree)
+    # Register commands from both modules
+    register_general_commands(tree)
+    register_commute_commands(tree)
 
-    # Load the bank_commands cog extension
+    # Load your cog extensions
     await bot.load_extension("bank_commands")
 
     try:
@@ -73,7 +72,7 @@ async def setup_hook():
 
     print("🛠️ setup_hook finished.")
 
-# --- DB Setup ---
+# DB Setup
 async def create_pool():
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
@@ -90,7 +89,7 @@ async def setup_database():
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool) 
 
-# --- Entrypoint ---
+# Entrypoint
 async def main():
     await create_pool()
     await setup_database()
