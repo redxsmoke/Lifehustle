@@ -8,9 +8,8 @@ import vehicle_logic
 from db_user import get_user, upsert_user
 import globals  # Make sure pool is initialized here
 
-# Commute handling imports
-from commute_command import handle_commute
-from vehicle_logic import get_user_vehicles, process_vehicle_commute
+
+ 
 
 # Fixed base prices by vehicle type
 BASE_PRICES = {
@@ -193,6 +192,7 @@ class CommuteButtons(View):
     @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="commute_drive")
     async def drive_button(self, interaction: Interaction, button: Button):
         try:
+            from commute_command import handle_commute
             await interaction.response.defer()
             await handle_commute(interaction, "drive")
             await self.disable_all_items()
@@ -207,6 +207,7 @@ class CommuteButtons(View):
     @discord.ui.button(label="Bike 🚴 (+$10)", style=discord.ButtonStyle.success, custom_id="commute_bike")
     async def bike_button(self, interaction: Interaction, button: Button):
         try:
+            from commute_command import handle_commute
             await interaction.response.defer()
             await handle_commute(interaction, "bike")
             await self.disable_all_items()
@@ -221,6 +222,7 @@ class CommuteButtons(View):
     @discord.ui.button(label="Subway 🚇 ($10)", style=discord.ButtonStyle.primary, custom_id="commute_subway")
     async def subway_button(self, interaction: Interaction, button: Button):
         try:
+            from commute_command import handle_commute
             await interaction.response.defer()
             await handle_commute(interaction, "subway")
             await self.disable_all_items()
@@ -235,6 +237,7 @@ class CommuteButtons(View):
     @discord.ui.button(label="Bus 🚌 ($5)", style=discord.ButtonStyle.secondary, custom_id="commute_bus")
     async def bus_button(self, interaction: Interaction, button: Button):
         try:
+            from commute_command import handle_commute
             await interaction.response.defer()
             await handle_commute(interaction, "bus")
             await self.disable_all_items()
