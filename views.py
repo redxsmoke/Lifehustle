@@ -2,7 +2,7 @@ import discord
 from discord.ui import View, Button, Select
 from discord import Interaction, Embed, Color
 import traceback
-
+from db_user import get_user, upsert_user, get_user_finances, upsert_user_finances
 import utilities
 import vehicle_logic
 from db_user import get_user, upsert_user
