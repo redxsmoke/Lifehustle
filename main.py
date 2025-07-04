@@ -12,12 +12,15 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
+
 # --- Local Imports ---
 from config import DISCORD_BOT_TOKEN, DATABASE_URL
 from db_user import reset_user_finances_table
 from db_pool import init_db
 from commands import register_commands
 from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_appearence_table, create_vehicle_appearance_table, seed_vehicle_appearance
+import commute_command 
+
 import globals
 
 # Import your bank_commands cog extension (do not import the file as a module directly)
