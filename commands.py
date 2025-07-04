@@ -234,22 +234,7 @@ def register_commands(tree: app_commands.CommandTree):
 
 
 
-    @tree.command(name="commute", description="Commute to work using buttons")
-    async def commute(interaction: Interaction):
-        from globals import pool
-        user_id = interaction.user.id
-        user = await get_user(pool, user_id)
-        if not user:
-            await interaction.response.send_message(embed=embed_message(
-                "❌ No Account", "Use `/start` to create an account."), ephemeral=True)
-            return
 
-        view = CommuteButtons()
-        await interaction.response.send_message(embed=embed_message(
-            "🚗 Commute", 
-            "Choose your commute method:", 
-            discord.Color.blue()  # or use COLOR_GREEN or another color constant
-        ), view=view, ephemeral=True)
 
     @tree.command(name="paycheck", description=f"Claim your paycheck (${PAYCHECK_AMOUNT:,}) every 12h")
     async def paycheck(interaction: Interaction):

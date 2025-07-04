@@ -7,9 +7,13 @@ import discord
 import unicodedata
 import re
 
+from discord import app_commands, Interaction
+
 from db_user import get_user, upsert_user
 from globals import pool
 from embeds import embed_message
+from utilities import charge_user, update_vehicle_condition_and_description, reward_user
+from views import CommuteButtons
 
 # ───────────────────────────────────────────────
 # VEHICLE CONDITION THRESHOLDS
@@ -40,11 +44,9 @@ async def handle_commute(interaction: discord.Interaction, method: str):
         )
         return
 
-    # Get user vehicles from DB
     vehicles = await get_user_vehicles(pool, user_id)
     working_vehicles = [v for v in vehicles if v["condition"] != "Broken Down"]
 
-    # Determine valid commute options
     if method == 'drive':
         cars = [v for v in working_vehicles if v["type"] in ("Beater Car", "Sedan", "Sports Car", "Pickup Truck", "Motorcycle")]
         if not cars:
@@ -77,16 +79,12 @@ async def handle_commute(interaction: discord.Interaction, method: str):
             "❌ You tried to invent a new commute method? Nice try, but that’s not a thing. Pick subway, bus, bike, or drive!", ephemeral=True
         )
 
-async def process_vehicle_commute(interaction, pool, user_id, vehicle, earn_bonus=False):
+async def process_vehicle_commute(interaction: discord.Interaction, pool, user_id: int, vehicle: dict, earn_bonus=False):
     vehicle_id = vehicle["vehicle_id"]
     commute_count = vehicle.get("commute_count", 0) + 1
     vehicle_type_id = vehicle.get("vehicle_type_id")
     old_condition = vehicle.get("condition", "Unknown")
 
-    # Import the updated DB helper function from utilities.py (adjust if needed)
-    from utilities import update_vehicle_condition_and_description, reward_user
-
-    # Update commute count, condition, and appearance description in DB
     new_condition, new_description = await update_vehicle_condition_and_description(
         pool, user_id, vehicle_id, vehicle_type_id, commute_count
     )
@@ -117,7 +115,7 @@ async def process_vehicle_commute(interaction, pool, user_id, vehicle, earn_bonu
     await interaction.response.send_message(embed=embed_message("✅ Commute Complete", msg), ephemeral=True)
 
 # ───────────────────────────────────────────────
-# DB UTILITIES (You can move to utilities.py later)
+# DB UTILITIES
 # ───────────────────────────────────────────────
 
 async def get_user_vehicles(pool, user_id):
@@ -125,5 +123,22 @@ async def get_user_vehicles(pool, user_id):
         rows = await conn.fetch("SELECT * FROM user_vehicle_inventory WHERE user_id = $1", user_id)
         return [dict(row) for row in rows]
 
-# Include charge_user stub for completeness, import from your utilities
-from utilities import charge_user
+# ───────────────────────────────────────────────
+# Slash command registration
+# ───────────────────────────────────────────────
+
+@ app_commands.command(name="commute", description="Commute to work using buttons")
+async def commute(interaction: Interaction):
+    user_id = interaction.user.id
+    user = await get_user(pool, user_id)
+    if not user:
+        await interaction.response.send_message(embed=embed_message(
+            "❌ No Account", "Use `/start` to create an account."), ephemeral=True)
+        return
+
+    view = CommuteButtons()
+    await interaction.response.send_message(embed=embed_message(
+        "🚗 Commute",
+        "Choose your commute method:",
+        discord.Color.blue()
+    ), view=view, ephemeral=True)
