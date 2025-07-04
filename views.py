@@ -1,5 +1,5 @@
 import discord
-from discord.ui import View, Select, Button
+from discord.ui import View, Button
 from discord import Interaction, Embed, Color
 import traceback
 
@@ -310,47 +310,48 @@ async def select_weighted_travel_outcome(pool, travel_type):
         upto += w
     return weighted_choices[-1][0]
 
-class TravelVehicleSelect(Select):
-    def __init__(self, vehicles, method):
-        options = []
-        for v in vehicles:
-            label = v.get("vehicle_type", "Unknown")
-            desc = v.get("appearance_description", "") or ""
-            # Option label: vehicle type + maybe short desc
-            options.append(discord.SelectOption(label=label, description=desc[:100], value=str(v["id"])))
-        super().__init__(placeholder=f"Select your {method}...", min_values=1, max_values=1, options=options)
+
+class VehicleUseButton(Button):
+    def __init__(self, vehicle, method):
+        label = f"Use {vehicle.get('vehicle_type', 'Vehicle')} for travel"
+        super().__init__(label=label, style=discord.ButtonStyle.primary)
+        self.vehicle = vehicle
         self.method = method
-        self.vehicles = {str(v["id"]): v for v in vehicles}
 
     async def callback(self, interaction: Interaction):
-        vehicle_id = self.values[0]
-        vehicle = self.vehicles.get(vehicle_id)
-        if not vehicle:
-            await interaction.response.send_message("❌ Vehicle not found. Please try again.", ephemeral=True)
+        if interaction.user.id != self.view.user_id:
+            await interaction.response.send_message("This isn't your vehicle list.", ephemeral=True)
             return
-        # Disable dropdown after selection
-        self.view.clear_items()
-        await interaction.response.edit_message(view=self.view)
-        # Call the travel handler continuation
-        await continue_travel_with_vehicle(interaction, self.method, vehicle)
+        # Since dropdown and continue_travel_with_vehicle are removed, send a simple message:
+        await interaction.response.send_message(
+            f"You selected your {self.vehicle.get('vehicle_type', 'vehicle')} to {self.method}. Travel logic not implemented yet.",
+            ephemeral=True
+        )
+        # Disable all buttons after selection to avoid duplicates
+        self.view.disable_all_buttons()
+        await interaction.message.edit(view=self.view)
 
 
-class TravelVehicleSelectView(View):
-    def __init__(self, vehicles, method):
+class VehicleUseView(View):
+    def __init__(self, user_id: int, vehicles: list, method: str):
         super().__init__(timeout=60)
-        self.add_item(TravelVehicleSelect(vehicles, method))
+        self.user_id = user_id
+        self.vehicles = vehicles
+        self.method = method
+        for vehicle in vehicles:
+            self.add_item(VehicleUseButton(vehicle, method))
 
+    def disable_all_buttons(self):
+        for child in self.children:
+            child.disabled = True
 
-
-
-
-class GroceryCategoryView(View):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Implement grocery category view buttons or logic here if needed
-
-
-class GroceryStashPaginationView(View):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Implement grocery stash pagination buttons or logic here if needed
+    async def on_timeout(self):
+        self.disable_all_buttons()
+        if hasattr(self, "message") and self.message:
+            try:
+                await self.message.edit(
+                    content="⌛ Vehicle selection timed out. Please try again.",
+                    view=self
+                )
+            except Exception as e:
+                print(f"[ERROR] Failed to edit message on timeout: {e}")

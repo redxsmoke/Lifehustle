@@ -16,7 +16,7 @@ from utilities import (
 )
 from vehicle_logic import get_user_vehicles
 from embeds import embed_message, COLOR_GREEN
-from views import select_weighted_travel_outcome, TravelVehicleSelectView
+from views import select_weighted_travel_outcome, VehicleUseView
 
 def condition_from_usage(travel_count: int) -> str:
     if travel_count < 50:
@@ -88,21 +88,24 @@ async def handle_travel(interaction: Interaction, method: str):
             return
 
         if len(cars) == 1:
-            # auto use the only car
-            await continue_travel_with_vehicle(interaction, method, cars[0])
-        else:
-            # ask user to select car
-            view = TravelVehicleSelectView(cars, method)
-            await interaction.response.send_message(
+            # Auto use the only car - send a simple confirmation
+            await interaction.followup.send(
                 embed=embed_message(
-                    "🚗 Select Car",
-                    "You own multiple cars. Please select which one to use for travel.",
-                    discord.Color.blue()
+                    "🚗 Travel",
+                    f"You drove your {cars[0].get('vehicle_type', 'car')} successfully!",
+                    discord.Color.green()
                 ),
-                view=view,
                 ephemeral=True
             )
-            return
+        else:
+            # Multiple cars but dropdown removed: prompt user accordingly
+            embed = embed_message(
+                "🚗 Multiple Cars Detected",
+                "You have multiple cars, but vehicle selection UI has been removed. Please use one car or fix this.",
+                discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+        return
 
     elif method == 'bike':
         bikes = [v for v in working_vehicles if v.get("vehicle_type") == "Bike"]
@@ -118,20 +121,23 @@ async def handle_travel(interaction: Interaction, method: str):
             return
 
         if len(bikes) == 1:
-            # auto use the only bike
-            await continue_travel_with_vehicle(interaction, method, bikes[0])
-        else:
-            # ask user to select bike
-            view = TravelVehicleSelectView(bikes, method)
-            await interaction.response.send_message(
+            # Auto use the only bike - send confirmation
+            await interaction.followup.send(
                 embed=embed_message(
-                    "🚴 Select Bike",
-                    "You own multiple bikes. Please select which one to use for travel.",
-                    discord.Color.blue()
+                    "🚴 Travel",
+                    f"You biked your {bikes[0].get('vehicle_type', 'bike')} successfully!",
+                    discord.Color.green()
                 ),
-                view=view,
                 ephemeral=True
             )
+        else:
+            # Multiple bikes but dropdown removed: prompt user accordingly
+            embed = embed_message(
+                "🚴 Multiple Bikes Detected",
+                "You have multiple bikes, but vehicle selection UI has been removed. Please use one bike or fix this.",
+                discord.Color.red()
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
         return
 
     elif method in ('subway', 'bus'):
@@ -194,86 +200,3 @@ async def handle_travel(interaction: Interaction, method: str):
             ),
             ephemeral=True
         )
-
-async def continue_travel_with_vehicle(interaction: Interaction, method: str, vehicle: dict):
-    pool = globals.pool
-    user_id = interaction.user.id
-
-    vehicle_type_id = vehicle.get("vehicle_type_id")
-    if vehicle_type_id is None:
-        await interaction.followup.send("❌ Vehicle data incomplete, contact support.", ephemeral=True)
-        return
-
-    finances = await get_user_finances(pool, user_id)
-    if finances is None:
-        finances = {
-            "checking_account_balance": 0,
-            "savings_account_balance": 0,
-            "debt_balance": 0,
-            "last_paycheck_claimed": datetime.datetime.fromtimestamp(0, tz=datetime.timezone.utc)
-        }
-
-    # Cost for drive or bike
-    cost = 10 if method == 'drive' else 0  # Bike travel cost is zero, user rewarded
-
-    # Check funds if cost > 0
-    if cost > 0 and finances.get("checking_account_balance", 0) < cost:
-        await interaction.followup.send(
-            embed=embed_message(
-                "⛽ Empty Tank!",
-                f"> You tried to travel with your **{vehicle['vehicle_type']}**, but your wallet is emptier than the gas tank! Need ${cost}, but you only have ${finances.get('checking_account_balance', 0)}.",
-                discord.Color.red()
-            ),
-            ephemeral=True
-        )
-        return
-
-    if cost > 0:
-        await charge_user(pool, user_id, cost)
-
-    new_travel_count = vehicle.get("travel_count", 0) + 1
-    await update_vehicle_condition_and_description(
-        pool,
-        user_id,
-        vehicle["id"],
-        vehicle_type_id,
-        new_travel_count
-    )
-
-    # Apply biking bonus for bike
-    if method == 'bike':
-        await reward_user(pool, user_id, 10)
-
-    # Select weighted outcome and apply effect
-    outcome = await select_weighted_travel_outcome(pool, method if method != "drive" else "car")
-    updated_finances = await get_user_finances(pool, user_id)
-    updated_balance = updated_finances.get("checking_account_balance", 0)
-
-    embed_text = (
-        f"> You traveled with your **{vehicle['vehicle_type']}**! Total travels: **{new_travel_count}**.\n"
-        f"> Your updated balance is: **${updated_balance}**."
-    )
-    if method == 'bike':
-        embed_text += " +$10 biking bonus!"
-
-    if outcome:
-        desc = outcome.get("description", "")
-        effect = outcome.get("effect_amount", 0)
-
-        if effect < 0 and updated_balance >= -effect:
-            await charge_user(pool, user_id, -effect)
-            updated_balance -= -effect
-        elif effect > 0:
-            await reward_user(pool, user_id, effect)
-            updated_balance += effect
-
-        embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Effect on balance: ${effect}"
-
-    await interaction.followup.send(
-        embed=embed_message(
-            "🚗 Travel Result" if method == "drive" else "🚴 Travel Result",
-            embed_text,
-            COLOR_GREEN
-        ),
-        ephemeral=True
-    )
