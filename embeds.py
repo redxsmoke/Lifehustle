@@ -1,6 +1,6 @@
 import discord
 COLOR_RED = discord.Color.red()
-COLOR_GREEN = discord.COLOR_GREEN()
+COLOR_GREEN = discord.color.green()
 
 def embed_message(title, description, color):
     embed = discord.Embed(title=title, description=description, color=color)

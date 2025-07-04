@@ -48,7 +48,10 @@ def register_commands(tree: app_commands.CommandTree):
         if not user:
             await interaction.response.send_message(
                 embed=embed_message(
-                    "❌ No Account", "Use `/start` to create an account.", discord.Color.red()), ephemeral=True)
+                    "❌ No Account", "Use `/start` to create an account.", discord.Color.red()
+                ),
+                ephemeral=True
+            )
             return
 
         from views import CommuteButtons
@@ -74,7 +77,11 @@ async def handle_commute(interaction: Interaction, method: str):
 
     if user is None:
         await interaction.followup.send(
-            "❌ Oops! You don’t have an account yet. Maybe create one before trying to commute? Use `/start`!",
+            embed=embed_message(
+                "❌ **No Account Found**",
+                "❌ Oops! You don’t have an account yet. Maybe create one before trying to commute? Use `/start`!",
+                discord.Color.red()
+            ),
             ephemeral=True
         )
         return
@@ -88,7 +95,11 @@ async def handle_commute(interaction: Interaction, method: str):
         )]
         if not cars:
             await interaction.followup.send(
-                "❌ No working car or motorcycle found!",
+                embed=embed_message(
+                    "❌🔧 **No Available Vehicle**",
+                    "❌ You don't own a car or it has broken down!",
+                    discord.Color.red()
+                ),
                 ephemeral=True
             )
             return
@@ -118,7 +129,11 @@ async def handle_commute(interaction: Interaction, method: str):
         bikes = [v for v in working_vehicles if v.get("vehicle_type") == "Bike"]
         if not bikes:
             await interaction.followup.send(
-                "❌ No working bike found!",
+                embed=embed_message(
+                    "❌🔧 **No Available Vehicle**",
+                    "❌ You do not own a bike or it is broken!",
+                    discord.Color.red()
+                ),
                 ephemeral=True
             )
             return
@@ -159,6 +174,10 @@ async def handle_commute(interaction: Interaction, method: str):
 
     else:
         await interaction.followup.send(
-            "❌ Invalid commute method. Choose drive, bike, subway, or bus.",
+            embed=embed_message(
+                "❌ Invalid Commute Method",
+                "❌ You've chosen an invalid commute method. Choose drive, bike, subway, or bus.",
+                discord.Color.red()
+            ),
             ephemeral=True
         )
