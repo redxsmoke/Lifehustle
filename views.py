@@ -169,7 +169,7 @@ class SellFromStashView(View):
 
 class CommuteButtons(View):
     def __init__(self):
-        super().__init__(timeout=60)
+        super().__init__(timeout=None)
         self.message = None  # Will hold the message with buttons
 
     async def disable_all_items(self, interaction: Interaction):
