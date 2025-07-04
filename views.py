@@ -1,7 +1,7 @@
 import discord
 from discord.ui import View, Button, Select
 from discord import Interaction, Embed, Color
-from embeds import  embed_message, COLOR_GREEN, COLOR_RED
+from embeds import embed_message, COLOR_GREEN, COLOR_RED
 import traceback
 from db_user import get_user, upsert_user, get_user_finances, upsert_user_finances
 import utilities
@@ -282,7 +282,7 @@ async def select_weighted_travel_outcome(pool, travel_type):
     async with pool.acquire() as conn:
         rows = await conn.fetch(
             """
-            SELECT id, description, effect_amount, effect_type
+            SELECT id, description, effect_amount, effect_type, probability
             FROM cd_travel_summaries
             WHERE travel_type = $1
             """,
@@ -335,6 +335,29 @@ class VehicleUseButton(Button):
             pool = globals.pool
             user_id = interaction.user.id
 
+            # Deduct base cost first
+            base_costs = {
+                "drive": 10,
+                "bike": 5
+            }
+            base_cost = base_costs.get(self.method, 0)
+
+            finances = await get_user_finances(pool, user_id)
+            balance = finances.get("checking_account_balance", 0)
+            if balance < base_cost:
+                await interaction.followup.send(
+                    embed=embed_message(
+                        "❌ Insufficient Funds",
+                        f"You need ${base_cost} to {self.method} your vehicle, but your balance is ${balance}.",
+                        discord.Color.red()
+                    ),
+                    ephemeral=True
+                )
+                return
+
+            await charge_user(pool, user_id, base_cost)
+            balance -= base_cost
+
             # Update travel_count by 1
             async with pool.acquire() as conn:
                 await conn.execute(
@@ -352,16 +375,9 @@ class VehicleUseButton(Button):
                 )
                 travel_count = travel_count_row['travel_count'] if travel_count_row else 0
 
-            # Get current finances
-            finances = await get_user_finances(pool, user_id)
-
             # Select a weighted travel outcome for the method ('drive' treated as 'car')
             outcome = await select_weighted_travel_outcome(pool, self.method)
 
-            updated_finances = await get_user_finances(pool, user_id)
-            updated_balance = updated_finances.get("checking_account_balance", 0)
-
-            # Initialize outcome description and effect
             outcome_desc = "No special events today."
             effect = 0
 
@@ -369,12 +385,12 @@ class VehicleUseButton(Button):
                 desc = outcome.get("description", "")
                 effect = outcome.get("effect_amount", 0)
 
-                if effect < 0 and updated_balance >= -effect:
+                if effect < 0 and balance >= -effect:
                     await charge_user(pool, user_id, -effect)
-                    updated_balance -= -effect
+                    balance -= -effect
                 elif effect > 0:
                     await reward_user(pool, user_id, effect)
-                    updated_balance += effect
+                    balance += effect
 
                 outcome_desc = desc
 
@@ -383,8 +399,8 @@ class VehicleUseButton(Button):
                 f"(Color: {self.vehicle.get('color', 'Unknown')}, Plate: {self.vehicle.get('plate_number', 'N/A')}).\n"
                 f"Travel Count: {travel_count}\n\n"
                 f"🎲 Outcome: {outcome_desc}\n"
-                f"💰 Balance Impact: ${effect}\n\n"
-                f"Your current balance is: **${updated_balance:,}**."
+                f"💰 Net Cost/Benefit: ${effect - base_cost}\n\n"
+                f"Your current balance is: **${balance:,}**."
             )
 
             await interaction.followup.send(
@@ -403,7 +419,6 @@ class VehicleUseButton(Button):
                     "❌ Something went wrong while processing your vehicle travel.",
                     ephemeral=True
                 )
-
 
 
 class VehicleUseView(View):
