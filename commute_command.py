@@ -53,12 +53,23 @@ def register_commands(tree: app_commands.CommandTree):
             return
 
         view = CommuteButtons()
-        await interaction.response.send_message(embed=embed_message(
-            "🚗 Commute",
-            "Choose your commute method:",
-            discord.Color.blue()
-        ), view=view, ephemeral=True)
 
+        # Defer the interaction first
+        await interaction.response.defer(ephemeral=True)
+
+        # Send followup message and assign it to view.message for editing later
+        msg = await interaction.followup.send(
+            embed=embed_message(
+                "🚗 Commute",
+                "Choose your commute method:",
+                discord.Color.blue()
+            ),
+            view=view,
+            ephemeral=True
+        )
+
+        # Save the message object to the view so buttons can edit it (disable)
+        view.message = msg
 # ───────────────────────────────────────────────
 # COMMUTE LOGIC
 # ───────────────────────────────────────────────

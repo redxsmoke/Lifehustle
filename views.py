@@ -174,6 +174,9 @@ class CommuteButtons(View):
         super().__init__(timeout=None)
         self.message = None  # Will hold the message with buttons
 
+    def set_message(self, message: discord.Message):
+        self.message = message
+
     async def disable_all_items(self):
         for child in self.children:
             child.disabled = True
@@ -185,7 +188,7 @@ class CommuteButtons(View):
 
     @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="commute_drive")
     async def drive_button(self, interaction: Interaction, button: Button):
-        await interaction.response.defer()  # Defer interaction first
+        await interaction.response.defer()
         await handle_commute(interaction, "drive")
         await self.disable_all_items()
 
@@ -218,6 +221,7 @@ class CommuteButtons(View):
                 )
             except Exception as e:
                 print(f"[ERROR] Failed to edit message on timeout: {e}")
+
 
 
 
