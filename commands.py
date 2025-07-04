@@ -445,7 +445,7 @@ def register_commands(tree: app_commands.CommandTree):
                         f"> {emoji} **{vehicle_type}** | Plate: {item['plate_number']}\n"
                         f"> \u200b\u200b    Condition: {condition}\n"
                         f"> \u200b\u200b    Description: {description}\n"
-                        f"> \u200b\u200b    Travel Count: {Travel_count}"
+                        f"> \u200b\u200b    Travel Count: {travel_count}"
                     )
 
 
