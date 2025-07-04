@@ -9,8 +9,6 @@ from db_user import get_user, upsert_user
 import globals  # Make sure pool is initialized here
 
 
- 
-
 # Fixed base prices by vehicle type
 BASE_PRICES = {
     "Bike": 2000,
@@ -170,9 +168,9 @@ class SellFromStashView(View):
                 )
 
 
-# In your views.py (or wherever CommuteButtons is defined):
+# Updated from CommuteButtons to TravelButtons:
 
-class CommuteButtons(View):
+class TravelButtons(View):
     def __init__(self):
         super().__init__(timeout=None)
         self.message = None  # Will hold the message with buttons
@@ -189,10 +187,10 @@ class CommuteButtons(View):
             except Exception as e:
                 print(f"[ERROR] Failed to edit message when disabling buttons: {e}")
 
-    @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="commute_drive")
+    @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="travel_drive")
     async def drive_button(self, interaction: Interaction, button: Button):
         try:
-            from commute_command import handle_commute
+            from commute_command import handle_commute  # consider renaming this if desired
             await interaction.response.defer()
             await handle_commute(interaction, "drive")
             await self.disable_all_items()
@@ -200,11 +198,11 @@ class CommuteButtons(View):
             traceback.print_exc()
             if not interaction.response.is_done():
                 await interaction.followup.send(
-                    "❌ Something went wrong processing your drive commute. Check the bot logs.",
+                    "❌ Something went wrong processing your drive travel. Check the bot logs.",
                     ephemeral=True
                 )
 
-    @discord.ui.button(label="Bike 🚴 (+$10)", style=discord.ButtonStyle.success, custom_id="commute_bike")
+    @discord.ui.button(label="Bike 🚴 (+$10)", style=discord.ButtonStyle.success, custom_id="travel_bike")
     async def bike_button(self, interaction: Interaction, button: Button):
         try:
             from commute_command import handle_commute
@@ -215,11 +213,11 @@ class CommuteButtons(View):
             traceback.print_exc()
             if not interaction.response.is_done():
                 await interaction.followup.send(
-                    "❌ Something went wrong processing your bike commute. Check the bot logs.",
+                    "❌ Something went wrong processing your bike travel. Check the bot logs.",
                     ephemeral=True
                 )
 
-    @discord.ui.button(label="Subway 🚇 ($10)", style=discord.ButtonStyle.primary, custom_id="commute_subway")
+    @discord.ui.button(label="Subway 🚇 ($10)", style=discord.ButtonStyle.primary, custom_id="travel_subway")
     async def subway_button(self, interaction: Interaction, button: Button):
         try:
             from commute_command import handle_commute
@@ -230,11 +228,11 @@ class CommuteButtons(View):
             traceback.print_exc()
             if not interaction.response.is_done():
                 await interaction.followup.send(
-                    "❌ Something went wrong processing your subway commute. Check the bot logs.",
+                    "❌ Something went wrong processing your subway travel. Check the bot logs.",
                     ephemeral=True
                 )
 
-    @discord.ui.button(label="Bus 🚌 ($5)", style=discord.ButtonStyle.secondary, custom_id="commute_bus")
+    @discord.ui.button(label="Bus 🚌 ($5)", style=discord.ButtonStyle.secondary, custom_id="travel_bus")
     async def bus_button(self, interaction: Interaction, button: Button):
         try:
             from commute_command import handle_commute
@@ -245,7 +243,7 @@ class CommuteButtons(View):
             traceback.print_exc()
             if not interaction.response.is_done():
                 await interaction.followup.send(
-                    "❌ Something went wrong processing your bus commute. Check the bot logs.",
+                    "❌ Something went wrong processing your bus travel. Check the bot logs.",
                     ephemeral=True
                 )
 
@@ -255,7 +253,7 @@ class CommuteButtons(View):
         if self.message:
             try:
                 await self.message.edit(
-                    content="⌛ Commute selection timed out. Please try again.",
+                    content="⌛ Travel selection timed out. Please try again.",
                     view=self
                 )
             except Exception as e:
