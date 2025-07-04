@@ -89,22 +89,20 @@ async def handle_travel(interaction: Interaction, method: str):
 
         if len(cars) == 1:
             # Auto use the only car - send a simple confirmation
-            await interaction.followup.send(
+            await handle_travel_with_vehicle(interaction, cars[0], method)
+        else:
+            # Multiple cars - show vehicle selection UI
+            view = VehicleUseView(user_id=user_id, vehicles=cars, method=method)
+            msg = await interaction.followup.send(
                 embed=embed_message(
-                    "🚗 Travel",
-                    f"You drove your {cars[0].get('vehicle_type', 'car')} successfully!",
-                    discord.Color.green()
+                    "🚗 Select Vehicle",
+                    "You have multiple cars. Please select one to drive:",
+                    discord.Color.blue()
                 ),
+                view=view,
                 ephemeral=True
             )
-        else:
-            # Multiple cars but dropdown removed: prompt user accordingly
-            embed = embed_message(
-                "🚗 Multiple Cars Detected",
-                "You have multiple cars, but vehicle selection UI has been removed. Please use one car or fix this.",
-                discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            view.message = msg
         return
 
     elif method == 'bike':
@@ -122,22 +120,20 @@ async def handle_travel(interaction: Interaction, method: str):
 
         if len(bikes) == 1:
             # Auto use the only bike - send confirmation
-            await interaction.followup.send(
+            await handle_travel_with_vehicle(interaction, bikes[0], method)
+        else:
+            # Multiple bikes - show vehicle selection UI
+            view = VehicleUseView(user_id=user_id, vehicles=bikes, method=method)
+            msg = await interaction.followup.send(
                 embed=embed_message(
-                    "🚴 Travel",
-                    f"You biked your {bikes[0].get('vehicle_type', 'bike')} successfully!",
-                    discord.Color.green()
+                    "🚴 Select Vehicle",
+                    "You have multiple bikes. Please select one to bike with:",
+                    discord.Color.blue()
                 ),
+                view=view,
                 ephemeral=True
             )
-        else:
-            # Multiple bikes but dropdown removed: prompt user accordingly
-            embed = embed_message(
-                "🚴 Multiple Bikes Detected",
-                "You have multiple bikes, but vehicle selection UI has been removed. Please use one bike or fix this.",
-                discord.Color.red()
-            )
-            await interaction.followup.send(embed=embed, ephemeral=True)
+            view.message = msg
         return
 
     elif method in ('subway', 'bus'):
@@ -200,3 +196,35 @@ async def handle_travel(interaction: Interaction, method: str):
             ),
             ephemeral=True
         )
+
+async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, method: str):
+    pool = globals.pool
+    user_id = interaction.user.id
+
+    # Example cost logic, adjust as needed
+    cost = 10 if method == "drive" else 5 if method == "bike" else 0
+
+    finances = await get_user_finances(pool, user_id)
+    if finances.get("checking_account_balance", 0) < cost:
+        await interaction.followup.send(
+            embed=embed_message(
+                "❌ Insufficient Funds",
+                f"> You need ${cost} to {method} your {vehicle.get('vehicle_type', 'vehicle')}, but your balance is ${finances.get('checking_account_balance', 0)}.",
+                discord.Color.red()
+            ),
+            ephemeral=True
+        )
+        return
+
+    await charge_user(pool, user_id, cost)
+
+    # TODO: Optionally update vehicle condition here
+
+    await interaction.followup.send(
+        embed=embed_message(
+            f"🚗 Travel Success" if method == "drive" else "🚴 Travel Success",
+            f"You successfully traveled by {method} using your {vehicle.get('vehicle_type', 'vehicle')}!",
+            discord.Color.green()
+        ),
+        ephemeral=True
+    )
