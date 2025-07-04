@@ -20,6 +20,7 @@ from embeds import embed_message
 from embeds import COLOR_RED
 from views import TravelButtons  # renamed import to match change
 
+from createtraveloutcomes import main as create_travel_outcomes_main
 
 
 # Rename imports to avoid name conflicts
@@ -95,7 +96,7 @@ async def setup_database():
     await drop_vehicle_appearence_table(globals.pool)
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool) 
-    
+    await create_travel_outcomes_main(globals.pool)
 # Entrypoint
 async def main():
     await create_pool()
