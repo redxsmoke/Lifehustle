@@ -26,7 +26,7 @@ CREATE TABLE user_vehicle_inventory (
 );
 """
 
-async def main():
+async def drop_and_recreate_uvi():
     if not DATABASE_URL:
         print("❌ DATABASE_URL environment variable not set.")
         return
@@ -41,5 +41,6 @@ async def main():
     finally:
         await conn.close()
 
+# Optional: Allow running this script directly for testing:
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(drop_and_recreate_uvi())
