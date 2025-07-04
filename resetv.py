@@ -8,7 +8,7 @@ async def drop_and_recreate_user_vehicle_inventory():
         raise EnvironmentError("DATABASE_URL env var not found")
 
     pool = await asyncpg.create_pool(dsn=DATABASE_URL)
-    drop_query = "DROP TABLE IF EXISTS user_vehicle_inventory;"
+    drop_query = "DROP TABLE IF EXISTS user_vehicle_inventory CASCADE;"
     create_query = """
     CREATE TABLE user_vehicle_inventory (
         id SERIAL PRIMARY KEY,
