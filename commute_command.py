@@ -5,6 +5,7 @@ import random
 import string
 import discord
 import unicodedata
+import globals
 import re
 
 from discord import app_commands, Interaction
