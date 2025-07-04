@@ -73,7 +73,7 @@ async def handle_commute(interaction: Interaction, method: str):
         await interaction.followup.send(
             embed=embed_message(
                 "❌ **No Account Found**",
-                "❌ Oops! You don’t have an account yet. Maybe create one before trying to commute? Use `/start`!",
+                "Uh-oh! You don’t have an account yet. Try `/start` and join the cool kids club!",
                 discord.Color.red()
             ),
             ephemeral=True
@@ -91,7 +91,7 @@ async def handle_commute(interaction: Interaction, method: str):
             await interaction.followup.send(
                 embed=embed_message(
                     "❌🔧 **No Available Vehicle**",
-                    "❌ You don't own a car or it has broken down!",
+                    "Looks like your cars are on vacation or broken down. No joyrides today!",
                     discord.Color.red()
                 ),
                 ephemeral=True
@@ -114,11 +114,14 @@ async def handle_commute(interaction: Interaction, method: str):
             new_commute_count
         )
 
-        new_condition = condition_from_usage(new_commute_count)
+        updated_user = await get_user(pool, user_id)
+        updated_balance = updated_user.get("checking_account_balance", 0)
+
         await interaction.followup.send(
             embed=embed_message(
                 "🚗 Drive Commute",
-                f"You drove your **{vehicle['vehicle_type']}**! New condition: **{new_condition}**.",
+                f"You drove your **{vehicle['vehicle_type']}**! Total commutes: **{new_commute_count}**.\n"
+                f"Your updated balance is: **${updated_balance}**.",
                 COLOR_GREEN
             ),
             ephemeral=True
@@ -130,7 +133,7 @@ async def handle_commute(interaction: Interaction, method: str):
             await interaction.followup.send(
                 embed=embed_message(
                     "❌🔧 **No Available Vehicle**",
-                    "❌ You do not own a bike or it is broken!",
+                    "No bike? No fun! Get one or fix that broken two-wheeler first.",
                     discord.Color.red()
                 ),
                 ephemeral=True
@@ -154,11 +157,14 @@ async def handle_commute(interaction: Interaction, method: str):
         )
         await reward_user(pool, user_id, 10)
 
-        new_condition = condition_from_usage(new_commute_count)
+        updated_user = await get_user(pool, user_id)
+        updated_balance = updated_user.get("checking_account_balance", 0)
+
         await interaction.followup.send(
             embed=embed_message(
                 "🚴 Bike Commute",
-                f"You biked on your **Bike**! New condition: **{new_condition}**. +$10 biking bonus!",
+                f"You biked on your **Bike**! Total commutes: **{new_commute_count}**.\n"
+                f"Your updated balance is: **${updated_balance}**. +$10 biking bonus!",
                 COLOR_GREEN
             ),
             ephemeral=True
@@ -172,7 +178,7 @@ async def handle_commute(interaction: Interaction, method: str):
             await interaction.followup.send(
                 embed=embed_message(
                     "❌ Insufficient Funds",
-                    f"You need ${cost} to commute by {method}, but your balance is only ${user.get('checking_account_balance', 0)}.",
+                    f"Yikes! You need ${cost} to ride the {method}, but your wallet says only ${user.get('checking_account_balance', 0)}. Maybe find some couch change?",
                     discord.Color.red()
                 ),
                 ephemeral=True
@@ -194,7 +200,7 @@ async def handle_commute(interaction: Interaction, method: str):
         await interaction.followup.send(
             embed=embed_message(
                 "❌ Invalid Commute Method",
-                "❌ You've chosen an invalid commute method. Choose drive, bike, subway, or bus.",
+                "Oops! That’s not a valid commute option. Pick one of: drive, bike, subway, or bus.",
                 discord.Color.red()
             ),
             ephemeral=True
