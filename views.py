@@ -312,25 +312,67 @@ async def select_weighted_travel_outcome(pool, travel_type):
 
 
 class VehicleUseButton(Button):
-    def __init__(self, vehicle, method):
-        label = f"Use {vehicle.get('vehicle_type', 'Vehicle')} for travel"
+    def __init__(self, vehicle: dict, method: str):
+        label = f"{vehicle.get('vehicle_type', 'Vehicle')} - Plate: {vehicle.get('plate_number', 'N/A')} - Color: {vehicle.get('color', 'Unknown')}"
         super().__init__(label=label, style=discord.ButtonStyle.primary)
         self.vehicle = vehicle
         self.method = method
 
-    async def callback(self, interaction: Interaction):
-        if interaction.user.id != self.view.user_id:
-            await interaction.response.send_message("This isn't your vehicle list.", ephemeral=True)
-            return
-        # Since dropdown and continue_travel_with_vehicle are removed, send a simple message:
-        await interaction.response.send_message(
-            f"You selected your {self.vehicle.get('vehicle_type', 'vehicle')} to {self.method}. Travel logic not implemented yet.",
+    async def callback(self, interaction: discord.Interaction):
+        self.view.disable_all_buttons()
+        await self.view.message.edit(view=self.view)
+
+        pool = globals.pool
+        user_id = interaction.user.id
+
+        # Update travel_count by 1
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE user_vehicle_inventory
+                SET travel_count = travel_count + 1
+                WHERE id = $1 AND user_id = $2
+                """,
+                self.vehicle['id'], user_id
+            )
+
+        # Get current finances
+        finances = await get_user_finances(pool, user_id)
+
+        # Select a weighted travel outcome for the method ('drive' treated as 'car')
+        outcome = await select_weighted_travel_outcome(pool, self.method)
+
+        updated_finances = await get_user_finances(pool, user_id)
+        updated_balance = updated_finances.get("checking_account_balance", 0)
+
+        embed_text = (
+            f"You traveled using your {self.vehicle.get('vehicle_type', 'vehicle')} "
+            f"(Color: {self.vehicle.get('color', 'Unknown')}, Plate: {self.vehicle.get('plate_number', 'N/A')}).\n"
+            f"Your updated travel count for this vehicle is increased by 1.\n"
+            f"Your current balance is: **${updated_balance}**."
+        )
+
+        if outcome:
+            desc = outcome.get("description", "")
+            effect = outcome.get("effect_amount", 0)
+
+            if effect < 0 and updated_balance >= -effect:
+                await charge_user(pool, user_id, -effect)
+                updated_balance -= -effect
+            elif effect > 0:
+                await reward_user(pool, user_id, effect)
+                updated_balance += effect
+
+            embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Effect on balance: ${effect}"
+
+        await interaction.followup.send(
+            embed=embed_message(
+                "🚗 Travel Summary",
+                embed_text,
+                COLOR_GREEN
+            ),
             ephemeral=True
         )
-        # Disable all buttons after selection to avoid duplicates
-        self.view.disable_all_buttons()
-        await interaction.message.edit(view=self.view)
-
 
 class VehicleUseView(View):
     def __init__(self, user_id: int, vehicles: list, method: str):
