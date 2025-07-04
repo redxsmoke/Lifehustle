@@ -32,7 +32,7 @@ def condition_from_usage(commute_count: int) -> str:
 # COMMUTE UTILITIES
 # ───────────────────────────────────────────────
 
-async def update_vehicle_condition_and_description(pool, user_id: int, vehicle_id: int, commute_count: int):
+async def update_vehicle_condition_and_description(pool, user_id: int, vehicle_id: int, vehicle_type_id: int, commute_count: int):
     """
     Increment commute_count, recalculate condition_id, pick a random new appearance,
     update the user_vehicle_inventory record, and return the new state.

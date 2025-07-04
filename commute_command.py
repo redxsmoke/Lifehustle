@@ -166,6 +166,20 @@ async def handle_commute(interaction: Interaction, method: str):
 
     elif method in ('subway', 'bus'):
         cost = 10 if method == 'subway' else 5
+
+        # Check user balance
+        if user.get("checking_account_balance", 0) < cost:
+            await interaction.followup.send(
+                embed=embed_message(
+                    "❌ Insufficient Funds",
+                    f"You need ${cost} to commute by {method}, but your balance is only ${user.get('checking_account_balance', 0)}.",
+                    discord.Color.red()
+                ),
+                ephemeral=True
+            )
+            return
+
+        # Deduct fare
         await charge_user(pool, user_id, cost)
         await interaction.followup.send(
             embed=embed_message(
