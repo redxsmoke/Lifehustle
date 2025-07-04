@@ -165,7 +165,7 @@ async def handle_travel(interaction: Interaction, method: str):
                 await reward_user(pool, user_id, effect)
                 updated_balance += effect
 
-            embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Effect on balance: ${effect}"
+            embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Balance: ${effect}"
 
         await interaction.followup.send(
             embed=embed_message(
@@ -231,7 +231,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
                 f"(Color: {vehicle.get('color', 'Unknown')}, Plate: {vehicle.get('plate', 'N/A')}).\n"
                 f"Travel Count: {vehicle.get('travel_count', 0) + 1}\n\n"
                 f"🎲 Outcome: {outcome_desc}\n"
-                f"💰 Effect on balance: ${effect}\n\n"
+                f"💰 Balance: ${effect}\n\n"
                 f"Your current balance is: ${current_balance:,}."
             ),
             color=COLOR_GREEN
