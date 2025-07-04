@@ -8,6 +8,10 @@ import vehicle_logic
 from db_user import get_user, upsert_user
 import globals  # Make sure pool is initialized here
 
+# Commute handling imports
+from commute_command import handle_commute
+from vehicle_logic import get_user_vehicles, process_vehicle_commute
+
 # Fixed base prices by vehicle type
 BASE_PRICES = {
     "Bike": 2000,
@@ -113,58 +117,58 @@ class SellFromStashView(View):
         )
 
     async def confirm_sale(self, interaction: Interaction):
-            try:
-                if not self.pending_vehicle or not self.pending_vehicle_id:
-                    await interaction.response.send_message("❌ No vehicle pending confirmation.", ephemeral=True)
-                    return
+        try:
+            if not self.pending_vehicle or not self.pending_vehicle_id:
+                await interaction.response.send_message("❌ No vehicle pending confirmation.", ephemeral=True)
+                return
 
-                # Delete vehicle by ID
-                await globals.pool.execute(
-                    "DELETE FROM user_vehicle_inventory WHERE id = $1",
-                    self.pending_vehicle_id
+            # Delete vehicle by ID
+            await globals.pool.execute(
+                "DELETE FROM user_vehicle_inventory WHERE id = $1",
+                self.pending_vehicle_id
+            )
+
+            # Remove vehicle from local stash list
+            self.vehicles = [v for v in self.vehicles if v.get("id") != self.pending_vehicle_id]
+
+            base_price = BASE_PRICES.get(self.pending_vehicle.get("type"), 0)
+            resale_percent = self.pending_vehicle.get("resale_percent", 0.10)
+            resale = int(base_price * resale_percent)
+
+            from db_user import get_user_finances, upsert_user_finances
+            from datetime import datetime, timezone
+
+            finances = await get_user_finances(globals.pool, self.user_id)
+            if finances is None:
+                finances = {
+                    "checking_account_balance": 0,
+                    "savings_account_balance": 0,
+                    "debt_balance": 0,
+                    "last_paycheck_claimed": datetime.fromtimestamp(0, tz=timezone.utc)
+                }
+
+            finances["checking_account_balance"] += resale
+            await upsert_user_finances(globals.pool, self.user_id, finances)
+
+            sold_type = self.pending_vehicle.get("type", "vehicle")
+            condition = self.pending_vehicle.get("condition", "Unknown")
+
+            self.pending_vehicle = None
+            self.pending_vehicle_id = None
+            self.clear_items()
+
+            await interaction.response.edit_message(
+                content=f"✅ You sold your {sold_type} for ${resale:,} ({condition}).",
+                view=None
+            )
+        except Exception:
+            print("Error in confirm_sale:")
+            traceback.print_exc()
+            if not interaction.response.is_done():
+                await interaction.response.send_message(
+                    "❌ Something went wrong while selling your vehicle. Please try again later.",
+                    ephemeral=True
                 )
-
-                # Remove vehicle from local stash list
-                self.vehicles = [v for v in self.vehicles if v.get("id") != self.pending_vehicle_id]
-
-                base_price = BASE_PRICES.get(self.pending_vehicle.get("type"), 0)
-                resale_percent = self.pending_vehicle.get("resale_percent", 0.10)
-                resale = int(base_price * resale_percent)
-
-                from db_user import get_user_finances, upsert_user_finances
-                from datetime import datetime, timezone
-
-                finances = await get_user_finances(globals.pool, self.user_id)
-                if finances is None:
-                    finances = {
-                        "checking_account_balance": 0,
-                        "savings_account_balance": 0,
-                        "debt_balance": 0,
-                        "last_paycheck_claimed": datetime.fromtimestamp(0, tz=timezone.utc)
-                    }
-
-                finances["checking_account_balance"] += resale
-                await upsert_user_finances(globals.pool, self.user_id, finances)
-
-                sold_type = self.pending_vehicle.get("type", "vehicle")
-                condition = self.pending_vehicle.get("condition", "Unknown")
-
-                self.pending_vehicle = None
-                self.pending_vehicle_id = None
-                self.clear_items()
-
-                await interaction.response.edit_message(
-                    content=f"✅ You sold your {sold_type} for ${resale:,} ({condition}).",
-                    view=None
-                )
-            except Exception:
-                print("Error in confirm_sale:")
-                traceback.print_exc()
-                if not interaction.response.is_done():
-                    await interaction.response.send_message(
-                        "❌ Something went wrong while selling your vehicle. Please try again later.",
-                        ephemeral=True
-                    )
 
 
 # In your views.py (or wherever CommuteButtons is defined):
@@ -188,27 +192,59 @@ class CommuteButtons(View):
 
     @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="commute_drive")
     async def drive_button(self, interaction: Interaction, button: Button):
-        await interaction.response.defer()
-        await handle_commute(interaction, "drive")
-        await self.disable_all_items()
+        try:
+            await interaction.response.defer()
+            await handle_commute(interaction, "drive")
+            await self.disable_all_items()
+        except Exception:
+            traceback.print_exc()
+            if not interaction.response.is_done():
+                await interaction.followup.send(
+                    "❌ Something went wrong processing your drive commute. Check the bot logs.",
+                    ephemeral=True
+                )
 
     @discord.ui.button(label="Bike 🚴 (+$10)", style=discord.ButtonStyle.success, custom_id="commute_bike")
     async def bike_button(self, interaction: Interaction, button: Button):
-        await interaction.response.defer()
-        await handle_commute(interaction, "bike")
-        await self.disable_all_items()
+        try:
+            await interaction.response.defer()
+            await handle_commute(interaction, "bike")
+            await self.disable_all_items()
+        except Exception:
+            traceback.print_exc()
+            if not interaction.response.is_done():
+                await interaction.followup.send(
+                    "❌ Something went wrong processing your bike commute. Check the bot logs.",
+                    ephemeral=True
+                )
 
     @discord.ui.button(label="Subway 🚇 ($10)", style=discord.ButtonStyle.primary, custom_id="commute_subway")
     async def subway_button(self, interaction: Interaction, button: Button):
-        await interaction.response.defer()
-        await handle_commute(interaction, "subway")
-        await self.disable_all_items()
+        try:
+            await interaction.response.defer()
+            await handle_commute(interaction, "subway")
+            await self.disable_all_items()
+        except Exception:
+            traceback.print_exc()
+            if not interaction.response.is_done():
+                await interaction.followup.send(
+                    "❌ Something went wrong processing your subway commute. Check the bot logs.",
+                    ephemeral=True
+                )
 
     @discord.ui.button(label="Bus 🚌 ($5)", style=discord.ButtonStyle.secondary, custom_id="commute_bus")
     async def bus_button(self, interaction: Interaction, button: Button):
-        await interaction.response.defer()
-        await handle_commute(interaction, "bus")
-        await self.disable_all_items()
+        try:
+            await interaction.response.defer()
+            await handle_commute(interaction, "bus")
+            await self.disable_all_items()
+        except Exception:
+            traceback.print_exc()
+            if not interaction.response.is_done():
+                await interaction.followup.send(
+                    "❌ Something went wrong processing your bus commute. Check the bot logs.",
+                    ephemeral=True
+                )
 
     async def on_timeout(self):
         for child in self.children:
@@ -221,8 +257,6 @@ class CommuteButtons(View):
                 )
             except Exception as e:
                 print(f"[ERROR] Failed to edit message on timeout: {e}")
-
-
 
 
 class GroceryCategoryView(View):
