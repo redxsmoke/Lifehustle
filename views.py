@@ -1,5 +1,5 @@
 import discord
-from discord.ui import View, Button
+from discord.ui import View, Button, Select
 from discord import Interaction, Embed, Color, Select
 import traceback
 
