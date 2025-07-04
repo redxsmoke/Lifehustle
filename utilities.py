@@ -32,14 +32,14 @@ def condition_from_usage(commute_count: int) -> str:
 # COMMUTE UTILITIES
 # ───────────────────────────────────────────────
 
-async def update_vehicle_condition_and_description(pool, user_id: int, vehicle_id: int, vehicle_type_id: int, commute_count: int):
+async def update_vehicle_condition_and_description(pool, user_id: int, vehicle_id: int, commute_count: int):
     """
-    Updates the vehicle's commute count, condition, and randomly selects a new appearance description
-    from cd_vehicle_appearance matching vehicle_type_id and condition.
+    Increment commute_count, recalculate condition_id, pick a random new appearance,
+    update the user_vehicle_inventory record, and return the new state.
     """
-    new_condition = condition_from_usage(commute_count)
-
-    # Map condition string to condition_id in db (1-based index matching your example)
+    # Determine new human-readable condition
+    new_cond_str = condition_from_usage(commute_count)
+    # Map to numeric condition_id
     condition_map = {
         "Brand New": 1,
         "Good Condition": 2,
@@ -47,37 +47,49 @@ async def update_vehicle_condition_and_description(pool, user_id: int, vehicle_i
         "Poor Condition": 4,
         "Broken Down": 5,
     }
-    condition_id = condition_map.get(new_condition)
-    if condition_id is None:
-        raise ValueError(f"Unknown condition: {new_condition}")
+    new_cond_id = condition_map[new_cond_str]
 
-    # Fetch a random appearance description from cd_vehicle_appearance matching vehicle_type_id and condition_id
     async with pool.acquire() as conn:
-        description_record = await conn.fetchrow(
+        # Fetch vehicle_type_id for appearance lookup
+        vt_row = await conn.fetchrow(
+            "SELECT vehicle_type_id FROM user_vehicle_inventory WHERE id = $1 AND user_id = $2",
+            vehicle_id, user_id
+        )
+        if not vt_row:
+            raise ValueError(f"Vehicle {vehicle_id} not found for user {user_id}")
+        vehicle_type_id = vt_row["vehicle_type_id"]
+
+        # Pick a random appearance description matching type and new condition
+        desc_row = await conn.fetchrow(
             """
-            SELECT description 
+            SELECT description
             FROM cd_vehicle_appearance
             WHERE vehicle_type_id = $1 AND condition_id = $2
-            ORDER BY RANDOM()
-            LIMIT 1
+            ORDER BY random() LIMIT 1
             """,
-            vehicle_type_id, condition_id
+            vehicle_type_id, new_cond_id
         )
-        if not description_record:
-            description = "No description available."
-        else:
-            description = description_record["description"]
+        description = desc_row["description"] if desc_row else "No description available."
 
-        # Update the vehicle record with new commute_count, condition, and appearance_description
+        # Update the inventory row
         await conn.execute(
             """
             UPDATE user_vehicle_inventory
-            SET commute_count = $1, condition = $2, appearance_description = $3
-            WHERE user_id = $4 AND vehicle_id = $5
+            SET
+              commute_count          = $1,
+              condition_id           = $2,
+              appearance_description = $3
+            WHERE id = $4 AND user_id = $5
             """,
-            commute_count, new_condition, description, user_id, vehicle_id
+            commute_count, new_cond_id, description, vehicle_id, user_id
         )
-    return new_condition, description
+
+    return {
+        "commute_count": commute_count,
+        "condition_id": new_cond_id,
+        "condition": new_cond_str,
+        "description": description
+    }
 
 # ───────────────────────────────────────────────
 # Parse amount strings like '1000', '1k', '2.5m', or 'all'
@@ -93,19 +105,14 @@ def parse_amount(amount_str: str) -> int | None:
     """
     s = amount_str.strip().lower()
     if s == "all":
-        return -1  # special flag meaning "all funds"
-
-    # Remove commas
+        return -1
     s = s.replace(',', '')
-
     try:
-        # Check for suffixes
         if s.endswith('k'):
             return int(float(s[:-1]) * 1_000)
         elif s.endswith('m'):
             return int(float(s[:-1]) * 1_000_000)
         else:
-            # Just a plain integer number
             return int(float(s))
     except ValueError:
         return None
@@ -122,19 +129,25 @@ async def charge_user(pool, user_id, amount):
 
 async def update_balance(pool, user_id, delta):
     async with pool.acquire() as conn:
-        await conn.execute("""
-            UPDATE users
-            SET checking_account = checking_account + $1
+        await conn.execute(
+            """
+            UPDATE user_finances
+            SET checking_account_balance = checking_account_balance + $1
             WHERE user_id = $2
-        """, delta, user_id)
-        
+            """,
+            delta, user_id
+        )
+
 # ───────────────────────────────────────────────
 # Fetch user's vehicles from DB
 # ───────────────────────────────────────────────
 
 async def get_user_vehicles(pool, user_id):
     async with pool.acquire() as conn:
-        rows = await conn.fetch("SELECT * FROM user_vehicle_inventory WHERE user_id = $1", user_id)
+        rows = await conn.fetch(
+            "SELECT * FROM user_vehicle_inventory WHERE user_id = $1",
+            user_id
+        )
         return [dict(row) for row in rows]
 
 # ───────────────────────────────────────────────
@@ -142,14 +155,8 @@ async def get_user_vehicles(pool, user_id):
 # ───────────────────────────────────────────────
 
 def normalize(text: str) -> str:
-    # Normalize Unicode characters (decompose accents)
     text = unicodedata.normalize('NFD', text)
-    # Remove accents
     text = ''.join(ch for ch in text if unicodedata.category(ch) != 'Mn')
-    # Convert to lowercase
     text = text.lower()
-    # Remove any non-alphanumeric characters except spaces
     text = re.sub(r'[^a-z0-9\s]', '', text)
-    # Remove leading/trailing whitespace
-    text = text.strip()
-    return text
+    return text.strip()
