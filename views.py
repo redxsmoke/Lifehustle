@@ -345,6 +345,12 @@ class VehicleUseButton(Button):
                     """,
                     self.vehicle['id'], user_id
                 )
+                # Fetch updated travel_count from DB
+                travel_count_row = await conn.fetchrow(
+                    "SELECT travel_count FROM user_vehicle_inventory WHERE id = $1 AND user_id = $2",
+                    self.vehicle['id'], user_id
+                )
+                travel_count = travel_count_row['travel_count'] if travel_count_row else 0
 
             # Get current finances
             finances = await get_user_finances(pool, user_id)
@@ -355,12 +361,9 @@ class VehicleUseButton(Button):
             updated_finances = await get_user_finances(pool, user_id)
             updated_balance = updated_finances.get("checking_account_balance", 0)
 
-            embed_text = (
-                f"You traveled using your {self.vehicle.get('vehicle_type', 'vehicle')} "
-                f"(Color: {self.vehicle.get('color', 'Unknown')}, Plate: {self.vehicle.get('plate_number', 'N/A')}).\n"
-                f"Your updated travel count for this vehicle is increased by 1.\n"
-                f"Your current balance is: **${updated_balance}**."
-            )
+            # Initialize outcome description and effect
+            outcome_desc = "No special events today."
+            effect = 0
 
             if outcome:
                 desc = outcome.get("description", "")
@@ -373,7 +376,16 @@ class VehicleUseButton(Button):
                     await reward_user(pool, user_id, effect)
                     updated_balance += effect
 
-                embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Effect on balance: ${effect}"
+                outcome_desc = desc
+
+            embed_text = (
+                f"You traveled using your {self.vehicle.get('vehicle_type', 'vehicle')} "
+                f"(Color: {self.vehicle.get('color', 'Unknown')}, Plate: {self.vehicle.get('plate_number', 'N/A')}).\n"
+                f"Travel Count: {travel_count}\n\n"
+                f"🎲 Outcome: {outcome_desc}\n"
+                f"💰 Balance Impact: ${effect}\n\n"
+                f"Your current balance is: **${updated_balance:,}**."
+            )
 
             await interaction.followup.send(
                 embed=embed_message(
@@ -384,12 +396,14 @@ class VehicleUseButton(Button):
                 ephemeral=True
             )
         except Exception:
+            import traceback
             traceback.print_exc()
             if not interaction.response.is_done():
                 await interaction.followup.send(
                     "❌ Something went wrong while processing your vehicle travel.",
                     ephemeral=True
                 )
+
 
 
 class VehicleUseView(View):

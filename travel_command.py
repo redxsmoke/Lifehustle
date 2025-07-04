@@ -181,7 +181,7 @@ async def handle_travel(interaction: Interaction, method: str):
         await interaction.followup.send(
             embed=embed_message(
                 "❌ Invalid Travel Method",
-                "> Are you hacking us?! How did you select this as a travel option 🤔? Pick one of: drive, bike, subway, or bus.",
+                "> Are you hacking us?! How did you select this as a travel option 🤔? Pick one of these: drive, bike, subway, or bus.",
                 discord.Color.red()
             ),
             ephemeral=True
