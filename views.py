@@ -168,13 +168,9 @@ class SellFromStashView(View):
                 )
 
 
-<<<<<<< HEAD
-class TravelButtons(View):
-=======
 
 
 class TravelButtons(View):
->>>>>>> bf4fa0b1f816b4df03cb1c565ae57567c893809e
     def __init__(self):
         super().__init__(timeout=None)
         self.message = None  # Will hold the message with buttons
@@ -194,11 +190,7 @@ class TravelButtons(View):
     @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="travel_drive")
     async def drive_button(self, interaction: Interaction, button: Button):
         try:
-<<<<<<< HEAD
-            from travel_command import handle_travel
-=======
             from travel_command import handle_travel  # consider renaming this if desired
->>>>>>> bf4fa0b1f816b4df03cb1c565ae57567c893809e
             await interaction.response.defer()
             await handle_travel(interaction, "drive")
             await self.disable_all_items()
