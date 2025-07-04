@@ -111,7 +111,7 @@ async def handle_commute(interaction: Interaction, method: str):
             pool,
             user_id,
             vehicle["id"],
-            vehicle["type_id"],
+            vehicle["vehicle_type_id"],
             new_commute_count
         )
 
@@ -145,7 +145,7 @@ async def handle_commute(interaction: Interaction, method: str):
             pool,
             user_id,
             vehicle["id"],
-            vehicle["type_id"],
+            vehicle["vehicle_type_id"],
             new_commute_count
         )
         await reward_user(pool, user_id, 10)
