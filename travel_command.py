@@ -16,7 +16,7 @@ from utilities import (
 )
 from vehicle_logic import get_user_vehicles
 from embeds import embed_message, COLOR_GREEN
-from travel_helpers import select_weighted_travel_outcome
+from views import select_weighted_travel_outcome
 
 def condition_from_usage(travel_count: int) -> str:
     if travel_count < 50:
