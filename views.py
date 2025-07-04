@@ -1,6 +1,6 @@
 import discord
-from discord.ui import View, Button
-from discord import Interaction, Embed
+from discord.ui import View, Select, Button
+from discord import Interaction, Embed, Color
 import traceback
 
 import utilities
@@ -309,6 +309,37 @@ async def select_weighted_travel_outcome(pool, travel_type):
             return row
         upto += w
     return weighted_choices[-1][0]
+
+class TravelVehicleSelect(Select):
+    def __init__(self, vehicles, method):
+        options = []
+        for v in vehicles:
+            label = v.get("vehicle_type", "Unknown")
+            desc = v.get("appearance_description", "") or ""
+            # Option label: vehicle type + maybe short desc
+            options.append(discord.SelectOption(label=label, description=desc[:100], value=str(v["id"])))
+        super().__init__(placeholder=f"Select your {method}...", min_values=1, max_values=1, options=options)
+        self.method = method
+        self.vehicles = {str(v["id"]): v for v in vehicles}
+
+    async def callback(self, interaction: Interaction):
+        vehicle_id = self.values[0]
+        vehicle = self.vehicles.get(vehicle_id)
+        if not vehicle:
+            await interaction.response.send_message("❌ Vehicle not found. Please try again.", ephemeral=True)
+            return
+        # Disable dropdown after selection
+        self.view.clear_items()
+        await interaction.response.edit_message(view=self.view)
+        # Call the travel handler continuation
+        await continue_travel_with_vehicle(interaction, self.method, vehicle)
+
+
+class TravelVehicleSelectView(View):
+    def __init__(self, vehicles, method):
+        super().__init__(timeout=60)
+        self.add_item(TravelVehicleSelect(vehicles, method))
+
 
 
 
