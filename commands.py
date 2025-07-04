@@ -107,7 +107,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             color = color_row["description"] if color_row else "Unknown"
             if item["type"] == "Bike":
                 funny_suffixes = ["ZOOM", "WHOAH", "SPOKEME", "TIRED-LOL", "RIDEME", "SLOWAF", "WHEEE", "B-ROKE", "RDHOG", "2POOR4CAR"]
-                plate_number = "BIKE-" + random.choice(funny_suffixes)
+                plate_number = random.choice(funny_suffixes)
             else:
                 plate_number = generate_random_plate()
             # Convert condition to int
