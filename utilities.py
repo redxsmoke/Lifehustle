@@ -122,10 +122,18 @@ def parse_amount(amount_str: str) -> int | None:
 # ───────────────────────────────────────────────
 
 async def reward_user(pool, user_id, amount):
-    await update_balance(pool, user_id, delta=amount)
+    finances = await get_user_finances(pool, user_id)
+    if finances is None:
+        return   
+    finances["checking_account_balance"] += amount
+    await upsert_user_finances(pool, user_id, finances)
 
 async def charge_user(pool, user_id, amount):
-    await update_balance(pool, user_id, delta=-amount)
+    finances = await get_user_finances(pool, user_id)
+    if finances is None:
+        return  # Or raise an error if you prefer
+    finances["checking_account_balance"] -= amount
+    await upsert_user_finances(pool, user_id, finances)
 
 async def update_balance(pool, user_id, delta):
     async with pool.acquire() as conn:
