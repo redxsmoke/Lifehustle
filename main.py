@@ -62,10 +62,10 @@ async def setup_hook():
     # Register commands from both modules
     register_general_commands(tree)
     register_commute_commands(tree)
-
+    
     # Load your cog extensions
     await bot.load_extension("bank_commands")
-
+    bot.add_view(CommuteButtons())
     try:
         synced = await tree.sync()
         print(f"✅ Synced {len(synced)} slash commands.")
