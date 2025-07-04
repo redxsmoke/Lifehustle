@@ -1,7 +1,7 @@
 import discord
 from discord.ui import View, Button, Select
 from discord import Interaction, Embed, Color
-from embeds import embed_message, COLOR_GREEN, COLOR_RED
+from embeds import  embed_message, COLOR_GREEN, COLOR_RED
 import traceback
 from db_user import get_user, upsert_user, get_user_finances, upsert_user_finances
 import utilities
@@ -187,14 +187,42 @@ class TravelButtons(View):
             except Exception as e:
                 print(f"[ERROR] Failed to edit message when disabling buttons: {e}")
 
+    async def charge_user(self, pool, user_id: int, amount: int):
+        finances = await get_user_finances(pool, user_id)
+        if finances is None:
+            finances = {
+                "checking_account_balance": 0,
+                "savings_account_balance": 0,
+                "debt_balance": 0,
+                "last_paycheck_claimed": datetime.fromtimestamp(0)
+            }
+
+        if finances["checking_account_balance"] >= amount:
+            finances["checking_account_balance"] -= amount
+            await upsert_user_finances(pool, user_id, finances)
+            return True
+        else:
+            return False
+
     @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="travel_drive")
     async def drive_button(self, interaction: Interaction, button: Button):
         try:
-            from travel_command import handle_travel  # consider renaming this if desired
+            from travel_command import handle_travel
+
+            user_id = interaction.user.id
+            pool = globals.pool
+            cost = 10
+
+            if not await self.charge_user(pool, user_id, cost):
+                await interaction.response.send_message(
+                    "❌ You do not have enough funds to drive.", ephemeral=True)
+                return
+
             await interaction.response.defer()
             await handle_travel(interaction, "drive")
             await self.disable_all_items()
         except Exception:
+            import traceback
             traceback.print_exc()
             if not interaction.response.is_done():
                 await interaction.followup.send(
@@ -206,10 +234,21 @@ class TravelButtons(View):
     async def bike_button(self, interaction: Interaction, button: Button):
         try:
             from travel_command import handle_travel
+
+            user_id = interaction.user.id
+            pool = globals.pool
+            cost = 10
+
+            if not await self.charge_user(pool, user_id, cost):
+                await interaction.response.send_message(
+                    "❌ You do not have enough funds to bike.", ephemeral=True)
+                return
+
             await interaction.response.defer()
             await handle_travel(interaction, "bike")
             await self.disable_all_items()
         except Exception:
+            import traceback
             traceback.print_exc()
             if not interaction.response.is_done():
                 await interaction.followup.send(
@@ -225,6 +264,7 @@ class TravelButtons(View):
             await handle_travel(interaction, "subway")
             await self.disable_all_items()
         except Exception:
+            import traceback
             traceback.print_exc()
             if not interaction.response.is_done():
                 await interaction.followup.send(
@@ -240,6 +280,7 @@ class TravelButtons(View):
             await handle_travel(interaction, "bus")
             await self.disable_all_items()
         except Exception:
+            import traceback
             traceback.print_exc()
             if not interaction.response.is_done():
                 await interaction.followup.send(
@@ -247,6 +288,17 @@ class TravelButtons(View):
                     ephemeral=True
                 )
 
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if self.message:
+            try:
+                await self.message.edit(
+                    content="⌛ Travel selection timed out. Please try again.",
+                    view=self
+                )
+            except Exception as e:
+                print(f"[ERROR] Failed to edit message on timeout: {e}")
     async def on_timeout(self):
         for child in self.children:
             child.disabled = True
@@ -282,7 +334,7 @@ async def select_weighted_travel_outcome(pool, travel_type):
     async with pool.acquire() as conn:
         rows = await conn.fetch(
             """
-            SELECT id, description, effect_amount, effect_type, probability
+            SELECT id, description, effect_amount, effect_type
             FROM cd_travel_summaries
             WHERE travel_type = $1
             """,
@@ -335,29 +387,6 @@ class VehicleUseButton(Button):
             pool = globals.pool
             user_id = interaction.user.id
 
-            # Deduct base cost first
-            base_costs = {
-                "drive": 10,
-                "bike": 5
-            }
-            base_cost = base_costs.get(self.method, 0)
-
-            finances = await get_user_finances(pool, user_id)
-            balance = finances.get("checking_account_balance", 0)
-            if balance < base_cost:
-                await interaction.followup.send(
-                    embed=embed_message(
-                        "❌ Insufficient Funds",
-                        f"You need ${base_cost} to {self.method} your vehicle, but your balance is ${balance}.",
-                        discord.Color.red()
-                    ),
-                    ephemeral=True
-                )
-                return
-
-            await charge_user(pool, user_id, base_cost)
-            balance -= base_cost
-
             # Update travel_count by 1
             async with pool.acquire() as conn:
                 await conn.execute(
@@ -375,9 +404,16 @@ class VehicleUseButton(Button):
                 )
                 travel_count = travel_count_row['travel_count'] if travel_count_row else 0
 
+            # Get current finances
+            finances = await get_user_finances(pool, user_id)
+
             # Select a weighted travel outcome for the method ('drive' treated as 'car')
             outcome = await select_weighted_travel_outcome(pool, self.method)
 
+            updated_finances = await get_user_finances(pool, user_id)
+            updated_balance = updated_finances.get("checking_account_balance", 0)
+
+            # Initialize outcome description and effect
             outcome_desc = "No special events today."
             effect = 0
 
@@ -385,12 +421,12 @@ class VehicleUseButton(Button):
                 desc = outcome.get("description", "")
                 effect = outcome.get("effect_amount", 0)
 
-                if effect < 0 and balance >= -effect:
+                if effect < 0 and updated_balance >= -effect:
                     await charge_user(pool, user_id, -effect)
-                    balance -= -effect
+                    updated_balance -= -effect
                 elif effect > 0:
                     await reward_user(pool, user_id, effect)
-                    balance += effect
+                    updated_balance += effect
 
                 outcome_desc = desc
 
@@ -399,8 +435,8 @@ class VehicleUseButton(Button):
                 f"(Color: {self.vehicle.get('color', 'Unknown')}, Plate: {self.vehicle.get('plate_number', 'N/A')}).\n"
                 f"Travel Count: {travel_count}\n\n"
                 f"🎲 Outcome: {outcome_desc}\n"
-                f"💰 Net Cost/Benefit: ${effect - base_cost}\n\n"
-                f"Your current balance is: **${balance:,}**."
+                f"💰 Balance Impact: ${effect}\n\n"
+                f"Your current balance is: **${updated_balance:,}**."
             )
 
             await interaction.followup.send(
@@ -419,6 +455,7 @@ class VehicleUseButton(Button):
                     "❌ Something went wrong while processing your vehicle travel.",
                     ephemeral=True
                 )
+
 
 
 class VehicleUseView(View):
@@ -499,4 +536,4 @@ class GroceryStashPaginationView(View):
     async def on_timeout(self):
         for child in self.children:
             child.disabled = True
-        # Note: You can add code here to update the message on timeout if you keep a reference to it.
+ 
