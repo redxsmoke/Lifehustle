@@ -22,13 +22,11 @@ from views import TravelButtons  # renamed import to match change
 
 from createtraveloutcomes import main as create_travel_outcomes_main
 
-
 # Rename imports to avoid name conflicts
 from commands import register_commands as register_general_commands
 from travel_command import register_commands as register_travel_commands  # renamed import
 
 from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_appearence_table, create_vehicle_appearance_table, seed_vehicle_appearance
-
 
 import globals
 
@@ -95,8 +93,10 @@ async def setup_database():
     await reset_user_finances_table(globals.pool)
     await drop_vehicle_appearence_table(globals.pool)
     await create_vehicle_appearance_table(globals.pool)
-    await seed_vehicle_appearance(globals.pool) 
+    await seed_vehicle_appearance(globals.pool)
+    # Pass the existing pool to the travel outcomes seeder
     await create_travel_outcomes_main(globals.pool)
+
 # Entrypoint
 async def main():
     await create_pool()
