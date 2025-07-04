@@ -372,3 +372,41 @@ class GroceryCategoryView(View):
     async def select_callback(self, interaction: Interaction):
         selected = self.select.values[0]
         await interaction.response.send_message(f"You selected the {selected} category.", ephemeral=True)
+
+class GroceryStashPaginationView(View):
+    def __init__(self, user_id: int, pages: list):
+        super().__init__(timeout=120)
+        self.user_id = user_id
+        self.pages = pages
+        self.current_page = 0
+
+    async def update_message(self, interaction: Interaction):
+        page_content = self.pages[self.current_page]
+        await interaction.response.edit_message(content=page_content, view=self)
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary)
+    async def previous_button(self, interaction: Interaction, button: Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This isn't your stash.", ephemeral=True)
+            return
+        if self.current_page > 0:
+            self.current_page -= 1
+            await self.update_message(interaction)
+        else:
+            await interaction.response.defer()
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary)
+    async def next_button(self, interaction: Interaction, button: Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This isn't your stash.", ephemeral=True)
+            return
+        if self.current_page < len(self.pages) - 1:
+            self.current_page += 1
+            await self.update_message(interaction)
+        else:
+            await interaction.response.defer()
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        # Note: You can add code here to update the message on timeout if you keep a reference to it.
