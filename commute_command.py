@@ -68,7 +68,7 @@ async def handle_commute(interaction: discord.Interaction, method: str):
     user_id = interaction.user.id
     user = await get_user(pool, user_id)
     if user is None:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             "❌ Oops! You don’t have an account yet. Maybe create one before trying to teleport to work? Use `/start`!",
             ephemeral=True
         )
@@ -81,7 +81,7 @@ async def handle_commute(interaction: discord.Interaction, method: str):
     if method == 'drive':
         cars = [v for v in working_vehicles if v["type"] in ("Beater Car", "Sedan", "Sports Car", "Pickup Truck", "Motorcycle")]
         if not cars:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "❌ Your car is more 'carcass' than 'car' right now. No working car or motorcycle found!",
                 ephemeral=True
             )
@@ -92,7 +92,7 @@ async def handle_commute(interaction: discord.Interaction, method: str):
     elif method == 'bike':
         bikes = [v for v in working_vehicles if v["type"] == "Bike"]
         if not bikes:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "❌ Your bike seems to have taken a permanent vacation. No working bike found!",
                 ephemeral=True
             )
@@ -103,14 +103,16 @@ async def handle_commute(interaction: discord.Interaction, method: str):
     elif method in ('subway', 'bus'):
         cost = 10 if method == 'subway' else 5
         await charge_user(pool, user_id, cost)
-        await interaction.response.send_message(embed=embed_message(
-            f"{'🚇' if method == 'subway' else '🚌'} Commute Summary",
-            f"You bravely commuted using the **{method.title()}** for just ${cost}. Don't forget to hold onto the strap!"),
+        await interaction.followup.send(
+            embed=embed_message(
+                f"{'🚇' if method == 'subway' else '🚌'} Commute Summary",
+                f"You bravely commuted using the **{method.title()}** for just ${cost}. Don't forget to hold onto the strap!"
+            ),
             ephemeral=True
         )
 
     else:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             "❌ You tried to invent a new commute method? Nice try, but that’s not a thing. Pick subway, bus, bike, or drive!",
             ephemeral=True
         )
