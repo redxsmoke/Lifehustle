@@ -355,3 +355,20 @@ class VehicleUseView(View):
                 )
             except Exception as e:
                 print(f"[ERROR] Failed to edit message on timeout: {e}")
+
+
+class GroceryCategoryView(View):
+    def __init__(self):
+        super().__init__(timeout=None)
+        options = [
+            discord.SelectOption(label="Fruits", description="Select fruits category"),
+            discord.SelectOption(label="Vegetables", description="Select vegetables category"),
+            discord.SelectOption(label="Dairy", description="Select dairy products"),
+        ]
+        self.select = Select(placeholder="Choose grocery category...", options=options)
+        self.select.callback = self.select_callback
+        self.add_item(self.select)
+
+    async def select_callback(self, interaction: Interaction):
+        selected = self.select.values[0]
+        await interaction.response.send_message(f"You selected the {selected} category.", ephemeral=True)
