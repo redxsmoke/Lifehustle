@@ -25,6 +25,8 @@ from commands import register_commands as register_general_commands
 from commute_command import register_commands as register_commute_commands
 
 from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_appearence_table, create_vehicle_appearance_table, seed_vehicle_appearance
+
+from resetv import drop_and_recreate_user_vehicle_inventory
 import globals
 
 # Load JSON Data
@@ -91,6 +93,7 @@ async def setup_database():
     await drop_vehicle_appearence_table(globals.pool)
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool) 
+    await drop_and_recreate_user_vehicle_inventory
 
 # Entrypoint
 async def main():
