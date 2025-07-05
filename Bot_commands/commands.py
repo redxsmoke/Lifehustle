@@ -24,7 +24,6 @@ from db_user import get_user, upsert_user
 
 
 from config import PAYCHECK_AMOUNT, PAYCHECK_COOLDOWN_SECONDS, COLOR_RED, COLOR_GREEN
-from category_loader import categories, category_autocomplete
 from defaults import DEFAULT_USER
 
  
@@ -172,22 +171,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             )
 
 
-def register_commands(tree: app_commands.CommandTree):
-    @tree.command(name="submitword", description="Submit a new word to a category")
-    @app_commands.describe(category="Select the category for your word")
-    @app_commands.autocomplete(category=category_autocomplete)
-    async def submitword(interaction: Interaction, category: str):
-        if category not in categories:
-            await interaction.response.send_message(
-                f"Category '{category}' does not exist. Please select a valid category.",
-                ephemeral=True
-            )
-            return
-        from modals import SubmitWordModal
-        modal = SubmitWordModal(category)
-        await interaction.response.send_modal(modal)
-
-    
+  
     @tree.command(name="shop", description="Shop for items by category")
     @app_commands.describe(category="Which category to browse?")
     @app_commands.choices(category=[
@@ -285,113 +269,7 @@ def register_commands(tree: app_commands.CommandTree):
             COLOR_GREEN
         ), ephemeral=True)
 
-    @tree.command(name="startcategories", description="Start a categories game round")
-    @app_commands.describe(category="Choose the category to play")
-    @app_commands.autocomplete(category=category_autocomplete)
-    async def startcategories(interaction: discord.Interaction, category: str):
-        from globals import pool
-        if category not in categories:
-            await interaction.response.send_message(
-                embed=embed_message(
-                    "❌ Invalid Category",
-                    f"? Category '{category}' does not exist.",
-                    discord.Color.red()
-                ),
-                ephemeral=True
-            )
-            return
-
-        letters = [l for l, words in categories[category].items() if words]
-        if not letters:
-            await interaction.response.send_message(
-                embed=embed_message(
-                    "❌ No Words Found",
-                    f"> No words found in category '{category}'.",
-                    discord.Color.red()
-                ),
-                ephemeral=True
-            )
-            return
-
-        chosen_letter = random.choice(letters).upper()
-        raw_words = categories[category][chosen_letter]
-        valid_words = {normalize(w): w for w in raw_words}
-
-        await interaction.response.send_message(
-            embed=embed_message(
-                f"🎮 Categories Game Started!",
-                f"> Category: **{category}**\nLetter: **{chosen_letter}**\nKeep naming words that start with **{chosen_letter}**! Game ends when you mess up."
-            ),
-            ephemeral=False
-        )
-
-        def check(m: discord.Message):
-            return m.channel == interaction.channel and m.author == interaction.user
-
-        used_words = set()
-
-        while True:
-            try:
-                msg = await interaction.client.wait_for('message', timeout=10.0, check=check)
-            except asyncio.TimeoutError:
-                await interaction.followup.send(
-                    embed=embed_message(
-                        "⏱️ Time's Up!",
-                        "> You took too long to answer. Game over!"
-                    )
-                )
-                break
-
-            word_raw = msg.content.strip()
-            word_clean = normalize(word_raw)
-
-            if not word_raw.lower().startswith(chosen_letter.lower()):
-                await interaction.followup.send(
-                    embed=embed_message(
-                        "❌ Wrong Start Letter",
-                        f"> **{word_raw}** doesn't start with **{chosen_letter}**. Game over!",
-                        discord.Color.red()
-                    )
-                )
-                break
-
-            if word_clean in used_words:
-                await interaction.followup.send(
-                    embed=embed_message(
-                        "⚠️ Word Used",
-                        f"> You've already used **{word_raw}**. Try something else!",
-                        discord.Color.orange()
-                    )
-                )
-                continue
-
-            if word_clean in valid_words:
-                used_words.add(word_clean)
-
-                user_id = interaction.user.id
-                user = await get_user(pool, user_id)
-                if user is None:
-                    user = DEFAULT_USER.copy()
-
-                user['checking_account_balance'] += 10
-                await upsert_user_finances(pool, user_id, user)
-
-                await interaction.followup.send(
-                    embed=embed_message(
-                        "✅ Correct!",
-                        f"> **{valid_words[word_clean]}** is valid. You earned $10! Keep going!",
-                        discord.Color.green()
-                    )
-                )
-            else:
-                await interaction.followup.send(
-                    embed=embed_message(
-                        "❌ Word Not Found",
-                        f"> **{word_raw}** is not in the list. Game over!\n\n*(Game is still in beta testing — many words are still missing)*",
-                        discord.Color.red()
-                    )
-                )
-                break
+   
 
     @tree.command(name="stash", description="View your inventory by category.")
     @app_commands.describe(category="Which category do you want to check?")
