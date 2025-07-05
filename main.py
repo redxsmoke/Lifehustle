@@ -14,7 +14,6 @@ from discord import app_commands
 
 # --- Local Imports ---
 from config import DISCORD_BOT_TOKEN, DATABASE_URL
-from db_user import reset_user_finances_table
 from db_pool import init_db
 from embeds import embed_message
 from embeds import COLOR_RED
@@ -90,7 +89,6 @@ async def setup_database():
     await init_db(globals.pool)
     await seed_grocery_categories(globals.pool)
     await seed_grocery_types(globals.pool)
-    await reset_user_finances_table(globals.pool)
     await drop_vehicle_appearence_table(globals.pool)
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool)

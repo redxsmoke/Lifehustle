@@ -181,15 +181,6 @@ async def get_user_vehicles(pool, user_id: int) -> list:
 async def remove_vehicle_by_id(pool, vehicle_id: int):
     await pool.execute("DELETE FROM user_vehicle_inventory WHERE id = $1", vehicle_id)
 
-async def sell_all_vehicles(interaction, user_id, vehicles):
-    from db_user import delete_user_vehicles
-    from utilities import reward_user
-
-    total_value = 0
-    for v in vehicles:
-        value = v.get("resale_value", 0)
-        total_value += value
-
 
 # ✅ View + Button to Trigger Purchase
 class PurchaseVehicleView(discord.ui.View):
@@ -231,3 +222,58 @@ class ConfirmSellView(discord.ui.View):
         self.value = False
         self.stop()
         await interaction.response.edit_message(content="❌ Sale cancelled.", view=None)
+
+async def sell_all_vehicles(interaction, user_id, vehicles):
+    try:
+        if not vehicles:
+            await interaction.response.send_message("You have no vehicles to sell.", ephemeral=True)
+            return
+
+        total_resale = 0
+        vehicle_ids = []
+        for vehicle in vehicles:
+            base_price = BASE_PRICES.get(vehicle.get("vehicle_type"), 0)
+            resale_percent = vehicle.get("resale_percent", 0.10)
+            resale = int(base_price * resale_percent)
+            total_resale += resale
+            if vehicle.get("id"):
+                vehicle_ids.append(vehicle["id"])
+
+        # Delete all vehicles in one query
+        await pool.execute(
+            "DELETE FROM user_vehicle_inventory WHERE id = ANY($1::int[])",
+            vehicle_ids
+        )
+
+        from db_user import get_user_finances, upsert_user_finances
+        from datetime import datetime, timezone
+
+        finances = await get_user_finances(pool, user_id)
+        if finances is None:
+            finances = {
+                "checking_account_balance": 0,
+                "savings_account_balance": 0,
+                "debt_balance": 0,
+                "last_paycheck_claimed": datetime.fromtimestamp(0, tz=timezone.utc)
+            }
+
+        finances["checking_account_balance"] += total_resale
+        await upsert_user_finances(pool, user_id, finances)
+
+        # Clear local vehicle list (if needed elsewhere)
+        # (If this function doesn't keep the list, you can omit)
+        
+        await interaction.response.edit_message(
+            content=f"✅ You sold **ALL** your vehicles for a total of ${total_resale:,}.",
+            view=None
+        )
+
+    except Exception as e:
+        print(f"Error in sell_all_vehicles: {e}")
+        import traceback
+        traceback.print_exc()
+        if not interaction.response.is_done():
+            await interaction.response.send_message(
+                "❌ Something went wrong while selling all your vehicles. Please try again later.",
+                ephemeral=True
+            )

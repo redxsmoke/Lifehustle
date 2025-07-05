@@ -81,6 +81,34 @@ class SellFromStashView(View):
 
         return f"Sell {emoji} {desc} ({condition}) - ${resale:,}"
 
+    async def sell_all_callback(self, interaction: discord.Interaction):
+        if not self.vehicles:
+            await interaction.response.send_message("You have no vehicles to sell.", ephemeral=True)
+            return
+
+        # Show confirmation view to the user
+        confirm_view = ConfirmSellView(self.user_id, self.vehicles)
+        await interaction.response.send_message(
+            "Are you sure you want to sell **ALL** your vehicles? This action cannot be undone.",
+            view=confirm_view,
+            ephemeral=True
+        )
+
+        # Wait for the user to respond (confirm or cancel)
+        await confirm_view.wait()
+
+        if confirm_view.value is None:
+            # User did not respond in time
+            await interaction.followup.send("⏳ Sale confirmation timed out.", ephemeral=True)
+        elif confirm_view.value:
+            # User confirmed sale
+            await sell_all_vehicles(interaction, self.user_id, self.vehicles)
+            # Optionally clear the local vehicles list after sale
+            self.vehicles.clear()
+        else:
+            # User cancelled sale
+            await interaction.followup.send("❌ Sale cancelled.", ephemeral=True)
+
     async def start_sell_flow(self, interaction: Interaction, vehicle, vehicle_id):
         self.pending_vehicle = vehicle
         self.pending_vehicle_id = vehicle_id
