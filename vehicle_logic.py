@@ -223,11 +223,12 @@ class ConfirmSellView(discord.ui.View):
         self.stop()
         await interaction.response.edit_message(content="❌ Sale cancelled.", view=None)
 
-async def sell_all_vehicles(interaction, user_id, vehicles):
+async def sell_all_vehicles(interaction, user_id, vehicles, pool):
     try:
         if not vehicles:
             await interaction.response.send_message("You have no vehicles to sell.", ephemeral=True)
             return
+        pool = globals.pool
 
         total_resale = 0
         vehicle_ids = []

@@ -96,17 +96,13 @@ class SellFromStashView(View):
 
         # Wait for the user to respond (confirm or cancel)
         await confirm_view.wait()
-
         if confirm_view.value is None:
-            # User did not respond in time
             await interaction.followup.send("⏳ Sale confirmation timed out.", ephemeral=True)
-        elif confirm_view.value:
-            # User confirmed sale
-            await sell_all_vehicles(interaction, self.user_id, self.vehicles)
-            # Optionally clear the local vehicles list after sale
+        elif confirm_view.value:  # user confirmed
+            await sell_all_vehicles(interaction, self.user_id, self.vehicles, globals.pool)
             self.vehicles.clear()
-        else:
-            # User cancelled sale
+            await interaction.followup.send("✅ All vehicles sold.", ephemeral=True)
+        else:  # user cancelled
             await interaction.followup.send("❌ Sale cancelled.", ephemeral=True)
 
     async def start_sell_flow(self, interaction: Interaction, vehicle, vehicle_id):
