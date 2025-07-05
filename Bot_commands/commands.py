@@ -11,7 +11,7 @@ import globals
 
 from datetime import datetime, timezone, timedelta   
 from db_user import get_user_finances, upsert_user_finances  
-from utilities import embed_message  
+from utilities import parse_amount, embed_message, normalize
 from shop_items import TransportationShopButtons
 
 from views import (
@@ -21,7 +21,7 @@ from views import (
     GroceryStashPaginationView,
 )
 from db_user import get_user, upsert_user
-from utilities import parse_amount, embed_message, normalize
+
 
 from config import PAYCHECK_AMOUNT, PAYCHECK_COOLDOWN_SECONDS, COLOR_RED, COLOR_GREEN
 from category_loader import categories, category_autocomplete
@@ -233,11 +233,6 @@ def register_commands(tree: app_commands.CommandTree):
 
             await interaction.followup.send(embed=embed, ephemeral=True)
 
-    # ... rest of your commands unchanged, omitted here for brevity ...
-
-
-
-
 
     @tree.command(name="paycheck", description=f"Claim your paycheck (${PAYCHECK_AMOUNT:,}) every 12h")
     async def paycheck(interaction: Interaction):
@@ -419,13 +414,12 @@ def register_commands(tree: app_commands.CommandTree):
             if category.value == "transportation":
                 async with pool.acquire() as conn:
                     vehicles = await conn.fetch("""
-                        SELECT DISTINCT
+                        SELECT
                             uvi.id, uvi.color, uvi.appearance_description, uvi.condition,
                             uvi.travel_count, uvi.created_at, uvi.resale_percent,
-                            cvt.name AS type, plate_number, cvt.emoji
+                            cvt.name AS type, uvi.plate_number, cvt.emoji
                         FROM user_vehicle_inventory uvi
                         JOIN cd_vehicle_type cvt ON uvi.vehicle_type_id = cvt.id
-                        JOIN cd_vehicle_condition cvc on uvi.vehicle_type_id = cvt.id
                         WHERE uvi.user_id = $1
                         ORDER BY uvi.created_at DESC
                     """, user_id)
@@ -441,7 +435,7 @@ def register_commands(tree: app_commands.CommandTree):
                     vehicle_type = item.get("type", "Unknown")
                     condition = item.get("condition", "Unknown")
                     description = item.get("appearance_description", "No description")
-                    travel_count = item.get("travel_count", 0) #renamed
+                    travel_count = item.get("travel_count", 0)
                     emoji = item.get("emoji", "🚗")
 
                     desc_lines.append(
@@ -504,27 +498,4 @@ def register_commands(tree: app_commands.CommandTree):
     async def purge(interaction: discord.Interaction):
         if interaction.guild is None:
             await interaction.response.send_message(
-                "❌ This command can't be used in DMs.",
-                ephemeral=True
-            )
-            return
-
-        if not interaction.channel.permissions_for(interaction.guild.me).manage_messages:
-            await interaction.response.send_message(
-                "❌ I need the Manage Messages permission to purge.",
-                ephemeral=True
-            )
-            return
-
-        await interaction.response.defer(ephemeral=True)
-
-        deleted = await interaction.channel.purge(limit=100)
-
-        await interaction.followup.send(
-            embed=embed_message(
-                "🧹 Purge Complete",
-                f"Deleted {len(deleted)} messages to clear clutter.",
-                discord.Color.green()
-            ),
-            ephemeral=True
-        )
+                "

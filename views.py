@@ -34,15 +34,11 @@ class SellButton(Button):
         self.parent_view = parent_view
         self.vehicle_id = vehicle_id
 
-        
-
     async def callback(self, interaction: Interaction):
         if interaction.user.id != self.parent_view.user_id:
             await interaction.response.send_message("This isn't your stash.", ephemeral=True)
             return
         await self.parent_view.start_sell_flow(interaction, self.vehicle, self.vehicle_id)
-
-        
 
 
 class SellFromStashView(View):
@@ -190,7 +186,8 @@ class SellFromStashView(View):
                     "❌ Something went wrong while selling your vehicle. Please try again later.",
                     ephemeral=True
                 )
-    async def confirm_sell_all(self, interaction: Interaction):
+
+    async def sell_all_callback(self, interaction: Interaction):
         try:
             if not self.vehicles:
                 await interaction.response.send_message("You have no vehicles to sell.", ephemeral=True)
@@ -236,7 +233,7 @@ class SellFromStashView(View):
             )
 
         except Exception:
-            print("Error in confirm_sell_all:")
+            print("Error in sell_all_callback:")
             traceback.print_exc()
             if not interaction.response.is_done():
                 await interaction.response.send_message(
