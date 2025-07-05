@@ -231,13 +231,15 @@ async def sell_all_vehicles(interaction, user_id, vehicles, pool):
 
         total_resale = 0
         vehicle_ids = []
+
         for vehicle in vehicles:
-            resale = vehicle.get[resale_value]
+            resale = vehicle["resale_value"]
             total_resale += resale
 
-            vehicle_id = vehicle.get("id")
-            if vehicle_id:
-                vehicle_ids.append(vehicle_id)
+            vehicle_id = vehicle["id"]
+            vehicle_ids.append(vehicle_id)
+
+            print(f"[DEBUG] Vehicle ID {vehicle_id} resale value: ${resale}")
 
         # Delete all vehicles in one query
         await pool.execute(
