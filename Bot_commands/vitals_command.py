@@ -114,7 +114,7 @@ async def register_commands(bot: discord.Client):
 
         embed = discord.Embed(
             title="⚕️ Vitals Overview",
-            description=f"Current vitals and weather report, {interaction.user.display_name}!",
+            description=f"> Current vitals and weather report, {interaction.user.display_name}!",
             color=0x1abc9c,
             timestamp=now_utc
         )
