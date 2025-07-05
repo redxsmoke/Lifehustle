@@ -6,10 +6,14 @@ import string
 import discord
 import unicodedata
 import globals
+import datetime
 
+from embeds import COLOR_GREEN, COLOR_RED
 from discord import app_commands, Interaction
+from discord.ext import commands
 from db_user import get_user, upsert_user, get_user_finances
 from vehicle_logic import ConfirmSellView, sell_all_vehicles
+from vitals_command import get_mock_weather_dynamic
 
 from utilities import (
     charge_user,
@@ -266,3 +270,35 @@ async def on_sell_all_button_click(interaction: discord.Interaction, user_id, ve
         # User cancelled
         # Nothing else needed, message already updated
         pass
+from vitals_command import get_mock_weather_dynamic  # Adjust import path as needed
+
+class Travel(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @commands.command(name="bike_travel")
+    async def bike_travel_command(self, ctx):
+        now_utc = datetime.datetime.utcnow()
+        weather_desc, weather_emoji, temp_c, temp_f = get_mock_weather_dynamic(now_utc)
+
+        if weather_desc in ["Rain", "Snow"]:
+            embed = discord.Embed(
+                title="🚴‍♂️ Bike Travel Denied!",
+                description=(
+                    "> Whoa there! Trying to bike in this weather? "
+                    "> Unless you want a soggy helmet or a snowman as a travel buddy, better wait it out! 🌧️❄️🚴‍♂️"
+                ),
+                color=COLOR_RED,
+            )
+            await ctx.send(embed=embed)
+            return
+
+        embed = discord.Embed(
+            title="🚴‍♂️ Bike Travel",
+            description="> You hop on your bike and enjoy a smooth ride! 🚲💨",
+            color=COLOR_GREEN,
+        )
+        await ctx.send(embed=embed)
+
+def setup(bot):
+    bot.add_cog(Travel(bot))
