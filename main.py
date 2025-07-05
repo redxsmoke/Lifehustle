@@ -68,7 +68,7 @@ async def setup_hook():
     register_travel_commands(tree)  # renamed call
     
     # Load your cog extensions
-    await bot.load_extension("Bot_Commands.bank_commands")
+    await bot.load_extension("Bot_commands.bank_commands")
     bot.add_view(TravelButtons())  # renamed to match change
     try:
         synced = await tree.sync()
