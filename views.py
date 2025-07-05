@@ -10,7 +10,8 @@ import globals  # Make sure pool is initialized here
 import random
 from datetime import datetime, time
 from vehicle_logic import ConfirmSellView, sell_all_vehicles
-from vitals import get_mock_weather_dynamic
+from Bot_commands.vitals_command import get_mock_weather_dynamic
+
 
 # Fixed base prices by vehicle type
 BASE_PRICES = {
