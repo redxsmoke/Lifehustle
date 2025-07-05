@@ -260,9 +260,9 @@ async def sell_all_vehicles(interaction, user_id, vehicles, pool):
         finances["checking_account_balance"] += total_resale
         await upsert_user_finances(pool, user_id, finances)
 
-        await interaction.response.edit_message(
+        await interaction.followup.send(
             content=f"✅ You sold **ALL** your vehicles for a total of ${total_resale:,}.",
-            view=None
+            ephemeral=True  # or False, depending on what you want
         )
 
     except Exception as e:
