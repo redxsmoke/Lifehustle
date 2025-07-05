@@ -207,7 +207,7 @@ class TravelButtons(View):
     @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="travel_drive")
     async def drive_button(self, interaction: Interaction, button: Button):
         try:
-            from Bot_Commands.travel_command import handle_travel
+            from Bot_commands.travel_command import handle_travel
 
             user_id = interaction.user.id
             pool = globals.pool
@@ -233,7 +233,7 @@ class TravelButtons(View):
     @discord.ui.button(label="Bike 🚴 (+$10)", style=discord.ButtonStyle.success, custom_id="travel_bike")
     async def bike_button(self, interaction: Interaction, button: Button):
         try:
-            from Bot_Commands.travel_command import handle_travel
+            from Bot_commands.travel_command import handle_travel
 
             user_id = interaction.user.id
             pool = globals.pool
@@ -259,7 +259,7 @@ class TravelButtons(View):
     @discord.ui.button(label="Subway 🚇 ($10)", style=discord.ButtonStyle.primary, custom_id="travel_subway")
     async def subway_button(self, interaction: Interaction, button: Button):
         try:
-            from Bot_Commands.travel_command import handle_travel
+            from Bot_commands.travel_command import handle_travel
             await interaction.response.defer()
             await handle_travel(interaction, "subway")
             await self.disable_all_items()
@@ -275,7 +275,7 @@ class TravelButtons(View):
     @discord.ui.button(label="Bus 🚌 ($5)", style=discord.ButtonStyle.secondary, custom_id="travel_bus")
     async def bus_button(self, interaction: Interaction, button: Button):
         try:
-            from Bot_Commands.travel_command import handle_travel
+            from Bot_commands.travel_command import handle_travel
             await interaction.response.defer()
             await handle_travel(interaction, "bus")
             await self.disable_all_items()
