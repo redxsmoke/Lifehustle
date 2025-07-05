@@ -99,11 +99,12 @@ class SellFromStashView(View):
         if confirm_view.value is None:
             await interaction.followup.send("⏳ Sale confirmation timed out.", ephemeral=True)
         elif confirm_view.value:  # user confirmed
-            await sell_all_vehicles(interaction, self.user_id, self.vehicles, globals.pool)
+            total_sale = await sell_all_vehicles(interaction, self.user_id, self.vehicles, globals.pool)
             self.vehicles.clear()
-            await interaction.followup.send("✅ All vehicles sold.", ephemeral=True)
-        else:  # user cancelled
-            await interaction.followup.send("❌ Sale cancelled.", ephemeral=True)
+            finances = await get_user_finances(globals.pool, self.user_id)
+            new_balance = finances.get("checking_account_balance", 0)
+            await interaction.followup.send(f"✅ All vehicles sold for **${total_sale:,}**. Your new balance is **${new_balance:,}**.", ephemeral=True)
+
 
     async def start_sell_flow(self, interaction: Interaction, vehicle, vehicle_id):
         self.pending_vehicle = vehicle

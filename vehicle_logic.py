@@ -227,7 +227,8 @@ async def sell_all_vehicles(interaction, user_id, vehicles, pool):
     try:
         if not vehicles:
             await interaction.response.send_message("You have no vehicles to sell.", ephemeral=True)
-            return
+            return 0  # Return 0 when no vehicles to sell
+
         pool = globals.pool
 
         total_resale = 0
