@@ -120,14 +120,14 @@ async def register_commands(bot: discord.Client):
         )
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
 
-        value = f"'{time_emoji} {time_str}'"
+        value = f"`{time_emoji} {time_str}`"
         embed.add_field(name="\u200b🕒 Time", value=value, inline=True)
-        value = f"'{date_str}'"
+        value = f"`{date_str}`"
         embed.add_field(name="\u200b📅 Date", value=value, inline=True)
 
         embed.add_field(name="\u200b", value="\u200b", inline=False)
 
-        value = f"'{checking_account_balance:,}'"
+        value = f"`{checking_account_balance:,}`"
         embed.add_field(name="\u200b💵 Cash on Hand", value=value, inline=True)
         value = f"`{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C`"
         embed.add_field(name="\u200b🌤 Weather", value=value, inline=True)
