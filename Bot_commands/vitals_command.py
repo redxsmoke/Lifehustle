@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 import datetime
 import random
 
@@ -94,8 +95,8 @@ class Vitals(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(name="vitals")
-    async def vitals_command(self, ctx):
+    @app_commands.command(name="vitals", description="Show your vitals including weather and balance")
+    async def vitals(self, interaction: discord.Interaction):
         now_utc = datetime.datetime.utcnow()
         hour = now_utc.hour
         time_emoji = "🌞" if 6 <= hour < 18 else "🌙"
@@ -103,7 +104,7 @@ class Vitals(commands.Cog):
         date_str = now_utc.strftime("%Y-%m-%d")
 
         weather_desc, weather_emoji, temp_c, temp_f = get_mock_weather_dynamic(now_utc)
-        checking_balance = await get_user_checking_balance(ctx.author.id)
+        checking_balance = await get_user_checking_balance(interaction.user.id)
 
         embed = discord.Embed(title="🩺 Vitals", color=0x00ff00)
         embed.add_field(name="Time", value=f"{time_emoji} {time_str}", inline=True)
@@ -111,7 +112,10 @@ class Vitals(commands.Cog):
         embed.add_field(name="Cash on Hand", value=f"💰 ${checking_balance:,}", inline=False)
         embed.add_field(name="Weather", value=f"{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C", inline=False)
 
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
-def setup(bot):
-    bot.add_cog(Vitals(bot))
+async def register_commands(tree: app_commands.CommandTree):
+    bot = tree._bot
+    vitals_cog = Vitals(bot)
+    bot.add_cog(vitals_cog)
+    tree.add_command(vitals_cog.vitals)
