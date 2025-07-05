@@ -498,4 +498,27 @@ def register_commands(tree: app_commands.CommandTree):
     async def purge(interaction: discord.Interaction):
         if interaction.guild is None:
             await interaction.response.send_message(
-                "
+                "❌ This command can't be used in DMs.",
+                ephemeral=True
+            )
+            return
+
+        if not interaction.channel.permissions_for(interaction.guild.me).manage_messages:
+            await interaction.response.send_message(
+                "❌ I need the Manage Messages permission to purge.",
+                ephemeral=True
+            )
+            return
+
+        await interaction.response.defer(ephemeral=True)
+
+        deleted = await interaction.channel.purge(limit=100)
+
+        await interaction.followup.send(
+            embed=embed_message(
+                "🧹 Purge Complete",
+                f"Deleted {len(deleted)} messages to clear clutter.",
+                discord.Color.green()
+            ),
+            ephemeral=True
+        )
