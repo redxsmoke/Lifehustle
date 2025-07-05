@@ -122,6 +122,8 @@ async def register_commands(bot: discord.Client):
 
         embed.add_field(name="🕒 Time", value=f"\u200b{time_emoji} {time_str}", inline=True)
         embed.add_field(name="📅 Date", value=f"\u200b  {date_str}", inline=True)
+
+        
         embed.add_field(name="💵 Cash on Hand", value=f"\u200b${checking_account_balance:,}", inline=True)
         embed.add_field(name="🌤 Weather", value=f"\u200b{weather_emoji} {weather_desc}\n{temp_f}°F / {temp_c}°C", inline=True)
 
