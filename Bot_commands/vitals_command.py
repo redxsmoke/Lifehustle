@@ -87,17 +87,17 @@ def get_mock_weather_dynamic(now=None):
     else:
         return night
 
-async def get_user_checking_balance(user_id):
+async def get_user_checking_account_balance(user_id):
     query = """
-    SELECT checking_balance 
+    SELECT checking_account_balance 
     FROM user_finances
     WHERE user_id = $1
     """
     pool = globals.pool
     async with pool.acquire() as connection:
         result = await connection.fetchrow(query, user_id)
-    if result and result['checking_balance'] is not None:
-        return result['checking_balance']
+    if result and result['checking_account_balance'] is not None:
+        return result['checking_account_balance']
     return 0
 
 async def register_commands(bot: discord.Client):
@@ -110,7 +110,7 @@ async def register_commands(bot: discord.Client):
         date_str = now_utc.strftime("%A, %B %d, %Y")
 
         weather_desc, weather_emoji, temp_c, temp_f = get_mock_weather_dynamic(now_utc)
-        checking_balance = await get_user_checking_balance(interaction.user.id)
+        checking_account_balance = await get_user_checking_account_balance(interaction.user.id)
 
         embed = discord.Embed(
             title="🩺 Vitals Overview",
@@ -122,7 +122,7 @@ async def register_commands(bot: discord.Client):
 
         embed.add_field(name="🕒 Time", value=f"{time_emoji} {time_str}", inline=True)
         embed.add_field(name="📅 Date", value=date_str, inline=True)
-        embed.add_field(name="💵 Cash on Hand", value=f"${checking_balance:,}", inline=False)
+        embed.add_field(name="💵 Cash on Hand", value=f"${checking_account_balance:,}", inline=False)
         embed.add_field(name="🌤 Weather", value=f"{weather_emoji} {weather_desc}\n{temp_f}°F / {temp_c}°C", inline=False)
 
         embed.set_footer(text="LifeHustle Bot | Stay healthy and safe!")
