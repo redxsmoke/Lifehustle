@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import datetime
 import random
+import globals  # your global DB pool
 
 def c_to_f(c):
     return c * 9 / 5 + 32
@@ -87,8 +88,17 @@ def get_mock_weather_dynamic(now=None):
         return night
 
 async def get_user_checking_balance(user_id):
-    # Replace with your DB call; placeholder for now
-    return 12345
+    query = """
+    SELECT checking_balance 
+    FROM user_finances
+    WHERE user_id = $1
+    """
+    pool = globals.pool
+    async with pool.acquire() as connection:
+        result = await connection.fetchrow(query, user_id)
+    if result and result['checking_balance'] is not None:
+        return result['checking_balance']
+    return 0
 
 async def register_commands(bot: discord.Client):
     @bot.tree.command(name="vitals", description="Check your vitals and weather")
@@ -97,16 +107,24 @@ async def register_commands(bot: discord.Client):
         hour = now_utc.hour
         time_emoji = "🌞" if 6 <= hour < 18 else "🌙"
         time_str = now_utc.strftime("%H:%M UTC")
-        date_str = now_utc.strftime("%Y-%m-%d")
+        date_str = now_utc.strftime("%A, %B %d, %Y")
 
         weather_desc, weather_emoji, temp_c, temp_f = get_mock_weather_dynamic(now_utc)
         checking_balance = await get_user_checking_balance(interaction.user.id)
 
-        embed = discord.Embed(title="🩺 Vitals", color=0x00ff00)
-        embed.add_field(name="Time", value=f"{time_emoji} {time_str}", inline=True)
-        embed.add_field(name="Date", value=f"📅 {date_str}", inline=True)
-        embed.add_field(name="Cash on Hand", value=f"💰 ${checking_balance:,}", inline=False)
-        embed.add_field(name="Weather", value=f"{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C", inline=False)
+        embed = discord.Embed(
+            title="🩺 Vitals Overview",
+            description=f"Here's your current vitals and weather report, {interaction.user.display_name}!",
+            color=0x1abc9c,
+            timestamp=now_utc
+        )
+        embed.set_thumbnail(url=interaction.user.display_avatar.url)
+
+        embed.add_field(name="🕒 Time", value=f"{time_emoji} {time_str}", inline=True)
+        embed.add_field(name="📅 Date", value=date_str, inline=True)
+        embed.add_field(name="💵 Cash on Hand", value=f"${checking_balance:,}", inline=False)
+        embed.add_field(name="🌤 Weather", value=f"{weather_emoji} {weather_desc}\n{temp_f}°F / {temp_c}°C", inline=False)
+
+        embed.set_footer(text="LifeHustle Bot | Stay healthy and safe!")
 
         await interaction.response.send_message(embed=embed)
-
