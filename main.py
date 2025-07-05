@@ -64,7 +64,7 @@ async def setup_hook():
     # Register commands from all modules
     register_general_commands(tree)
     register_travel_commands(tree)  # renamed call
-    await register_vitals_commands(tree)
+    await register_vitals_commands(bot)
 
     # Load your cog extensions
     await bot.load_extension("Bot_commands.bank_commands")

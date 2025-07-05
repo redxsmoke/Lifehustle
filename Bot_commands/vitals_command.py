@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 import datetime
 import random
 
@@ -91,12 +90,9 @@ async def get_user_checking_balance(user_id):
     # Replace with your DB call; placeholder for now
     return 12345
 
-class Vitals(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-
-    @app_commands.command(name="vitals", description="Show your vitals including weather and balance")
-    async def vitals(self, interaction: discord.Interaction):
+async def register_commands(bot: discord.Client):
+    @bot.tree.command(name="vitals", description="Check your vitals and weather")
+    async def vitals_command(interaction: discord.Interaction):
         now_utc = datetime.datetime.utcnow()
         hour = now_utc.hour
         time_emoji = "🌞" if 6 <= hour < 18 else "🌙"
@@ -112,10 +108,5 @@ class Vitals(commands.Cog):
         embed.add_field(name="Cash on Hand", value=f"💰 ${checking_balance:,}", inline=False)
         embed.add_field(name="Weather", value=f"{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C", inline=False)
 
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await interaction.response.send_message(embed=embed)
 
-async def register_commands(tree: app_commands.CommandTree):
-    bot = tree._bot
-    vitals_cog = Vitals(bot)
-    bot.add_cog(vitals_cog)
-    tree.add_command(vitals_cog.vitals)
