@@ -232,7 +232,7 @@ async def sell_all_vehicles(interaction, user_id, vehicles, pool):
         total_resale = 0
         vehicle_ids = []
         for vehicle in vehicles:
-            resale = vehicle.get("resale_value", 0)
+            resale = vehicle.get[resale_value]
             total_resale += resale
 
             vehicle_id = vehicle.get("id")
