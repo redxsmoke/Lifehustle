@@ -15,22 +15,24 @@ from discord import app_commands
 # --- Local Imports ---
 from config import DISCORD_BOT_TOKEN, DATABASE_URL
 from db_pool import init_db
-from embeds import embed_message
-from embeds import COLOR_RED
+from embeds import embed_message, COLOR_RED
 from views import TravelButtons  # renamed import to match change
 from create_education_occupation_tables import setup
 
 # Rename imports to avoid name conflicts
 from Bot_commands.commands import register_commands as register_general_commands
-from Bot_commands.travel_command import register_commands as register_travel_commands  # renamed import
-from Bot_commands.vitals_command import register_commands as register_vitals_commands  # Added import for vitals
+from Bot_commands.travel_command import register_commands as register_travel_commands
+from Bot_commands.vitals_command import register_commands as register_vitals_commands
 
-
-
-from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_appearence_table, create_vehicle_appearance_table, seed_vehicle_appearance
+from data_tier import (
+    seed_grocery_types,
+    seed_grocery_categories,
+    drop_vehicle_appearence_table,
+    create_vehicle_appearance_table,
+    seed_vehicle_appearance,
+)
 
 import globals
-
 
 # Bot Setup
 intents = discord.Intents.default()
@@ -45,7 +47,7 @@ async def on_app_command_error(interaction: discord.Interaction, error):
     try:
         await interaction.response.send_message(
             embed=embed_message("❌ Error", str(error), COLOR_RED),
-            ephemeral=True
+            ephemeral=True,
         )
     except Exception as e:
         print(f"Failed to send error message: {e}")
@@ -65,9 +67,9 @@ async def setup_hook():
     register_travel_commands(tree)
     await register_vitals_commands(bot)
 
-    # Load your cog extensions
+    # Load your cog extensions - extensions can access pool via bot.pool
     await bot.load_extension("Bot_commands.bank_commands")
-    await bot.load_extension("Bot_occupations.occupations_commands")  # <-- added
+    await bot.load_extension("Bot_occupations.occupations_commands")
 
     bot.add_view(TravelButtons())  # renamed to match change
 
@@ -86,7 +88,7 @@ async def create_pool():
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
     globals.pool = await asyncpg.create_pool(DATABASE_URL, ssl=ssl_context)
-    bot.pool = globals.pool        # <-- Add this line
+    bot.pool = globals.pool  # Make pool accessible to cogs via bot.pool
     print("✅ Database connection pool created.")
 
 
@@ -97,7 +99,7 @@ async def setup_database():
     await drop_vehicle_appearence_table(globals.pool)
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool)
-    await setup()
+    await setup()  # Setup education and occupation tables
 
 
 # Entrypoint

@@ -3,13 +3,12 @@ from discord.ext import commands
 from discord.ui import View
 import discord
 
-# Make sure to import these from your occupations views or relevant module:
-from Bot_occupations.occupations_views import assign_user_job, get_eligible_occupations
+from Bot_occupations.occupations_views import assign_user_job, get_eligible_occupations, get_user
 
 class ApplyJob(commands.Cog):
-    def __init__(self, bot, pool):
+    def __init__(self, bot):
         self.bot = bot
-        self.pool = pool
+        self.pool = bot.pool
 
     @app_commands.command(name="apply_job", description="Apply for a new job!")
     async def apply_job(self, interaction: discord.Interaction):
@@ -32,23 +31,16 @@ class ApplyJob(commands.Cog):
             async def select_callback(self, select: discord.ui.Select, interaction2: discord.Interaction):
                 selected_id = int(select.values[0])
                 await assign_user_job(self.pool, interaction.user.id, selected_id)
-                # Find label for selected option to show proper job name
                 selected_label = next(opt.label for opt in options if opt.value == select.values[0])
                 await interaction2.response.send_message(f"🎉 You are now employed as a **{selected_label}**!", ephemeral=True)
 
         await interaction.response.send_message("Choose a job to apply for:", view=JobSelectView(), ephemeral=True)
 
-async def setup(bot, pool):
-    await bot.add_cog(ApplyJob(bot, pool))
-
-
-import discord
-from discord.ext import commands
 
 class JobStatus(commands.Cog):
-    def __init__(self, bot, pool):
+    def __init__(self, bot):
         self.bot = bot
-        self.pool = pool
+        self.pool = bot.pool
 
     @commands.command(name="current_job")
     async def current_job(self, ctx):
@@ -71,8 +63,10 @@ class JobStatus(commands.Cog):
             embed.add_field(name="Pay Rate (per shift)", value=f"${occupation['pay_rate']}", inline=True)
             embed.add_field(name="Shifts Required Per Day", value=str(occupation['required_shifts_per_day']), inline=True)
             embed.add_field(name="Hired Since", value=user['job_start_date'].strftime("%Y-%m-%d") if user['job_start_date'] else "Unknown", inline=False)
-            
+
             await ctx.send(embed=embed)
 
-async def setup(bot, pool):
-    await bot.add_cog(JobStatus(bot, pool))
+
+async def setup(bot):
+    await bot.add_cog(ApplyJob(bot))
+    await bot.add_cog(JobStatus(bot))
