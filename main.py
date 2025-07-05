@@ -19,11 +19,10 @@ from embeds import embed_message
 from embeds import COLOR_RED
 from views import TravelButtons  # renamed import to match change
 
-
-
 # Rename imports to avoid name conflicts
 from Bot_commands.commands import register_commands as register_general_commands
 from Bot_commands.travel_command import register_commands as register_travel_commands  # renamed import
+from Bot_commands.vitals_command import register_commands as register_vitals_commands  # Added import for vitals
 
 from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_appearence_table, create_vehicle_appearance_table, seed_vehicle_appearance
 
@@ -62,15 +61,15 @@ async def on_ready():
 async def setup_hook():
     print("🛠️ setup_hook starting...")
 
-    # Register commands from both modules
+    # Register commands from all modules
     register_general_commands(tree)
     register_travel_commands(tree)  # renamed call
-    
+    register_vitals_commands(tree)  # Register vitals commands here
+
     # Load your cog extensions
     await bot.load_extension("Bot_commands.bank_commands")
-    await bot.load_extension("vitals_command")      
-    
     bot.add_view(TravelButtons())  # renamed to match change
+
     try:
         synced = await tree.sync()
         print(f"✅ Synced {len(synced)} slash commands.")
@@ -78,6 +77,7 @@ async def setup_hook():
         print(f"❌ Error syncing commands in setup_hook: {e}")
 
     print("🛠️ setup_hook finished.")
+
 # DB Setup
 async def create_pool():
     ssl_context = ssl.create_default_context()
