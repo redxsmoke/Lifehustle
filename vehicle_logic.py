@@ -269,8 +269,15 @@ async def sell_all_vehicles(interaction, user_id, vehicles, pool):
         print(f"Error in sell_all_vehicles: {e}")
         import traceback
         traceback.print_exc()
-        if not interaction.response.is_done():
+
+        try:
             await interaction.response.send_message(
+                "❌ Something went wrong while selling all your vehicles. Please try again later.",
+                ephemeral=True
+            )
+        except discord.InteractionResponded:
+            # fallback if the interaction was already responded to
+            await interaction.followup.send(
                 "❌ Something went wrong while selling all your vehicles. Please try again later.",
                 ephemeral=True
             )
