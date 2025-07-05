@@ -171,7 +171,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
             )
 
 
-  
+  def register_commands(tree: app_commands.CommandTree):
     @tree.command(name="shop", description="Shop for items by category")
     @app_commands.describe(category="Which category to browse?")
     @app_commands.choices(category=[
