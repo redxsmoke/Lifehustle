@@ -1,1 +1,1 @@
-touch commands/__init__.py
+# This makes the folder a Python package
