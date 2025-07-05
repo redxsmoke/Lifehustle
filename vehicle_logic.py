@@ -229,8 +229,6 @@ async def sell_all_vehicles(interaction, user_id, vehicles, pool):
             await interaction.response.send_message("You have no vehicles to sell.", ephemeral=True)
             return 0  # Return 0 when no vehicles to sell
 
-        pool = globals.pool
-
         total_resale = 0
         vehicle_ids = []
         for vehicle in vehicles:
@@ -262,9 +260,6 @@ async def sell_all_vehicles(interaction, user_id, vehicles, pool):
         finances["checking_account_balance"] += total_resale
         await upsert_user_finances(pool, user_id, finances)
 
-        # Clear local vehicle list (if needed elsewhere)
-        # (If this function doesn't keep the list, you can omit)
-        
         await interaction.response.edit_message(
             content=f"✅ You sold **ALL** your vehicles for a total of ${total_resale:,}.",
             view=None
