@@ -138,9 +138,10 @@ async def handle_vehicle_purchase(
 
         resale_percent = CONDITION_TO_PERCENT.get(condition_name, 0.5)
         resale_value = int(BASE_PRICES.get(vehicle_type_id, cost) * resale_percent)
-
+        print(f"[DEBUG] vehicle_type_id={vehicle_type_id}, resale_percent={resale_percent}, resale_value={resale_value}")
         await conn.execute(
             """
+            
             INSERT INTO user_vehicle_inventory (
                 user_id, vehicle_type_id, plate_number, color, appearance_description,
                 condition, travel_count, resale_value, resale_percent, created_at, sold_at
