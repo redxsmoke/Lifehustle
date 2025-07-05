@@ -113,17 +113,17 @@ async def register_commands(bot: discord.Client):
         checking_account_balance = await get_user_checking_account_balance(interaction.user.id)
 
         embed = discord.Embed(
-            title="🩺 Vitals Overview",
-            description=f"Here's your current vitals and weather report, {interaction.user.display_name}!",
+            title="⚕️ Vitals Overview",
+            description=f"Current vitals and weather report, {interaction.user.display_name}!",
             color=0x1abc9c,
             timestamp=now_utc
         )
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
 
-        embed.add_field(name="🕒 Time", value=f"{time_emoji} {time_str}", inline=True)
-        embed.add_field(name="📅 Date", value=date_str, inline=True)
-        embed.add_field(name="💵 Cash on Hand", value=f"${checking_account_balance:,}", inline=False)
-        embed.add_field(name="🌤 Weather", value=f"{weather_emoji} {weather_desc}\n{temp_f}°F / {temp_c}°C", inline=False)
+        embed.add_field(name="> 🕒 Time", value=f"{time_emoji} {time_str}", inline=True)
+        embed.add_field(name="> 📅 Date", value=date_str, inline=True)
+        embed.add_field(name="> 💵 Cash on Hand", value=f"${checking_account_balance:,}", inline=False)
+        embed.add_field(name="> 🌤 Weather", value=f"{weather_emoji} {weather_desc}\n{temp_f}°F / {temp_c}°C", inline=False)
 
         embed.set_footer(text="LifeHustle Bot | Stay healthy and safe!")
 
