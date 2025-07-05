@@ -463,7 +463,7 @@ class VehicleUseButton(Button):
             finances = await get_user_finances(pool, user_id)
 
             # Select a weighted travel outcome for the method ('drive' treated as 'car')
-            travel_type = "car" if self.method == "drive" else self.method
+            #travel_type = "car" if self.method == "drive" else self.method
             outcome = await select_weighted_travel_outcome(pool, travel_type)
 
             updated_finances = await get_user_finances(pool, user_id)
