@@ -9,6 +9,7 @@ import globals
 
 from discord import app_commands, Interaction
 from db_user import get_user, upsert_user, get_user_finances
+from views import ConfirmSellView, sell_all_vehicles
 from utilities import (
     charge_user,
     update_vehicle_condition_and_description,
