@@ -18,7 +18,7 @@ from db_pool import init_db
 from embeds import embed_message
 from embeds import COLOR_RED
 from views import TravelButtons  # renamed import to match change
-from create_education_and_occupation_tables import setup_db
+from create_education_occupation_tables import setup_db
 
 # Rename imports to avoid name conflicts
 from Bot_commands.commands import register_commands as register_general_commands
