@@ -4,7 +4,7 @@ from discord.ui import View
 import discord
 
 # Make sure to import these from your occupations views or relevant module:
-from your_module import get_user, get_eligible_occupations, assign_user_job
+from occupations get assign_user_job, get_eligible_occupations
 
 class ApplyJob(commands.Cog):
     def __init__(self, bot, pool):
