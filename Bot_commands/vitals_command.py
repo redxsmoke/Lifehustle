@@ -122,7 +122,7 @@ async def register_commands(bot: discord.Client):
 
         value = f"{time_emoji} {time_str}"
         embed.add_field(name="\u200b🕒 Time", value=value, inline=True)
-        value = f"{date_str}
+        value = f"{date_str}"
         embed.add_field(name="\u200b📅 Date", value=value, inline=True)
 
         embed.add_field(name="\u200b", value="\u200b", inline=False)
