@@ -232,12 +232,23 @@ async def sell_all_vehicles(interaction, user_id, vehicles, pool):
         total_resale = 0
         vehicle_ids = []
 
+        vehicles = await pool.fetch(
+            """
+            SELECT uvi.id, uvi.vehicle_type_id, uvi.resale_percent, cvt.cost
+            FROM user_vehicle_inventory uvi
+            JOIN cd_vehicle_type cvt ON uvi.vehicle_type_id = cvt.id
+            WHERE uvi.user_id = $1
+            ORDER BY uvi.id
+            """,
+            user_id
+        )
+
         for vehicle in vehicles:
-            vehicle_type_id = vehicle.get("vehicle_type_id")  # Use the correct key
-            base_price = BASE_PRICES.get(vehicle_type_id, 0)
-            resale_percent = vehicle.get("resale_percent", 0.10)
-            resale = int(base_price * resale_percent)
+            resale_percent = vehicle['resale_percent'] or 0.1  # fallback if null
+            cost = vehicle['cost'] or 0
+            resale = int(cost * resale_percent)
             total_resale += resale
+            vehicle_ids.append(vehicle['id'])
 
         # Delete all vehicles in one query
         await pool.execute(
