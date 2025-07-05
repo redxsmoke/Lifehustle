@@ -253,7 +253,7 @@ class TravelButtons(View):
         else:
             return False
 
-    @discord.ui.button(label="car 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="travel_car")
+    @discord.ui.button(label="Car 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="travel_car")
     async def car_button(self, interaction: Interaction, button: Button):
         try:
             from Bot_commands.travel_command import handle_travel

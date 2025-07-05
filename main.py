@@ -18,6 +18,7 @@ from db_pool import init_db
 from embeds import embed_message
 from embeds import COLOR_RED
 from views import TravelButtons  # renamed import to match change
+from create_education_and_occupation_tables import setup_db
 
 # Rename imports to avoid name conflicts
 from Bot_commands.commands import register_commands as register_general_commands
@@ -87,7 +88,7 @@ async def setup_database():
     await drop_vehicle_appearence_table(globals.pool)
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool)
-    
+    await setup_db
 
 # Entrypoint
 async def main():
