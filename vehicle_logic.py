@@ -216,17 +216,17 @@ class ConfirmSellView(discord.ui.View):
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
-            await interaction.response.send_message("This confirmation is not for you.", ephemeral=True)
+            await interaction.response.send_message("> This confirmation is not for you.", ephemeral=True)
             return
 
         self.value = False
         self.stop()
-        await interaction.response.edit_message(content="❌ Sale cancelled.", view=None)
+        await interaction.response.edit_message(content="> ❌ Sale cancelled.", view=None)
 
 async def sell_all_vehicles(interaction, user_id, vehicles, pool):
     try:
         if not vehicles:
-            await interaction.response.send_message("You have no vehicles to sell.", ephemeral=True)
+            await interaction.response.send_message("> You have no vehicles to sell.", ephemeral=True)
             return 0  # Return 0 when no vehicles to sell
 
         total_resale = 0
@@ -272,7 +272,7 @@ async def sell_all_vehicles(interaction, user_id, vehicles, pool):
         await upsert_user_finances(pool, user_id, finances)
 
         await interaction.followup.send(
-            content=f"✅ You sold **ALL** your vehicles for a total of ${total_resale:,}.",
+            content=f"> ✅ You sold **ALL** your vehicles for a total of ${total_resale:,}.",
             ephemeral=True  # or False, depending on what you want
         )
 
@@ -283,12 +283,12 @@ async def sell_all_vehicles(interaction, user_id, vehicles, pool):
 
         try:
             await interaction.response.send_message(
-                "❌ Something went wrong while selling all your vehicles. Please try again later.",
+                "> ❌ Something went wrong while selling all your vehicles. Please try again later.",
                 ephemeral=True
             )
         except discord.InteractionResponded:
             # fallback if the interaction was already responded to
             await interaction.followup.send(
-                "❌ Something went wrong while selling all your vehicles. Please try again later.",
+                "> ❌ Something went wrong while selling all your vehicles. Please try again later.",
                 ephemeral=True
             )

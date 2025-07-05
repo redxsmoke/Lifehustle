@@ -68,6 +68,8 @@ async def setup_hook():
     
     # Load your cog extensions
     await bot.load_extension("Bot_commands.bank_commands")
+    await bot.load_extension("vitals_command")      
+    
     bot.add_view(TravelButtons())  # renamed to match change
     try:
         synced = await tree.sync()
@@ -76,7 +78,6 @@ async def setup_hook():
         print(f"❌ Error syncing commands in setup_hook: {e}")
 
     print("🛠️ setup_hook finished.")
-
 # DB Setup
 async def create_pool():
     ssl_context = ssl.create_default_context()
