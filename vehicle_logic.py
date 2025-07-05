@@ -234,12 +234,12 @@ async def sell_all_vehicles(interaction, user_id, vehicles, pool):
 
         for vehicle in vehicles:
             resale = vehicle["resale_value"]
+            if not resale:
+                # fallback calculation
+                base_price = BASE_PRICES.get(vehicle["vehicle_type"], 0)
+                resale_percent = vehicle["resale_percent"] or 0.1
+                resale = int(base_price * resale_percent)
             total_resale += resale
-
-            vehicle_id = vehicle["id"]
-            vehicle_ids.append(vehicle_id)
-
-            print(f"[DEBUG] Vehicle ID {vehicle_id} resale value: ${resale}")
 
         # Delete all vehicles in one query
         await pool.execute(
