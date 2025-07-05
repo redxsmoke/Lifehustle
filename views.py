@@ -34,11 +34,15 @@ class SellButton(Button):
         self.parent_view = parent_view
         self.vehicle_id = vehicle_id
 
+        
+
     async def callback(self, interaction: Interaction):
         if interaction.user.id != self.parent_view.user_id:
             await interaction.response.send_message("This isn't your stash.", ephemeral=True)
             return
         await self.parent_view.start_sell_flow(interaction, self.vehicle, self.vehicle_id)
+
+        
 
 
 class SellFromStashView(View):
@@ -54,6 +58,11 @@ class SellFromStashView(View):
                 self.add_item(SellButton(vehicle, self))
             else:
                 print(f"[WARNING] Vehicle without valid ID skipped: {vehicle}")
+
+        # Add Sell All button at the end
+        sell_all_btn = Button(label="Sell All", style=discord.ButtonStyle.danger)
+        sell_all_btn.callback = self.sell_all_callback
+        self.add_item(sell_all_btn)
 
     def make_button_label(self, vehicle):
         emoji = {
@@ -101,6 +110,11 @@ class SellFromStashView(View):
             for v in self.vehicles:
                 if v.get("id"):
                     self.add_item(SellButton(v, self))
+            # Re-add Sell All button after cancel
+            sell_all_btn = Button(label="Sell All", style=discord.ButtonStyle.danger)
+            sell_all_btn.callback = self.sell_all_callback
+            self.add_item(sell_all_btn)
+
             await i.response.edit_message(content="Sale cancelled.", view=self)
 
         confirm_btn.callback = confirm_callback
@@ -155,10 +169,18 @@ class SellFromStashView(View):
             self.pending_vehicle = None
             self.pending_vehicle_id = None
             self.clear_items()
+            # Rebuild buttons for remaining vehicles
+            for v in self.vehicles:
+                if v.get("id"):
+                    self.add_item(SellButton(v, self))
+            # Re-add Sell All button
+            sell_all_btn = Button(label="Sell All", style=discord.ButtonStyle.danger)
+            sell_all_btn.callback = self.sell_all_callback
+            self.add_item(sell_all_btn)
 
             await interaction.response.edit_message(
                 content=f"✅ You sold your {sold_type} for ${resale:,} ({condition}).",
-                view=None
+                view=self if self.vehicles else None
             )
         except Exception:
             print("Error in confirm_sale:")
@@ -166,6 +188,59 @@ class SellFromStashView(View):
             if not interaction.response.is_done():
                 await interaction.response.send_message(
                     "❌ Something went wrong while selling your vehicle. Please try again later.",
+                    ephemeral=True
+                )
+    async def confirm_sell_all(self, interaction: Interaction):
+        try:
+            if not self.vehicles:
+                await interaction.response.send_message("You have no vehicles to sell.", ephemeral=True)
+                return
+
+            total_resale = 0
+            vehicle_ids = []
+            for vehicle in self.vehicles:
+                base_price = BASE_PRICES.get(vehicle.get("type"), 0)
+                resale_percent = vehicle.get("resale_percent", 0.10)
+                resale = int(base_price * resale_percent)
+                total_resale += resale
+                if vehicle.get("id"):
+                    vehicle_ids.append(vehicle["id"])
+
+            # Delete all vehicles in one query
+            await globals.pool.execute(
+                "DELETE FROM user_vehicle_inventory WHERE id = ANY($1::int[])",
+                vehicle_ids
+            )
+
+            from db_user import get_user_finances, upsert_user_finances
+            from datetime import datetime, timezone
+
+            finances = await get_user_finances(globals.pool, self.user_id)
+            if finances is None:
+                finances = {
+                    "checking_account_balance": 0,
+                    "savings_account_balance": 0,
+                    "debt_balance": 0,
+                    "last_paycheck_claimed": datetime.fromtimestamp(0, tz=timezone.utc)
+                }
+
+            finances["checking_account_balance"] += total_resale
+            await upsert_user_finances(globals.pool, self.user_id, finances)
+
+            self.vehicles = []  # Clear local vehicle list
+
+            self.clear_items()
+            await interaction.response.edit_message(
+                content=f"✅ You sold **ALL** your vehicles for a total of ${total_resale:,}.",
+                view=None
+            )
+
+        except Exception:
+            print("Error in confirm_sell_all:")
+            traceback.print_exc()
+            if not interaction.response.is_done():
+                await interaction.response.send_message(
+                    "❌ Something went wrong while selling all your vehicles. Please try again later.",
                     ephemeral=True
                 )
 
@@ -538,3 +613,7 @@ class GroceryStashPaginationView(View):
         for child in self.children:
             child.disabled = True
  
+from discord.ui import View, Button
+from discord import ButtonStyle
+
+

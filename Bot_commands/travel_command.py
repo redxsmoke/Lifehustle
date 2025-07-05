@@ -65,6 +65,27 @@ def register_commands(tree: app_commands.CommandTree):
         )
         view.message = msg
 
+    @tree.command(name="stash", description="View and sell your vehicles")
+    async def stash(interaction: Interaction):
+        pool = globals.pool
+        if pool is None:
+            await interaction.response.send_message(
+                "⚠️ The database isn’t ready yet. Try again in a moment.", ephemeral=True
+            )
+            return
+
+        user_id = interaction.user.id
+        vehicles = await get_user_vehicles(pool, user_id)
+        if not vehicles:
+            await interaction.response.send_message(
+                "You have no vehicles in your stash.", ephemeral=True
+            )
+            return
+
+        from views import SellFromStashView
+        view = SellFromStashView(user_id, vehicles)
+        await interaction.response.send_message("Your stash:", view=view, ephemeral=True)
+
 async def handle_travel(interaction: Interaction, method: str):
     pool = globals.pool
     user_id = interaction.user.id
@@ -237,4 +258,4 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
             color=COLOR_GREEN
         ),
         ephemeral=True
-    )#
+    )
