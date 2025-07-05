@@ -10,6 +10,7 @@ import globals  # Make sure pool is initialized here
 import random
 from datetime import datetime, time
 from vehicle_logic import ConfirmSellView, sell_all_vehicles
+from vitals import get_mock_weather_dynamic
 
 # Fixed base prices by vehicle type
 BASE_PRICES = {
@@ -282,6 +283,23 @@ class TravelButtons(View):
         try:
             from Bot_commands.travel_command import handle_travel
 
+            now_utc = datetime.utcnow()
+            weather_desc, weather_emoji, temp_c, temp_f = get_mock_weather_dynamic(now_utc)
+
+            # Block biking if it's raining or snowing
+            if weather_desc in ["Rain", "Snow"]:
+                embed = embed_message(
+                    title="🚴‍♂️ Bike Travel Denied!",
+                    description=(
+                        f"Whoa there! Trying to bike in this weather?\n"
+                        f"Unless you want a soggy helmet or a snowman as a travel buddy, better wait it out! "
+                        f"{weather_emoji} {weather_desc}"
+                    ),
+                    color=COLOR_RED
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+
             user_id = interaction.user.id
             pool = globals.pool
             cost = 10
@@ -335,17 +353,6 @@ class TravelButtons(View):
                     ephemeral=True
                 )
 
-    async def on_timeout(self):
-        for child in self.children:
-            child.disabled = True
-        if self.message:
-            try:
-                await self.message.edit(
-                    content="⌛ Travel selection timed out. Please try again.",
-                    view=self
-                )
-            except Exception as e:
-                print(f"[ERROR] Failed to edit message on timeout: {e}")
     async def on_timeout(self):
         for child in self.children:
             child.disabled = True
