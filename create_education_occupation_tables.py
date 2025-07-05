@@ -161,3 +161,29 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+
+
+async def create_user_work_log_table(pool):
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS user_work_log (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT REFERENCES users(user_id) ON DELETE CASCADE,
+                work_timestamp TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+        """)
+        print("✅ Created table: user_work_log")
+
+async def setup_db():
+    pool = await asyncpg.create_pool(
+        user='your_user',
+        password='your_password',
+        database='your_database',
+        host='localhost',  # or Railway DB host
+        port=5432
+    )
+    await create_user_work_log_table(pool)
+    await pool.close()
+
+if __name__ == "__main__":
+    asyncio.run(setup_db())
