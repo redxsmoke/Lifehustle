@@ -610,30 +610,5 @@ class GroceryStashPaginationView(View):
         for child in self.children:
             child.disabled = True
  
-class ConfirmSellView(discord.ui.View):
-    def __init__(self, user_id, vehicles, timeout=60):
-        super().__init__(timeout=timeout)
-        self.user_id = user_id
-        self.vehicles = vehicles
-        self.value = None  # will be True if confirmed, False if cancelled
 
-    @discord.ui.button(label="Confirm Sell All", style=discord.ButtonStyle.danger)
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("This confirmation is not for you.", ephemeral=True)
-            return
-
-        self.value = True
-        self.stop()
-        await interaction.response.edit_message(content="✅ Confirmed! Selling all vehicles...", view=None)
-
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("This confirmation is not for you.", ephemeral=True)
-            return
-
-        self.value = False
-        self.stop()
-        await interaction.response.edit_message(content="❌ Sale cancelled.", view=None)
 

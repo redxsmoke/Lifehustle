@@ -181,6 +181,15 @@ async def get_user_vehicles(pool, user_id: int) -> list:
 async def remove_vehicle_by_id(pool, vehicle_id: int):
     await pool.execute("DELETE FROM user_vehicle_inventory WHERE id = $1", vehicle_id)
 
+async def sell_all_vehicles(interaction, user_id, vehicles):
+    from db_user import delete_user_vehicles
+    from utilities import reward_user
+
+    total_value = 0
+    for v in vehicles:
+        value = v.get("resale_value", 0)
+        total_value += value
+
 
 # ✅ View + Button to Trigger Purchase
 class PurchaseVehicleView(discord.ui.View):
@@ -189,7 +198,36 @@ class PurchaseVehicleView(discord.ui.View):
         self.item = item
         self.cost = cost
 
+
+
     @discord.ui.button(label="Buy Vehicle", style=discord.ButtonStyle.success)
     async def buy_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         print(f"[DEBUG] Buy button clicked by {interaction.user.id}")
         await handle_vehicle_purchase(interaction, self.item, self.cost)
+
+class ConfirmSellView(discord.ui.View):
+    def __init__(self, user_id, vehicles, timeout=60):
+        super().__init__(timeout=timeout)
+        self.user_id = user_id
+        self.vehicles = vehicles
+        self.value = None  # will be True if confirmed, False if cancelled
+
+    @discord.ui.button(label="Confirm Sell All", style=discord.ButtonStyle.danger)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This confirmation is not for you.", ephemeral=True)
+            return
+
+        self.value = True
+        self.stop()
+        await interaction.response.edit_message(content="✅ Confirmed! Selling all vehicles...", view=None)
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This confirmation is not for you.", ephemeral=True)
+            return
+
+        self.value = False
+        self.stop()
+        await interaction.response.edit_message(content="❌ Sale cancelled.", view=None)
