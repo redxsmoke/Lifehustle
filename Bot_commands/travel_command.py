@@ -240,3 +240,27 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
         ),
         ephemeral=True
     )
+async def on_sell_all_button_click(interaction: discord.Interaction, user_id, vehicles):
+    # Send confirmation prompt
+    confirm_view = ConfirmSellView(user_id, vehicles)
+    await interaction.response.send_message(
+        "Are you sure you want to **sell all your vehicles**? This action cannot be undone.",
+        view=confirm_view,
+        ephemeral=True
+    )
+
+    # Wait for user to click confirm or cancel
+    await confirm_view.wait()
+
+    if confirm_view.value is None:
+        # User did not respond within timeout
+        await interaction.followup.send("⏳ Sale confirmation timed out.", ephemeral=True)
+    elif confirm_view.value:
+        # User confirmed sale
+        # Proceed with selling vehicles here (your existing sale logic)
+        # For example:
+        await sell_all_vehicles(interaction, user_id, vehicles)
+    else:
+        # User cancelled
+        # Nothing else needed, message already updated
+        pass
