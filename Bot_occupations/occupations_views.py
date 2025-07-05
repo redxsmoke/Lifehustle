@@ -1,3 +1,6 @@
+from db_user import get_user
+
+
 async def get_eligible_occupations(pool, user_education_level: int):
     async with pool.acquire() as conn:
         return await conn.fetch('''
