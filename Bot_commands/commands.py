@@ -5,7 +5,7 @@ import asyncio
 import defaults
 import discord
 from discord import app_commands, Interaction
-import category_loader
+
 from vehicle_logic import generate_random_plate
 import globals
 
