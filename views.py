@@ -9,7 +9,7 @@ import vehicle_logic
 import globals  # Make sure pool is initialized here
 import random
 from datetime import datetime, time
-
+from vehicle_logic import ConfirmSellView, sell_all_vehicles
 
 # Fixed base prices by vehicle type
 BASE_PRICES = {
