@@ -25,6 +25,8 @@ from Bot_commands.commands import register_commands as register_general_commands
 from Bot_commands.travel_command import register_commands as register_travel_commands  # renamed import
 from Bot_commands.vitals_command import register_commands as register_vitals_commands  # Added import for vitals
 
+
+
 from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_appearence_table, create_vehicle_appearance_table, seed_vehicle_appearance
 
 import globals
