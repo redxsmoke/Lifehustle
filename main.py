@@ -20,11 +20,11 @@ from embeds import embed_message
 from embeds import COLOR_RED
 from views import TravelButtons  # renamed import to match change
 
-from createtraveloutcomes import main as create_travel_outcomes_main
+
 
 # Rename imports to avoid name conflicts
-from commands import register_commands as register_general_commands
-from travel_command import register_commands as register_travel_commands  # renamed import
+from Bot_commands.commands import register_commands as register_general_commands
+from Bot_commands.travel_command import register_commands as register_travel_commands  # renamed import
 
 from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_appearence_table, create_vehicle_appearance_table, seed_vehicle_appearance
 
@@ -68,7 +68,7 @@ async def setup_hook():
     register_travel_commands(tree)  # renamed call
     
     # Load your cog extensions
-    await bot.load_extension("bank_commands")
+    await bot.load_extension("Bot_Commands.bank_commands")
     bot.add_view(TravelButtons())  # renamed to match change
     try:
         synced = await tree.sync()
@@ -94,8 +94,7 @@ async def setup_database():
     await drop_vehicle_appearence_table(globals.pool)
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool)
-    # Pass the existing pool to the travel outcomes seeder
-    await create_travel_outcomes_main(globals.pool)
+    
 
 # Entrypoint
 async def main():
