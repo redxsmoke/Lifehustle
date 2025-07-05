@@ -67,7 +67,6 @@ async def setup_hook():
 
     # Load your cog extensions
     await bot.load_extension("Bot_commands.bank_commands")
-    await bot.load_extension("Bot_occupations.JobStatus")
     await bot.load_extension("Bot_occupations.occupations_commands")  # <-- added
 
     bot.add_view(TravelButtons())  # renamed to match change
