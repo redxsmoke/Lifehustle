@@ -120,13 +120,19 @@ async def register_commands(bot: discord.Client):
         )
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
 
-        embed.add_field(name="🕒 Time", value=f"{time_emoji} {time_str}", inline=True)
-        embed.add_field(name="📅 Date", value=f"{date_str}", inline=True)
+        value = f"{time_emoji} {time_str}"
+        embed.add_field(name="\u200b🕒 Time", value=value, inline=True)
+        value = f"{date_str}
+        embed.add_field(name="\u200b📅 Date", value=value, inline=True)
 
-        embed.add_field(name="\u200b", value="\u200b", inline=False)  # Blank line separator
+        embed.add_field(name="\u200b", value="\u200b", inline=False)
 
-        embed.add_field(name="💵 Cash on Hand", value=f"${checking_account_balance:,}", inline=True)
-        embed.add_field(name="🌤 Weather", value=f"{weather_emoji} {weather_desc}\n{temp_f}°F / {temp_c}°C", inline=True)
+        value = f"{checking_account_balance:,}"
+        embed.add_field(name="\u200b💵 Cash on Hand", value=value, inline=True)
+        value = f"`{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C`"
+        embed.add_field(name="\u200b🌤 Weather", value=value, inline=True)
+        
+        embed.add_field(name="\u200b", value="\u200b", inline=False)
 
         embed.set_footer(text="LifeHustle Bot | Stay healthy and safe!")
 
