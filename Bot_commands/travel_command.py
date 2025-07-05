@@ -271,7 +271,7 @@ async def on_sell_all_button_click(interaction: discord.Interaction, user_id, ve
         # User cancelled
         # Nothing else needed, message already updated
         pass
-from vitals_command import get_mock_weather_dynamic  # Adjust import path as needed
+
 
 class Travel(commands.Cog):
     def __init__(self, bot):
