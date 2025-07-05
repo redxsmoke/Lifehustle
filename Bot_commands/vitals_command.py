@@ -126,7 +126,7 @@ async def register_commands(bot: discord.Client):
         embed.add_field(name="\u200b", value="\u200b", inline=False)  # Spacer line
 
         embed.add_field(name="\u200b💵 Cash on Hand", value=cash_value, inline=True)
-        embed.add_field(name="\u200b🌤 Weather", value=weather_value, inline=True)
+        value = f"{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C"
         embed.add_field(name="\u200b", value="\u200b", inline=False)
 
         embed.set_footer(text="LifeHustle Bot | Stay healthy and safe!")
