@@ -86,6 +86,7 @@ async def create_pool():
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
     globals.pool = await asyncpg.create_pool(DATABASE_URL, ssl=ssl_context)
+    bot.pool = globals.pool        # <-- Add this line
     print("✅ Database connection pool created.")
 
 
