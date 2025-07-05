@@ -4,6 +4,7 @@ import datetime
 import random
 import globals  # your global DB pool
 
+# Helper functions you already have (keep these as is)
 def c_to_f(c):
     return c * 9 / 5 + 32
 
@@ -100,17 +101,41 @@ async def get_user_checking_account_balance(user_id):
         return result['checking_account_balance']
     return 0
 
+# Updated vitals command with shifts worked logic
 async def register_commands(bot: discord.Client):
     @bot.tree.command(name="vitals", description="Check your vitals and weather")
     async def vitals_command(interaction: discord.Interaction):
         now_utc = datetime.datetime.utcnow()
         hour = now_utc.hour
-        time_emoji = "🌞" if 6 <= hour < 18 else "🌙"
+        time_emoji = "☀️" if 6 <= hour < 18 else "🌙"
         time_str = now_utc.strftime("%H:%M UTC")
         date_str = now_utc.strftime("%A, %B %d, %Y")
 
         weather_desc, weather_emoji, temp_c, temp_f = get_mock_weather_dynamic(now_utc)
         checking_account_balance = await get_user_checking_account_balance(interaction.user.id)
+
+        # --- NEW: Fetch shifts worked today and required shifts ---
+        pool = globals.pool
+        async with pool.acquire() as conn:
+            user_job = await conn.fetchrow('''
+                SELECT u.occupation_id, o.required_shifts_per_day
+                FROM users u
+                LEFT JOIN cd_occupations o ON u.occupation_id = o.cd_occupation_id
+                WHERE u.user_id = $1
+            ''', interaction.user.id)
+
+            shifts_worked = 0
+            required_shifts = 0
+            if user_job and user_job['occupation_id']:
+                required_shifts = user_job['required_shifts_per_day'] or 0
+
+                shifts_worked = await conn.fetchval('''
+                    SELECT COUNT(*)
+                    FROM user_work_log
+                    WHERE user_id = $1
+                    AND work_timestamp >= date_trunc('day', NOW() AT TIME ZONE 'UTC')
+                ''', interaction.user.id)
+                shifts_worked = shifts_worked or 0
 
         embed = discord.Embed(
             title="⚕️ Vitals Overview",
@@ -131,7 +156,14 @@ async def register_commands(bot: discord.Client):
         embed.add_field(name="\u200b💵 Cash on Hand", value=value, inline=True)
         value = f"`{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C`"
         embed.add_field(name="\u200b🌤 Weather", value=value, inline=True)
-        
+
+        # --- NEW FIELD ---
+        if user_job is None or user_job['occupation_id'] is None:
+            embed.add_field(name="\u200b🛠 Shifts Worked Today", value="Unemployed", inline=False)
+        elif required_shifts > 0:
+            embed.add_field(name="\u200b🛠 Shifts Worked Today", value=f"{shifts_worked} / {required_shifts}", inline=False)
+
+
         embed.add_field(name="\u200b", value="\u200b", inline=False)
 
         embed.set_footer(text="LifeHustle Bot | Stay healthy and safe!")

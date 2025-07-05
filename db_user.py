@@ -20,15 +20,17 @@ async def get_user(pool, user_id: int):
 async def upsert_user(pool, user_id: int, data: dict):
     async with pool.acquire() as conn:
         await conn.execute('''
-            INSERT INTO users (user_id, user_name, last_seen)
-            VALUES ($1, $2, $3)
+            INSERT INTO users (user_id, user_name, last_seen, education_level_id)
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT (user_id) DO UPDATE SET
                 user_name = EXCLUDED.user_name,
                 last_seen = EXCLUDED.last_seen
         ''', user_id,
              data.get('user_name'),
-             data.get('last_seen')
+             data.get('last_seen'),
+             1  # default education_level_id
         )
+
 
 
 # ---------- USER_FINANCES TABLE (Money, Debts, Paycheck Timestamp) ----------

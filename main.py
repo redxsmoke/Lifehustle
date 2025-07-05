@@ -30,12 +30,12 @@ from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_
 import globals
 
 
-
 # Bot Setup
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
+
 
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error):
@@ -48,9 +48,11 @@ async def on_app_command_error(interaction: discord.Interaction, error):
     except Exception as e:
         print(f"Failed to send error message: {e}")
 
+
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
+
 
 @bot.event
 async def setup_hook():
@@ -58,11 +60,14 @@ async def setup_hook():
 
     # Register commands from all modules
     register_general_commands(tree)
-    register_travel_commands(tree)  # renamed call
+    register_travel_commands(tree)
     await register_vitals_commands(bot)
 
     # Load your cog extensions
     await bot.load_extension("Bot_commands.bank_commands")
+    await bot.load_extension("Bot_occupations.ApplyJob")    # <-- added
+    await bot.load_extension("Bot_occupations.JobStatus")   # <-- added
+
     bot.add_view(TravelButtons())  # renamed to match change
 
     try:
@@ -73,6 +78,7 @@ async def setup_hook():
 
     print("🛠️ setup_hook finished.")
 
+
 # DB Setup
 async def create_pool():
     ssl_context = ssl.create_default_context()
@@ -80,6 +86,7 @@ async def create_pool():
     ssl_context.verify_mode = ssl.CERT_NONE
     globals.pool = await asyncpg.create_pool(DATABASE_URL, ssl=ssl_context)
     print("✅ Database connection pool created.")
+
 
 async def setup_database():
     await init_db(globals.pool)
@@ -90,6 +97,7 @@ async def setup_database():
     await seed_vehicle_appearance(globals.pool)
     await setup()
 
+
 # Entrypoint
 async def main():
     await create_pool()
@@ -97,8 +105,6 @@ async def main():
     print("✅ Starting bot...")
     await bot.start(DISCORD_BOT_TOKEN)
 
+
 if __name__ == "__main__":
     asyncio.run(main())
-
-
-
