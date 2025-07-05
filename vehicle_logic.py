@@ -6,14 +6,13 @@ from datetime import datetime, timezone
 
 # Base prices for resale calculation
 BASE_PRICES = {
-    "Beater Car": 10000,
-    "Sedan Car": 25000,
-    "Sports Car": 100000,
-    "Pickup Truck": 75000,
-    "Bike": 2000,
-    "Motorcycle": 18000
+    1: 10000,    # Beater Car
+    2: 25000,    # Sedan Car
+    3: 100000,   # Sports Car
+    4: 75000,    # Pickup Truck
+    5: 2000,     # Bike
+    6: 18000     # Motorcycle
 }
-
 # Condition → resale percent
 CONDITION_TO_PERCENT = {
     "Brand New": 0.85,
@@ -138,7 +137,7 @@ async def handle_vehicle_purchase(
         appearance_description = await fetch_appearance_description(conn, vehicle_type_id, condition_id)
 
         resale_percent = CONDITION_TO_PERCENT.get(condition_name, 0.5)
-        resale_value = int(BASE_PRICES.get(vehicle_type_name, cost) * resale_percent)
+        resale_value = int(BASE_PRICES.get(vehicle_type_id, cost) * resale_percent)
 
         await conn.execute(
             """
