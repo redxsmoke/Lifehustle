@@ -253,8 +253,8 @@ class TravelButtons(View):
         else:
             return False
 
-    @discord.ui.button(label="Drive 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="travel_drive")
-    async def drive_button(self, interaction: Interaction, button: Button):
+    @discord.ui.button(label="car 🚗 ($10)", style=discord.ButtonStyle.danger, custom_id="travel_car")
+    async def car_button(self, interaction: Interaction, button: Button):
         try:
             from Bot_commands.travel_command import handle_travel
 
@@ -268,14 +268,14 @@ class TravelButtons(View):
                 return
 
             await interaction.response.defer()
-            await handle_travel(interaction, "drive")
+            await handle_travel(interaction, "car")
             await self.disable_all_items()
         except Exception:
             import traceback
             traceback.print_exc()
             if not interaction.response.is_done():
                 await interaction.followup.send(
-                    "❌ Something went wrong processing your drive travel. Check the bot logs.",
+                    "❌ Something went wrong processing your car travel. Check the bot logs.",
                     ephemeral=True
                 )
 
@@ -385,7 +385,7 @@ async def select_weighted_travel_outcome(pool, travel_type):
             "negative": 0.35,
             "positive": 0.15,
         }
-
+    print(f"[DEBUG] Fetching travel outcomes for: {travel_type}")
     async with pool.acquire() as conn:
         rows = await conn.fetch(
             """
@@ -462,8 +462,7 @@ class VehicleUseButton(Button):
             # Get current finances
             finances = await get_user_finances(pool, user_id)
 
-            # Select a weighted travel outcome for the method ('drive' treated as 'car')
-            #travel_type = "car" if self.method == "drive" else self.method
+          
             outcome = await select_weighted_travel_outcome(pool, travel_type)
 
             updated_finances = await get_user_finances(pool, user_id)

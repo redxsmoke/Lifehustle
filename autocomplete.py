@@ -23,7 +23,7 @@ async def travel_method_autocomplete(
     interaction: discord.Interaction,
     current: str
 ) -> list[app_commands.Choice[str]]:
-    methods = ["drive", "bike", "subway", "bus"]
+    methods = ["car", "bike", "subway", "bus"]
     current_lower = current.lower()
 
     choices = [

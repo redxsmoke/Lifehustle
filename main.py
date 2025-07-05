@@ -28,13 +28,7 @@ from data_tier import seed_grocery_types, seed_grocery_categories, drop_vehicle_
 
 import globals
 
-# Load JSON Data
-with open("travel_outcomes.json", "r") as f:
-    TRAVEL_OUTCOMES = json.load(f)
-with open("shop_items.json", "r", encoding="utf-8") as f:
-    SHOP_ITEMS = json.load(f)
-with open("categories.json", "r") as f:
-    CATEGORIES = json.load(f)
+
 
 # Bot Setup
 intents = discord.Intents.default()

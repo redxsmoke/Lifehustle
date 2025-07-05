@@ -81,7 +81,7 @@ async def handle_travel(interaction: Interaction, method: str):
     vehicles = await get_user_vehicles(pool, user_id)
     working_vehicles = [v for v in vehicles if v.get("condition") != "Broken Down"]
 
-    if method == 'drive':
+    if method == 'car':
         cars = [v for v in working_vehicles if v.get("vehicle_type") in (
             "Beater Car", "Sedan", "Sports Car", "Pickup Truck", "Motorcycle"
         )]
@@ -200,7 +200,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
     pool = globals.pool
     user_id = interaction.user.id
 
-    cost = 10 if method == "drive" else 5 if method == "bike" else 0
+    cost = 10 if method == "car" else 5 if method == "bike" else 0
 
     finances = await get_user_finances(pool, user_id)
     if finances.get("checking_account_balance", 0) < cost:
@@ -216,8 +216,9 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
 
     await charge_user(pool, user_id, cost)
     current_balance = finances.get("checking_account_balance", 0) - cost
-
+    print(f"[DEBUG] Travel method passed: {method}")
     outcome = await select_weighted_travel_outcome(pool, method)
+    print(f"[DEBUG] Outcome result for {method}: {outcome}")
     outcome_desc = "No special events today."
     effect = 0
 
@@ -234,7 +235,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
 
     await interaction.followup.send(
         embed=discord.Embed(
-            title=f"{'🚗' if method == 'drive' else '🚴'} Travel Summary",
+            title=f"{'🚗' if method == 'car' else '🚴'} Travel Summary",
             description=(
                 f"You traveled using your {vehicle.get('vehicle_type', 'vehicle')} "
                 f"(Color: {vehicle.get('color', 'Unknown')}, Plate: {vehicle.get('plate', 'N/A')}).\n"
