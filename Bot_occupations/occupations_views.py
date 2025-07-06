@@ -44,17 +44,20 @@ class ApplyJob(commands.Cog):
                 self.add_item(self.select_menu)
 
             async def select_callback(self, select: discord.ui.Select, interaction2: discord.Interaction):
-                selected_id = int(select.values[0])
-                success = await assign_user_job(self.pool, interaction.user.id, selected_id)
-                selected_label = next(opt.label for opt in options if opt.value == select.values[0])
+                try:
+                    selected_id = int(select.values[0])
+                    success = await assign_user_job(self.pool, interaction2.user.id, selected_id)
+                    selected_label = next(opt.label for opt in options if opt.value == select.values[0])
 
-                if success:
-                    response_msg = f"🎉 You are now employed as a **{selected_label}**!"
-                    # Disable select menu so user can't re-select
-                    self.select_menu.disabled = True
-                    await interaction2.response.edit_message(content=response_msg, view=self)
-                else:
-                    await interaction2.response.send_message("⚠️ Failed to assign that job. Please try again.", ephemeral=True)
+                    if success:
+                        response_msg = f"🎉 You are now employed as a **{selected_label}**!"
+                        # Disable select menu so user can't re-select
+                        self.select_menu.disabled = True
+                        await interaction2.response.edit_message(content=response_msg, view=self)
+                    else:
+                        await interaction2.response.send_message("⚠️ Failed to assign that job. Please try again.", ephemeral=True)
+                except Exception as e:
+                    await interaction2.response.send_message(f"⚠️ An error occurred: {e}", ephemeral=True)
 
         await interaction.followup.send("Choose a job to apply for:", view=JobSelectView(), ephemeral=True)
 
