@@ -61,6 +61,7 @@ class CareerPath(commands.Cog):
                 occupation = await conn.fetchrow(occ_query, user_id)
                 print(f"[workshift] Occupation row: {occupation}")
                 occupation_name = occupation['description']
+                pay_rate = occupation['pay_rate']
 
                 try:
                     occupation = await conn.fetchrow(occ_query, user_id)
