@@ -14,7 +14,13 @@ class OfferConfirmationView(View):
 
     @discord.ui.button(label="✅ Accept Position", style=discord.ButtonStyle.success)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
-        success = await assign_user_job(self.pool, self.user_id, self.occupation['cd_occupation_id'])
+        try:
+            success = await assign_user_job(self.pool, self.user_id, self.occupation['cd_occupation_id'])
+        except Exception as e:
+            print(f"[accept] assign_user_job error: {e}")
+            await interaction.response.send_message("Internal error assigning job.", ephemeral=True)
+            return
+
         if success:
             embed = discord.Embed(
                 title="✅ Position Accepted!",
@@ -24,10 +30,20 @@ class OfferConfirmationView(View):
                 ),
                 color=discord.Color.green()
             )
-            await interaction.message.edit(embed=embed, view=None)
-            await interaction.response.defer()  # ✅ Prevents "interaction failed"
+            try:
+                await interaction.response.edit_message(embed=embed, view=None)
+            except Exception as e:
+                print(f"[accept] interaction.response.edit_message error: {e}")
+                # fallback: send a follow-up message
+                try:
+                    await interaction.followup.send("✅ Position accepted!", ephemeral=True)
+                except Exception as e2:
+                    print(f"[accept] followup.send failed: {e2}")
         else:
-            await interaction.response.send_message("Something went wrong accepting the job.", ephemeral=True)
+            try:
+                await interaction.response.send_message("Something went wrong accepting the job.", ephemeral=True)
+            except Exception as e:
+                print(f"[accept] send_message error: {e}")
 
         self.stop()
 
