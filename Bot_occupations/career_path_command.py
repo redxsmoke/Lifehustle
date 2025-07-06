@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands, tasks
 import datetime
 from Bot_occupations.career_path_views import ConfirmResignView  # adjust if your folder structure differs
+from embeds import COLOR_GREEN, COLOR_RED
 
 class CareerPath(commands.Cog):
     def __init__(self, bot, db_pool):
@@ -14,6 +15,7 @@ class CareerPath(commands.Cog):
 
     @commands.hybrid_group(name="careerpath", description="Manage your career path")
     async def careerpath(self, ctx):
+        await ctx.defer()
         if ctx.invoked_subcommand is None:
             await ctx.send("Please use a subcommand: workshift or resign")
 
@@ -74,19 +76,22 @@ class CareerPath(commands.Cog):
 
     @careerpath.command(name="resign", description="Resign from your job with confirmation")
     async def resign(self, ctx):
+        await ctx.defer(ephemeral=True)  # <-- ADD THIS
+
         view = ConfirmResignView(ctx.author)
-        await ctx.send("Are you sure you want to resign?", view=view)
+        await ctx.followup.send("Are you sure you want to resign?", view=view, ephemeral=False)
         await view.wait()
 
         if view.value is None:
-            await ctx.send("Resignation timed out. No changes were made.")
+            await ctx.followup.send("Resignation timed out. No changes were made.", ephemeral=True)
         elif view.value:
             async with self.db_pool.acquire() as conn:
                 await conn.execute(
                     "UPDATE users SET occupation_id = NULL, occupation_failed_days = 0, occupation_needs_warning = FALSE WHERE user_id = $1",
                     ctx.author.id
                 )
-            await ctx.send("You have successfully resigned from your job.")
+            await ctx.followup.send("You have successfully resigned from your job.", ephemeral=False)
+
         else:
             # Cancelled - no action needed
             pass
