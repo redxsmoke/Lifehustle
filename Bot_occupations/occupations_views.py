@@ -2,6 +2,7 @@ from discord import app_commands
 from discord.ext import commands
 from discord.ui import View, Select
 import discord
+import traceback
 
 from Bot_occupations.occupation_db_utilities import assign_user_job, get_eligible_occupations, get_user
 
@@ -17,8 +18,12 @@ class JobSelect(Select):
 
     async def callback(self, interaction: discord.Interaction):
         try:
+            # Debug: confirm callback invocation and available values
+            print(f"[DEBUG] callback called with interaction type: {type(interaction)}")
+            print(f"[DEBUG] self.values: {getattr(self, 'values', None)}")
+
             selected_id = int(self.values[0])
-            print(f"[DEBUG] User {interaction.user.id} selected job {selected_id}")
+            print(f"[DEBUG] User {interaction.user.id} selected job ID {selected_id}")
 
             success = await assign_user_job(self.pool, interaction.user.id, selected_id)
             selected_label = next(opt.label for opt in self.options if opt.value == str(selected_id))
@@ -27,7 +32,7 @@ class JobSelect(Select):
                 self.disabled = True  # disable the select menu
                 await interaction.response.edit_message(
                     content=f"🎉 You are now employed as a **{selected_label}**!",
-                    view=self.view  # or the view instance
+                    view=self.view
                 )
                 print("[DEBUG] Job assignment succeeded")
             else:
@@ -37,7 +42,8 @@ class JobSelect(Select):
                 print("[DEBUG] Job assignment failed")
 
         except Exception as e:
-            print(f"[ERROR] Exception in callback: {e}")
+            print(f"[ERROR] Exception in select callback: {e}")
+            traceback.print_exc()
             if not interaction.response.is_done():
                 await interaction.response.send_message(f"⚠️ An error occurred: {e}", ephemeral=True)
 
@@ -46,8 +52,7 @@ class JobSelectView(View):
     def __init__(self, pool, options):
         super().__init__()
         self.pool = pool
-        self.job_select = JobSelect(pool, options)
-        self.add_item(self.job_select)
+        self.add_item(JobSelect(pool, options))
 
 
 class ApplyJob(commands.Cog):
@@ -60,7 +65,6 @@ class ApplyJob(commands.Cog):
         await interaction.response.defer(ephemeral=True)
 
         user = await get_user(self.pool, interaction.user.id)
-
         if not user:
             async with self.pool.acquire() as conn:
                 await conn.execute('''
@@ -73,7 +77,6 @@ class ApplyJob(commands.Cog):
             user_edu_level = user.get('education_level_id') or 1
 
         occupations = await get_eligible_occupations(self.pool, user_edu_level)
-
         if not occupations:
             await interaction.followup.send("You don't qualify for any jobs right now.", ephemeral=True)
             return
