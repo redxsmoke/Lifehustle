@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 import datetime
 import random
 from Bot_occupations.career_path_views import ConfirmResignView
-from occupation_mini_games import snake_breakroom
+from Bot_occupations.occupation_mini_games import snake_breakroom
 from embeds import COLOR_GREEN, COLOR_RED
 
 class CareerPath(commands.Cog):
