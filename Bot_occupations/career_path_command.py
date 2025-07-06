@@ -21,6 +21,7 @@ class CareerPath(commands.Cog):
 
     @careerpath.command(name="workshift", description="Log a work shift and add your pay")
     async def workshift(self, ctx):
+        await ctx.defer()
         user_id = ctx.author.id
 
         async with self.db_pool.acquire() as conn:
@@ -69,28 +70,50 @@ class CareerPath(commands.Cog):
                 user_id
             )
 
-        await ctx.send(
-            f"Shift logged! You earned ${occupation['pay_rate']}. "
-            f"Shifts today: {shifts_today}/{occupation['required_shifts']}."
+        embed = discord.Embed(
+            title="🕒 Shift Logged",
+            description=(
+                f"You earned **${occupation['pay_rate']}**.\n"
+                f"Shifts today: **{shifts_today}/{occupation['required_shifts']}**."
+            ),
+            color=COLOR_GREEN
         )
+        await ctx.send(embed=embed)
 
     @careerpath.command(name="resign", description="Resign from your job with confirmation")
     async def resign(self, ctx):
-        await ctx.defer(ephemeral=True)  # <-- ADD THIS
+        await ctx.defer(ephemeral=True)
 
+        embed = discord.Embed(
+            title="📝 Submit Letter of Resignation",
+            description="Are you sure you want to resign?",
+            color=discord.Color.orange()
+        )
         view = ConfirmResignView(ctx.author)
-        await ctx.followup.send("Are you sure you want to resign?", view=view, ephemeral=False)
+        await ctx.followup.send(embed=embed, view=view, ephemeral=False)
+
         await view.wait()
 
         if view.value is None:
-            await ctx.followup.send("Resignation timed out. No changes were made.", ephemeral=True)
+            embed = discord.Embed(
+                title="⏰ Resignation Timed Out",
+                description="No changes were made.",
+                color=COLOR_RED
+            )
+            await ctx.followup.send(embed=embed, ephemeral=True)
+
         elif view.value:
             async with self.db_pool.acquire() as conn:
                 await conn.execute(
                     "UPDATE users SET occupation_id = NULL, occupation_failed_days = 0, occupation_needs_warning = FALSE WHERE user_id = $1",
                     ctx.author.id
                 )
-            await ctx.followup.send("You have successfully resigned from your job.", ephemeral=False)
+            embed = discord.Embed(
+                title="✅ Resignation Successful",
+                description="You have successfully resigned from your job.",
+                color=COLOR_GREEN
+            )
+            await ctx.followup.send(embed=embed, ephemeral=False)
 
         else:
             # Cancelled - no action needed
@@ -99,7 +122,6 @@ class CareerPath(commands.Cog):
     @tasks.loop(time=datetime.time(hour=0, minute=0, tzinfo=datetime.timezone.utc))
     async def daily_shift_check(self):
         async with self.db_pool.acquire() as conn:
-            # Get users who failed yesterday
             query = """
             WITH shifts_yesterday AS (
               SELECT user_id, COUNT(*) AS shifts_worked
@@ -134,23 +156,19 @@ class CareerPath(commands.Cog):
                 new_failed_days = failed_days + 1
 
                 if new_failed_days >= max_failed:
-                    # Mark user resigned/fired
                     await conn.execute(
                         "UPDATE users SET occupation_id = NULL, occupation_needs_warning = FALSE, occupation_failed_days = $1 WHERE user_id = $2",
                         new_failed_days,
                         user_id
                     )
-                    # Send fired message
                     await self._send_fired_message(user_id)
                 else:
-                    # Update failed_days count and set warning flag
                     await conn.execute(
                         "UPDATE users SET occupation_failed_days = $1, occupation_needs_warning = TRUE WHERE user_id = $2",
                         new_failed_days,
                         user_id
                     )
 
-            # Delete yesterday's logs
             await conn.execute(
                 """
                 DELETE FROM user_work_log
