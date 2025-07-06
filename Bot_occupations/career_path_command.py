@@ -139,9 +139,12 @@ class CareerPath(commands.Cog):
 
     @careerpath.command(name="resign", description="Resign from your job with confirmation")
     async def resign(self, ctx):
+        def log(msg):
+            print(f"[resign][{time.strftime('%H:%M:%S')}] {msg}")
+
         await ctx.defer(ephemeral=True)
         user_id = ctx.author.id
-        print(f"[resign] Started for user_id: {user_id}")
+        log(f"Started for user_id: {user_id}")
 
         try:
             embed = discord.Embed(
@@ -151,10 +154,15 @@ class CareerPath(commands.Cog):
             )
             view = ConfirmResignView(ctx.author)
             await ctx.followup.send(embed=embed, view=view, ephemeral=True)
-            print("[resign] Confirmation view sent.")
+            log("Confirmation view sent.")
 
-            await view.wait()
-            print(f"[resign] View result: {view.value}")
+            # Wait with timeout (e.g., 60 seconds)
+            try:
+                await asyncio.wait_for(view.wait(), timeout=60.0)
+                log(f"View result: {view.value}")
+            except asyncio.TimeoutError:
+                log("View wait timed out after 60 seconds.")
+                view.value = None  # Treat as timeout
 
             if view.value is None:
                 embed = discord.Embed(
@@ -163,35 +171,41 @@ class CareerPath(commands.Cog):
                     color=COLOR_RED
                 )
                 await ctx.followup.send(embed=embed, ephemeral=True)
-                print("[resign] Resignation timed out, no changes.")
+                log("Resignation timed out, no changes.")
 
             elif view.value:
-                async with self.db_pool.acquire() as conn:
-                    print("[resign] Clearing user's occupation in DB...")
-                    await conn.execute(
-                        "UPDATE users SET occupation_id = NULL, occupation_failed_days = 0, occupation_needs_warning = FALSE WHERE user_id = $1",
-                        user_id
-                    )
-                    print("[resign] Occupation cleared.")
+                try:
+                    async with self.db_pool.acquire() as conn:
+                        log("Clearing user's occupation in DB...")
+                        start_db = time.time()
+                        await conn.execute(
+                            "UPDATE users SET occupation_id = NULL, occupation_failed_days = 0, occupation_needs_warning = FALSE WHERE user_id = $1",
+                            user_id
+                        )
+                        log(f"Occupation cleared in {time.time() - start_db:.2f} seconds.")
+                except Exception as db_e:
+                    log(f"DB error: {db_e}")
+                    await ctx.followup.send("Failed to update your job status. Please try again later.", ephemeral=True)
+                    return
 
                 embed = discord.Embed(
                     title="✅ Resignation Successful",
-                    description="You have successfully resigned from your job.",
+                    description="> Resignation accepted. May your next job pay better or at least not suck as much.",
                     color=COLOR_GREEN
                 )
                 await ctx.followup.send(embed=embed, ephemeral=True)
-                print("[resign] Success message sent.")
+                log("Success message sent.")
 
             else:
-                print("[resign] Resignation cancelled by user.")
+                log("Resignation cancelled by user.")
                 # No further action needed.
 
         except Exception as e:
-            print(f"[resign] Exception caught: {e}")
+            log(f"Exception caught: {e}")
             try:
                 await ctx.followup.send("An error occurred during resignation. Please try again later.", ephemeral=True)
             except:
-                print("[resign] Failed to send error message to user.")
+                log("Failed to send error message to user.")
 
     @tasks.loop(time=datetime.time(hour=0, minute=0, tzinfo=datetime.timezone.utc))
     async def daily_shift_check(self):
