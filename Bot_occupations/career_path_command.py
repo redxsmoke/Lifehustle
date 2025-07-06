@@ -91,11 +91,54 @@ class CareerPath(commands.Cog):
                     )
                     return
 
+                # Insert a new shift log
+                await conn.execute(
+                    "INSERT INTO user_work_log(user_id, work_timestamp) VALUES ($1, NOW())",
+                    user_id
+                )
+                print("[workshift] Shift log inserted.")
+
+                # Count shifts today
+                shifts_today = await conn.fetchval(
+                    "SELECT COUNT(*) FROM user_work_log WHERE user_id = $1 AND work_timestamp >= CURRENT_DATE",
+                    user_id
+                )
+                print(f"[workshift] Shifts today: {shifts_today}")
+
+                # Update user balance
+                await conn.execute(
+                    "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
+                    pay_rate,
+                    user_id
+                )
+                print("[workshift] Balance updated.")
+
+                # Get new balance to show in embed
+                new_balance = await conn.fetchval(
+                    "SELECT checking_account_balance FROM user_finances WHERE user_id = $1",
+                    user_id
+                )
+
+                # Send the minigame view
                 view = view_class(self.db_pool, ctx.guild.id, user_id, occupation_id, pay_rate)
                 await ctx.followup.send(
                     f"🐍 Breakroom game starting for **{occupation_name}**!", view=view
                 )
-                return
+
+                # Send the paystub embed
+                embed = discord.Embed(
+                    title=f"🕒 Shift Logged - here is your pay stub from ***{company_name}***",
+                    description=(
+                        f"> You completed your shift as a **{occupation_name}** and earned **${pay_rate:.2f}**.\n"
+                        f"> Your total completed shifts today: **{shifts_today}/{required_shifts_per_day}**\n\n"
+                        f"> 💵 ${pay_rate:.2f} has been deposited into your checking account.\n"
+                        f"> **New Balance:** ${new_balance:,.2f}\n\n"
+                        f"*Paid. Hopefully this cash sticks around longer than your last situationship.*"
+                    ),
+                    color=COLOR_GREEN
+                )
+                await ctx.send(embed=embed)
+                print("[workshift] Response sent.")
 
         except Exception as e:
             print(f"[workshift] Exception caught: {e}")
