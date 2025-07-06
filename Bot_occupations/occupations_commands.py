@@ -6,7 +6,6 @@ from Bot_occupations.occupation_db_utilities import assign_user_job, get_eligibl
 import discord
 
 
-
 class ApplyJob(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -14,16 +13,26 @@ class ApplyJob(commands.Cog):
 
     @app_commands.command(name="need_money", description="Apply for a new job!")
     async def need_money(self, interaction: discord.Interaction):
-        # Defer the response immediately to avoid timeout
         await interaction.response.defer(ephemeral=True)
 
         user = await get_user(self.pool, interaction.user.id)
-        user_edu_level = user.get('education_level_id', 1)
+
+        if not user:
+            # User not found, create with education_level_id=1 (high school) and occupation_id=NULL
+            async with self.pool.acquire() as conn:
+                await conn.execute('''
+                    INSERT INTO users (user_id, education_level_id, occupation_id)
+                    VALUES ($1, 1, NULL)
+                    ON CONFLICT (user_id) DO NOTHING
+                ''', interaction.user.id)
+            user_edu_level = 1
+        else:
+            # If education_level_id is NULL, treat as 1
+            user_edu_level = user.get('education_level_id') or 1
 
         occupations = await get_eligible_occupations(self.pool, user_edu_level)
 
         if not occupations:
-            # Use followup.send after deferring
             await interaction.followup.send("You don't qualify for any jobs right now.", ephemeral=True)
             return
 
@@ -38,12 +47,10 @@ class ApplyJob(commands.Cog):
                 selected_id = int(select.values[0])
                 await assign_user_job(self.pool, interaction.user.id, selected_id)
                 selected_label = next(opt.label for opt in options if opt.value == select.values[0])
-                # This is a different interaction, respond normally here
                 await interaction2.response.send_message(
                     f"🎉 You are now employed as a **{selected_label}**!", ephemeral=True
                 )
 
-        # Use followup.send here as well after deferring
         await interaction.followup.send("Choose a job to apply for:", view=JobSelectView(), ephemeral=True)
 
 
