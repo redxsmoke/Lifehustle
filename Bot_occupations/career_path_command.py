@@ -153,10 +153,10 @@ class CareerPath(commands.Cog):
                 color=discord.Color.orange()
             )
             view = ConfirmResignView(ctx.author)
-            await ctx.followup.send(embed=embed, view=view, ephemeral=True)
+            confirmation_message = await ctx.followup.send(embed=embed, view=view, ephemeral=True)
             log("Confirmation view sent.")
 
-            # Wait with timeout (e.g., 60 seconds)
+            # Wait with timeout
             try:
                 await asyncio.wait_for(view.wait(), timeout=60.0)
                 log(f"View result: {view.value}")
@@ -170,7 +170,7 @@ class CareerPath(commands.Cog):
                     description="No changes were made.",
                     color=COLOR_RED
                 )
-                await ctx.followup.send(embed=embed, ephemeral=True)
+                await confirmation_message.edit(embed=embed, view=None)
                 log("Resignation timed out, no changes.")
 
             elif view.value:
@@ -185,7 +185,12 @@ class CareerPath(commands.Cog):
                         log(f"Occupation cleared in {time.time() - start_db:.2f} seconds.")
                 except Exception as db_e:
                     log(f"DB error: {db_e}")
-                    await ctx.followup.send("Failed to update your job status. Please try again later.", ephemeral=True)
+                    error_embed = discord.Embed(
+                        title="❌ Database Error",
+                        description="Failed to update your job status. Please try again later.",
+                        color=COLOR_RED
+                    )
+                    await confirmation_message.edit(embed=error_embed, view=None)
                     return
 
                 embed = discord.Embed(
@@ -193,12 +198,17 @@ class CareerPath(commands.Cog):
                     description="> Resignation accepted. May your next job pay better or at least not suck as much.",
                     color=COLOR_GREEN
                 )
-                await ctx.followup.send(embed=embed, ephemeral=True)
+                await confirmation_message.edit(embed=embed, view=None)
                 log("Success message sent.")
 
             else:
                 log("Resignation cancelled by user.")
-                # No further action needed.
+                embed = discord.Embed(
+                    title="❎ Resignation Cancelled",
+                    description="Your resignation request was cancelled. No changes were made.",
+                    color=discord.Color.greyple()
+                )
+                await confirmation_message.edit(embed=embed, view=None)
 
         except Exception as e:
             log(f"Exception caught: {e}")
