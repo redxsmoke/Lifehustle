@@ -28,16 +28,17 @@ class CareerPath(commands.Cog):
         self.daily_shift_check.cancel()
 
     @commands.hybrid_group(name="careerpath", description="Manage your career path")
-    print(f"✅ careerpath group type = {type(careerpath)}")
-    print(f"✅ careerpath dir = {dir(careerpath)}")
-
     async def careerpath(self, ctx):
+        command_obj = self.bot.get_command("careerpath")
+        print(f"✅ careerpath group type = {type(command_obj)}")
+        print(f"✅ careerpath dir = {dir(command_obj)}")
+        
         if ctx.invoked_subcommand is None:
             await ctx.send("Please use a subcommand: workshift or resign")
 
-    print(f"✅ DEBUG: Declaring workshift with careerpath type = {type(careerpath)}")
     @careerpath.command(name="workshift", description="Log a work shift and add your pay")
     async def workshift(self, ctx):
+        print("✅ DEBUG: workshift command invoked")
         await ctx.defer()
         user_id = ctx.author.id
         print(f"[workshift] Started for user_id: {user_id}")
