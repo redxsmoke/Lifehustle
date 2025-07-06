@@ -10,8 +10,8 @@ class ApplyJob(commands.Cog):
         self.bot = bot
         self.pool = bot.pool
 
-    @app_commands.command(name="apply_job", description="Apply for a new job!")
-    async def apply_job(self, interaction: discord.Interaction):
+    @app_commands.command(name="need_money", description="Apply for a new job!")
+    async def need_money(self, interaction: discord.Interaction):
         user = await get_user(self.pool, interaction.user.id)
         user_edu_level = user.get('education_level_id', 1)
 
