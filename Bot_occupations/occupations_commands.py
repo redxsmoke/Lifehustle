@@ -3,7 +3,7 @@ from discord.ext import commands
 import discord
 
 from Bot_occupations.occupation_db_utilities import get_user, get_eligible_occupations
-from Bot_occupations.views import JobSelectView  # import the fixed view
+from Bot_occupations.occupations_views import JobSelectView  # Make sure this file exists and is correct!
 
 class ApplyJob(commands.Cog):
     def __init__(self, bot):
@@ -36,14 +36,12 @@ class ApplyJob(commands.Cog):
             for row in occupations
         ]
 
-        # Use the external, correctly implemented view
         view = JobSelectView(self.pool, options)
         await interaction.followup.send(
             "Choose a job to apply for:",
             view=view,
             ephemeral=True
         )
-
 
 class JobStatus(commands.Cog):
     def __init__(self, bot):
@@ -77,7 +75,6 @@ class JobStatus(commands.Cog):
             )
 
             await ctx.send(embed=embed)
-
 
 async def setup(bot):
     await bot.add_cog(ApplyJob(bot))

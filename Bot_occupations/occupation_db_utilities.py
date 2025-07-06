@@ -1,4 +1,3 @@
-# db_utils.py
 import asyncpg
 
 async def get_user(pool: asyncpg.pool.Pool, user_id: int):
@@ -18,7 +17,7 @@ async def get_eligible_occupations(pool: asyncpg.pool.Pool, user_education_level
 
 async def assign_user_job(pool: asyncpg.pool.Pool, user_id: int, occupation_id: int):
     async with pool.acquire() as conn:
-        # Validate occupation exists and is active
+        # Validate the occupation exists and is active
         valid = await conn.fetchval('''
             SELECT EXISTS(
                 SELECT 1 FROM cd_occupations
