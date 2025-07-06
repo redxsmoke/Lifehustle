@@ -1,52 +1,53 @@
 from discord import app_commands
 from discord.ext import commands
 from discord.ui import View, Select
-
 import discord
 
 from Bot_occupations.occupation_db_utilities import assign_user_job, get_eligible_occupations, get_user
 
-
-class JobSelectView(View):
+class JobSelect(Select):
     def __init__(self, pool, options):
-        super().__init__()
-        self.pool = pool
-        self.options = options
-
-        self.select_menu = Select(
+        super().__init__(
             placeholder="Select a job to apply for",
-            options=options,
             min_values=1,
-            max_values=1
+            max_values=1,
+            options=options
         )
-        self.select_menu.callback = self.select_callback  # Bind the callback
-        self.add_item(self.select_menu)
+        self.pool = pool
 
-    async def select_callback(self, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         try:
-            selected_id = int(interaction.data["values"][0])
+            selected_id = int(self.values[0])
             print(f"[DEBUG] User {interaction.user.id} selected job {selected_id}")
 
             success = await assign_user_job(self.pool, interaction.user.id, selected_id)
             selected_label = next(opt.label for opt in self.options if opt.value == str(selected_id))
 
             if success:
-                self.select_menu.disabled = True
+                self.disabled = True  # disable the select menu
                 await interaction.response.edit_message(
-                    content=f"🎉 You are now employed as a **{selected_label}**!", view=self
+                    content=f"🎉 You are now employed as a **{selected_label}**!",
+                    view=self.view  # or the view instance
                 )
-                print(f"[DEBUG] Job assignment succeeded")
+                print("[DEBUG] Job assignment succeeded")
             else:
                 await interaction.response.send_message(
                     "⚠️ Failed to assign that job. Please try again.", ephemeral=True
                 )
-                print(f"[DEBUG] Job assignment failed")
+                print("[DEBUG] Job assignment failed")
+
         except Exception as e:
-            print(f"[ERROR] Exception in select_callback: {e}")
+            print(f"[ERROR] Exception in callback: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message(f"⚠️ An error occurred: {e}", ephemeral=True)
-            else:
-                print("[ERROR] Interaction response already sent.")
+
+
+class JobSelectView(View):
+    def __init__(self, pool, options):
+        super().__init__()
+        self.pool = pool
+        self.job_select = JobSelect(pool, options)
+        self.add_item(self.job_select)
 
 
 class ApplyJob(commands.Cog):
@@ -82,11 +83,8 @@ class ApplyJob(commands.Cog):
             for row in occupations
         ]
 
-        await interaction.followup.send(
-            "Choose a job to apply for:",
-            view=JobSelectView(self.pool, options),
-            ephemeral=True
-        )
+        view = JobSelectView(self.pool, options)
+        await interaction.followup.send("Choose a job to apply for:", view=view, ephemeral=True)
 
 
 class JobStatus(commands.Cog):
