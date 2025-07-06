@@ -157,7 +157,7 @@ async def register_commands(bot: discord.Client):
         embed.add_field(name="\u200b🌤 Weather", value=f"`{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C`", inline=True)
 
         # NEW Occupation field
-        embed.add_field(name="\u200b🏢 Occupation", value=occupation_name, inline=False)
+        embed.add_field(name="\u200b🏢 Occupation", value=occupation_name, inline=True)
 
         # Shifts worked field
         if occupation_name == "Unemployed":
