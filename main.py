@@ -22,7 +22,7 @@ from create_education_occupation_tables import setup
 # Rename imports to avoid name conflicts
 from Bot_commands.commands import register_commands as register_general_commands
 from Bot_commands.travel_command import register_commands as register_travel_commands
-from Bot_commands.vitals_command import register_commands as register_vitals_commands
+from Bot_commands.lifecheck_command import register_commands as register_lifecheck_commands
 
 from data_tier import (
     seed_grocery_types,
@@ -65,7 +65,7 @@ async def setup_hook():
     # Register commands from all modules
     register_general_commands(tree)
     register_travel_commands(tree)
-    await register_vitals_commands(bot)
+    await register_lifecheck_commands(bot)
 
     # Load your cog extensions - extensions can access pool via bot.pool
     await bot.load_extension("Bot_commands.bank_commands")

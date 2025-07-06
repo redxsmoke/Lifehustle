@@ -13,7 +13,7 @@ from discord import app_commands, Interaction
 from discord.ext import commands
 from db_user import get_user, upsert_user, get_user_finances
 from vehicle_logic import ConfirmSellView, sell_all_vehicles
-from .vitals_command import get_mock_weather_dynamic
+from .lifecheck_command import get_mock_weather_dynamic
 
 
 from utilities import (

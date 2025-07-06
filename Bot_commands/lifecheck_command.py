@@ -102,10 +102,10 @@ async def get_user_checking_account_balance(user_id):
         return result['checking_account_balance']
     return 0
 
-# Updated vitals command with shifts worked logic
+# Updated lifecheck command with shifts worked logic
 async def register_commands(bot: discord.Client):
-    @bot.tree.command(name="vitals", description="Check your vitals and weather")
-    async def vitals_command(interaction: discord.Interaction):
+    @bot.tree.command(name="lifecheck", description="Monitor your wellbeing, work shifts, and weather all in one place.")
+    async def lifecheck_command(interaction: discord.Interaction):
         now_utc = datetime.datetime.utcnow()
         hour = now_utc.hour
         time_emoji = "☀️" if 6 <= hour < 18 else "🌙"
@@ -141,8 +141,8 @@ async def register_commands(bot: discord.Client):
                 shifts_worked = shifts_worked or 0
 
         embed = discord.Embed(
-            title="⚕️ Vitals Overview",
-            description=f"> Current vitals and weather report, {interaction.user.display_name}!",
+            title="⚕️ Lifecheck Overview",
+            description=f"> Current Lifecheck and weather report, {interaction.user.display_name}!",
             color=0x1abc9c,
             timestamp=now_utc
         )
