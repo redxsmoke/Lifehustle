@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS cd_education_levels (
 );
 """
 
-DROP_CD_OCCUPATIONS = "DROP TABLE IF EXISTS cd_occupations;"
+DROP_CD_OCCUPATIONS = "DROP TABLE IF EXISTS cd_occupations CASCADE;"
 
 CREATE_CD_OCCUPATIONS = """
 CREATE TABLE cd_occupations (
