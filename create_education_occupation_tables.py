@@ -14,18 +14,31 @@ CREATE TABLE IF NOT EXISTS cd_education_levels (
 DROP_CD_OCCUPATIONS = "DROP TABLE IF EXISTS cd_occupations CASCADE;"
 
 CREATE_CD_OCCUPATIONS = """
-CREATE TABLE cd_occupations (
-    cd_occupation_id SERIAL PRIMARY KEY,
-    company_name TEXT,
-    description TEXT NOT NULL,
-    pay_rate NUMERIC(10, 2) NOT NULL,
-    required_shifts_per_day INT NOT NULL,
-    education_level_id INT NOT NULL,
-    other_requirements TEXT,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
-);
-"""
+async def alter_columns(pool):
+    async with pool.acquire() as conn:
+        await conn.execute("""
+            ALTER TABLE users
+            ALTER COLUMN guild_id TYPE BIGINT USING guild_id::bigint,
+            ALTER COLUMN user_id TYPE BIGINT USING user_id::bigint;
+        """)
+    print("Columns altered successfully.")
+
+async def main():
+    pool = await asyncpg.create_pool(
+        user='your_db_user',
+        password='your_db_password',
+        database='your_db_name',
+        host='your_db_host',
+        port=5432,
+    )
+    try:
+        await alter_columns(pool)
+    finally:
+        await pool.close()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
 
 CREATE_CD_DESTINATIONS = """
 CREATE TABLE IF NOT EXISTS cd_destinations (
