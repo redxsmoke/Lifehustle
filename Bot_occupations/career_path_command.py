@@ -6,6 +6,15 @@ from Bot_occupations.career_path_views import ConfirmResignView
 from Bot_occupations.occupation_mini_games import snake_breakroom
 from embeds import COLOR_GREEN, COLOR_RED
 
+minigames_by_id = {
+    1: SnakeBreakroomView,  #Professional Cuddler 
+    2: SnakeBreakroomView,  # Senior Bubble Wrap Popper
+    3: SnakeBreakroomView,  # Street Performer
+    4: SnakeBreakroomView,  # Dog Walker
+    5: SnakeBreakroomView,  # Human Statue
+    
+}
+
 class CareerPath(commands.Cog):
     def __init__(self, bot, db_pool):
         self.bot = bot
@@ -62,32 +71,35 @@ class CareerPath(commands.Cog):
                 """
                 occupation = await conn.fetchrow(occ_query, user_id)
                 print(f"[workshift] Occupation row: {occupation}")
-                occupation_name = occupation['description']
-                company_name = occupation['company_name']
-                pay_rate = occupation['pay_rate']
-                required_shifts_per_day = occupation['required_shifts_per_day']
-                new_balance = await conn.fetchval(
-                    "SELECT checking_account_balance FROM user_finances WHERE user_id = $1",
-                    user_id
-                )
 
-                # After fetching occupation data...
-
-                possible_events = ["snake_breakroom"]
-                selected_event = random.choice(possible_events)
-
-                if selected_event in minigames_by_name:
-                    minigame = minigames_by_name[selected_event]
-                    embed, view = await minigame.play(
-                        self.db_pool,
-                        ctx.guild.id,
-                        user_id,
-                        occupation['cd_occupation_id'],
-                        pay_rate
-                    )
-                    await ctx.followup.send(embed=embed, view=view)
+                if occupation is None:
+                    await ctx.followup.send("❌ You don't have a job yet. Use `/apply_job` to get hired!")
                     return
 
+                occupation_id = occupation["cd_occupation_id"]
+                occupation_name = occupation["description"]
+                company_name = occupation["company_name"]
+                pay_rate = occupation["pay_rate"]
+                required_shifts_per_day = occupation["required_shifts_per_day"]
+
+                # Determine mini-game based on occupation_id
+                view_class = minigames_by_id.get(occupation_id)
+
+                if view_class is None:
+                    await ctx.followup.send(
+                        f"🧹 You worked a shift as a **{occupation_name}**, but this job doesn't have a mini-game yet. No payout this time!"
+                    )
+                    return
+
+                view = view_class(self.db_pool, ctx.guild.id, user_id, occupation_id, pay_rate)
+                await ctx.followup.send(
+                    f"🐍 Breakroom game starting for **{occupation_name}**!", view=view
+                )
+                return
+
+        except Exception as e:
+            print(f"[workshift] Exception caught: {e}")
+            await ctx.followup.send("❌ An error occurred while processing your shift. Please try again later.")
 
 
 
