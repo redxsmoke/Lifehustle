@@ -34,6 +34,7 @@ class CareerPath(commands.Cog):
         print(f"✅ careerpath dir = {dir(command_obj)}")
         
         if ctx.invoked_subcommand is None:
+            # No defer here, so just regular send
             await ctx.send("Please use a subcommand: workshift or resign")
 
     @careerpath.command(name="workshift", description="Log a work shift and add your pay")
@@ -81,7 +82,10 @@ class CareerPath(commands.Cog):
                 print(f"[workshift] Occupation row: {occupation}")
 
                 if occupation is None:
-                    await ctx.followup.send("❌ You don't have a job yet. Use `/apply_job` to get hired!")
+                    if hasattr(ctx, "followup"):
+                        await ctx.followup.send("❌ You don't have a job yet. Use `/apply_job` to get hired!")
+                    else:
+                        await ctx.send("❌ You don't have a job yet. Use `/apply_job` to get hired!")
                     return
 
                 occupation_id = occupation["cd_occupation_id"]
@@ -94,9 +98,14 @@ class CareerPath(commands.Cog):
                 view_class = minigames_by_id.get(occupation_id)
 
                 if view_class is None:
-                    await ctx.followup.send(
-                        f"🧹 You worked a shift as a **{occupation_name}**, but this job doesn't have a mini-game yet. No payout this time!"
+                    no_minigame_msg = (
+                        f"🧹 You worked a shift as a **{occupation_name}**, "
+                        "but this job doesn't have a mini-game yet. No payout this time!"
                     )
+                    if hasattr(ctx, "followup"):
+                        await ctx.followup.send(no_minigame_msg)
+                    else:
+                        await ctx.send(no_minigame_msg)
                     return
 
                 # Insert a new shift log
@@ -129,9 +138,14 @@ class CareerPath(commands.Cog):
 
                 # Send the minigame view
                 view = view_class(self.db_pool, ctx.guild.id, user_id, occupation_id, pay_rate)
-                await ctx.followup.send(
-                    f"🐍 Breakroom game starting for **{occupation_name}**!", view=view
-                )
+                if hasattr(ctx, "followup"):
+                    await ctx.followup.send(
+                        f"🐍 Breakroom game starting for **{occupation_name}**!", view=view
+                    )
+                else:
+                    await ctx.send(
+                        f"🐍 Breakroom game starting for **{occupation_name}**!", view=view
+                    )
 
                 # Send the paystub embed
                 embed = discord.Embed(
@@ -145,13 +159,19 @@ class CareerPath(commands.Cog):
                     ),
                     color=COLOR_GREEN
                 )
-                await ctx.followup.send(embed=embed)
+                if hasattr(ctx, "followup"):
+                    await ctx.followup.send(embed=embed)
+                else:
+                    await ctx.send(embed=embed)
                 print("[workshift] Response sent.")
 
         except Exception as e:
             print(f"[workshift] Exception caught: {e}")
-            await ctx.followup.send("❌ An error occurred while processing your shift. Please try again later.")
-
+            # Fallback to ctx.send if followup is missing on error too
+            if hasattr(ctx, "followup"):
+                await ctx.followup.send("❌ An error occurred while processing your shift. Please try again later.")
+            else:
+                await ctx.send("❌ An error occurred while processing your shift. Please try again later.")
     @careerpath.command(name="resign", description="Resign from your job with confirmation")
     async def resign(self, ctx):
         import time
