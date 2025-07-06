@@ -156,12 +156,12 @@ async def register_commands(bot: discord.Client):
         embed.add_field(name="\u200b💵 Cash on Hand", value=f"`{checking_account_balance:,}`", inline=True)
         embed.add_field(name="\u200b🌤 Weather", value=f"`{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C`", inline=True)
 
-        # NEW Occupation field
-        embed.add_field(name="\u200b🏢 Occupation", value=occupation_name, inline=True)
+        embed.add_field(name="\u200b", value="\u200b", inline=False)
+        embed.add_field(name="\u200b🏢 Occupation", value=occupation_name, inline=False)
 
-        # Shifts worked field
+        
         if occupation_name == "Unemployed":
-            embed.add_field(name="\u200b🛠 Shifts Worked Today", value="Unemployed", inline=False)
+            embed.add_field(name="\u200b🛠 Shifts Worked Today", value="Unemployed", inline=True)
         elif required_shifts > 0:
             emoji = "✅" if shifts_worked == required_shifts else "⚠️"
             embed.add_field(
