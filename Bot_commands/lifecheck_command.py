@@ -148,20 +148,20 @@ async def register_commands(bot: discord.Client):
         )
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
 
-        embed.add_field(name="\u200b🕒 Time", value=f"`{time_emoji} {time_str}`", inline=True)
-        embed.add_field(name="\u200b📅 Date", value=f"`{date_str}`", inline=True)
+        embed.add_field(name="\u200b🕒 Time", value=f"{time_emoji} {time_str}", inline=True)
+        embed.add_field(name="\u200b📅 Date", value=f"{date_str}", inline=True)
 
         embed.add_field(name="\u200b", value="\u200b", inline=False)
 
-        embed.add_field(name="\u200b💵 Cash on Hand", value=f"`{checking_account_balance:,}`", inline=True)
-        embed.add_field(name="\u200b🌤 Weather", value=f"`{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C`", inline=True)
+        embed.add_field(name="\u200b💵 Cash on Hand", value=f"{checking_account_balance:,}", inline=True)
+        embed.add_field(name="\u200b🌤 Weather", value=f"{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C", inline=True)
 
         embed.add_field(name="\u200b", value="\u200b", inline=False)
-        embed.add_field(name="\u200b🏢 Occupation", value=f"`{occupation_name}`", inline=True)
+        embed.add_field(name="\u200b🏢 Occupation", value=f"{occupation_name}", inline=True)
 
         
         if occupation_name == "Unemployed":
-            embed.add_field(name="\u200b🛠 Today's Shifts", value=f"`{"Unemployed"}`", inline=True)
+            embed.add_field(name="\u200b🛠 Today's Shifts", value=f"{"Unemployed"}", inline=True)
         elif required_shifts > 0:
             emoji = "✅" if shifts_worked == required_shifts else "⚠️"
             embed.add_field(
