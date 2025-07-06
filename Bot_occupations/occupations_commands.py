@@ -1,10 +1,9 @@
 from discord import app_commands
 from discord.ext import commands
-from discord.ui import View
-from Bot_occupations.occupation_db_utilities import assign_user_job, get_eligible_occupations, get_user
-
 import discord
 
+from Bot_occupations.occupation_db_utilities import get_user, get_eligible_occupations
+from Bot_occupations.views import JobSelectView  # import the fixed view
 
 class ApplyJob(commands.Cog):
     def __init__(self, bot):
@@ -16,9 +15,7 @@ class ApplyJob(commands.Cog):
         await interaction.response.defer(ephemeral=True)
 
         user = await get_user(self.pool, interaction.user.id)
-
         if not user:
-            # User not found, create with education_level_id=1 (high school) and occupation_id=NULL
             async with self.pool.acquire() as conn:
                 await conn.execute('''
                     INSERT INTO users (user_id, education_level_id, occupation_id)
@@ -27,11 +24,9 @@ class ApplyJob(commands.Cog):
                 ''', interaction.user.id)
             user_edu_level = 1
         else:
-            # If education_level_id is NULL, treat as 1
             user_edu_level = user.get('education_level_id') or 1
 
         occupations = await get_eligible_occupations(self.pool, user_edu_level)
-
         if not occupations:
             await interaction.followup.send("You don't qualify for any jobs right now.", ephemeral=True)
             return
@@ -41,30 +36,13 @@ class ApplyJob(commands.Cog):
             for row in occupations
         ]
 
-        class JobSelectView(View):
-            @discord.ui.select(placeholder="Select a job to apply for", options=options)
-            async def select(self, select: discord.ui.Select, interaction2: discord.Interaction):
-                try:
-                    selected_id = int(select.values[0])
-                    print(f"[DEBUG] User {interaction2.user.id} selected job ID {selected_id}")
-
-                    success = await assign_user_job(self.pool, interaction2.user.id, selected_id)
-                    if not success:
-                        print(f"[DEBUG] Failed to assign job ID {selected_id} to user {interaction2.user.id}")
-                        await interaction2.response.send_message("⚠️ Could not assign that job.", ephemeral=True)
-                        return
-
-                    selected_label = next(opt.label for opt in options if opt.value == select.values[0])
-                    print(f"[DEBUG] Successfully assigned job '{selected_label}' to user {interaction2.user.id}")
-
-                    await interaction2.response.send_message(
-                        f"🎉 You are now employed as a **{selected_label}**!", ephemeral=True
-                    )
-                except Exception as e:
-                    print(f"[ERROR] Exception in select: {e}")
-                    await interaction2.response.send_message(f"⚠️ Error: {e}", ephemeral=True)
-
-        await interaction.followup.send("Choose a job to apply for:", view=JobSelectView(), ephemeral=True)
+        # Use the external, correctly implemented view
+        view = JobSelectView(self.pool, options)
+        await interaction.followup.send(
+            "Choose a job to apply for:",
+            view=view,
+            ephemeral=True
+        )
 
 
 class JobStatus(commands.Cog):
