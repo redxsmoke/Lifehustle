@@ -24,19 +24,24 @@ class JobSelectView(View):
     async def select_callback(self, select: discord.ui.Select, interaction2: discord.Interaction):
         try:
             selected_id = int(select.values[0])
+            print(f"[DEBUG] User {interaction2.user.id} selected job ID {selected_id}")
+
             success = await assign_user_job(self.pool, interaction2.user.id, selected_id)
             selected_label = next(opt.label for opt in self.options if opt.value == select.values[0])
 
             if success:
+                print(f"[DEBUG] Job assignment success for user {interaction2.user.id}")
                 self.select_menu.disabled = True
                 await interaction2.response.edit_message(
                     content=f"🎉 You are now employed as a **{selected_label}**!", view=self
                 )
             else:
+                print(f"[DEBUG] Job assignment failed for user {interaction2.user.id}")
                 await interaction2.response.send_message(
                     "⚠️ Failed to assign that job. Please try again.", ephemeral=True
                 )
         except Exception as e:
+            print(f"[ERROR] Exception in select_callback: {e}")
             await interaction2.response.send_message(
                 f"⚠️ An error occurred: {e}", ephemeral=True
             )
