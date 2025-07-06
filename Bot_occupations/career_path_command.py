@@ -61,6 +61,7 @@ class CareerPath(commands.Cog):
                 occupation = await conn.fetchrow(occ_query, user_id)
                 print(f"[workshift] Occupation row: {occupation}")
                 occupation_name = occupation['description']
+                company_name = occupation['company_name']
                 pay_rate = occupation['pay_rate']
                 required_shifts_per_day = occupation['required_shifts_per_day']
                 new_balance = await conn.fetchval(
@@ -115,7 +116,7 @@ class CareerPath(commands.Cog):
                     raise
 
             embed = discord.Embed(
-                title="🕒 Shift Logged - here is your 🧾pay stub",
+                title=f"🕒 Shift Logged - here is your pay stub from **{company_name}**",
                 description=(
                     f"> You completed your shift as a **{occupation_name}** and earned **${pay_rate:.2f}**.\n"
                     f"> Your total completed shifts today: **{shifts_today}/{required_shifts_per_day}**\n\n"
