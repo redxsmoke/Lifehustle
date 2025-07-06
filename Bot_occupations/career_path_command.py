@@ -52,7 +52,7 @@ class CareerPath(commands.Cog):
 
                 print("[workshift] Fetching occupation info...")
                 occ_query = """
-                    SELECT o.cd_occupation_id, o.description, o.pay_rate, o.required_shifts_per_day
+                    SELECT o.cd_occupation_id, o.description, o.pay_rate, o.required_shifts_per_day, o.company_name
                     FROM users u
                     JOIN cd_occupations o ON u.occupation_id = o.cd_occupation_id
                     WHERE u.user_id = $1
