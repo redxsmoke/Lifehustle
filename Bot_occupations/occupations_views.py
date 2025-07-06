@@ -17,7 +17,7 @@ class OfferConfirmationView(View):
         success = await assign_user_job(self.pool, self.user_id, self.occupation['cd_occupation_id'])
         if success:
             await interaction.response.edit_message(
-                content=f"🎉 Congratulations! You have accepted the position as **{self.occupation['description']}** at **{self.occupation['company_name']}**.",
+                content=f"🥳 Congratulations! You have accepted the position as **{self.occupation['description']}** at **{self.occupation['company_name']}**.",
                 embed=None,
                 view=None
             )
@@ -68,7 +68,8 @@ class JobSelect(Select):
             )
             embed.add_field(name="💼 Job Title", value=occupation['description'], inline=False)
             embed.add_field(name="💰 Pay Rate", value=f"${occupation['pay_rate']} per shift", inline=True)
-            embed.add_field(name="⏰ Required Shifts", value=str(occupation['required_shifts_per_day']), inline=True)
+            embed.add_field(name="⏰ Required Shifts Per Day", value=str(occupation['required_shifts_per_day']), inline=True)
+            embed.add_field(name="📅 Start Date", value="Immediate Start", inline=False)
             embed.set_footer(text="Do you accept this position?")
 
             view = OfferConfirmationView(self.pool, interaction.user.id, occupation)
