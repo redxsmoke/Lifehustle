@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 import datetime
+import logging
 from Bot_occupations.career_path_views import ConfirmResignView
 from embeds import COLOR_GREEN, COLOR_RED
 
@@ -23,55 +24,63 @@ class CareerPath(commands.Cog):
         await ctx.defer()
         user_id = ctx.author.id
 
-        async with self.db_pool.acquire() as conn:
-            needs_warning = await conn.fetchval(
-                "SELECT occupation_needs_warning FROM users WHERE user_id = $1",
-                user_id
-            )
-            if needs_warning:
-                await self._send_warning_message(ctx)
+        try:
+            async with self.db_pool.acquire() as conn:
+                needs_warning = await conn.fetchval(
+                    "SELECT occupation_needs_warning FROM users WHERE user_id = $1",
+                    user_id
+                )
+                if needs_warning:
+                    await self._send_warning_message(ctx)
+                    await conn.execute(
+                        "UPDATE users SET occupation_needs_warning = FALSE WHERE user_id = $1",
+                        user_id
+                    )
+
+                occ_query = """
+                    SELECT o.occupation_id, o.pay_rate, o.required_shifts
+                    FROM users u
+                    JOIN cd_occupations o ON u.occupation_id = o.occupation_id
+                    WHERE u.user_id = $1
+                    AND u.occupation_id IS NOT NULL;
+                """
+                occupation = await conn.fetchrow(occ_query, user_id)
+                if occupation is None:
+                    await ctx.followup.send("You don't currently have an active occupation.")
+                    return
+
                 await conn.execute(
-                    "UPDATE users SET occupation_needs_warning = FALSE WHERE user_id = $1",
+                    "INSERT INTO user_work_log(user_id, work_timestamp) VALUES ($1, NOW())",
                     user_id
                 )
 
-            occ_query = """
-                SELECT o.occupation_id, o.pay_rate, o.required_shifts
-                FROM users u
-                JOIN cd_occupations o ON u.occupation_id = o.occupation_id
-                WHERE u.user_id = $1
-                AND u.occupation_id IS NOT NULL;
-            """
-            occupation = await conn.fetchrow(occ_query, user_id)
-            if occupation is None:
-                await ctx.followup.send("You don't currently have an active occupation.")
-                return
+                shifts_today = await conn.fetchval(
+                    "SELECT COUNT(*) FROM user_work_log WHERE user_id = $1 AND work_timestamp >= CURRENT_DATE",
+                    user_id
+                )
 
-            await conn.execute(
-                "INSERT INTO user_work_log(user_id, work_timestamp) VALUES ($1, NOW())",
-                user_id
+                await conn.execute(
+                    "UPDATE users SET balance = balance + $1 WHERE user_id = $2",
+                    occupation['pay_rate'],
+                    user_id
+                )
+
+            embed = discord.Embed(
+                title="🕒 Shift Logged",
+                description=(
+                    f"You earned **${occupation['pay_rate']}**.\n"
+                    f"Shifts today: **{shifts_today}/{occupation['required_shifts']}**."
+                ),
+                color=COLOR_GREEN
             )
+            await ctx.followup.send(embed=embed)
 
-            shifts_today = await conn.fetchval(
-                "SELECT COUNT(*) FROM user_work_log WHERE user_id = $1 AND work_timestamp >= CURRENT_DATE",
-                user_id
-            )
-
-            await conn.execute(
-                "UPDATE users SET balance = balance + $1 WHERE user_id = $2",
-                occupation['pay_rate'],
-                user_id
-            )
-
-        embed = discord.Embed(
-            title="🕒 Shift Logged",
-            description=(
-                f"You earned **${occupation['pay_rate']}**.\n"
-                f"Shifts today: **{shifts_today}/{occupation['required_shifts']}**."
-            ),
-            color=COLOR_GREEN
-        )
-        await ctx.followup.send(embed=embed)
+        except Exception as e:
+            logging.exception("Error in workshift command:")
+            try:
+                await ctx.followup.send("An error occurred while logging your shift. Please try again later.")
+            except:
+                pass
 
     @careerpath.command(name="resign", description="Resign from your job with confirmation")
     async def resign(self, ctx):
@@ -209,7 +218,7 @@ class CareerPath(commands.Cog):
             f"**Message from {await self._get_company_name(user_id)} HQ 🚨**\n"
             f"Hey {user.name},\n\n"
             f"You've been fired! The digital pink slip has arrived. "
-            f"Thanks for your time with us. Better luck next game! 🎮👋"
+            f"Thanks for your time with us. Better luck next time! 😢👋"
         )
         try:
             await user.send(msg)
