@@ -95,7 +95,7 @@ class CareerPath(commands.Cog):
                 print("[workshift] Updating user balance...")
                 try:
                     await conn.execute(
-                        "UPDATE users SET balance = balance + $1 WHERE user_id = $2",
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
                         occupation['pay_rate'],
                         user_id
                     )

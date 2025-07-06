@@ -159,7 +159,6 @@ async def register_commands(bot: discord.Client):
         embed.add_field(name="\u200b", value="\u200b", inline=False)
         embed.add_field(name="\u200b🏢 Occupation", value=f"{occupation_name}", inline=True)
 
-        
         if occupation_name == "Unemployed":
             embed.add_field(name="\u200b🛠 Today's Shifts", value=f"{"Unemployed"}", inline=True)
         elif required_shifts > 0:
