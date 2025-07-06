@@ -78,7 +78,7 @@ class CareerPath(commands.Cog):
                 occupation_id = occupation["cd_occupation_id"]
                 occupation_name = occupation["description"]
                 company_name = occupation["company_name"]
-                pay_rate = occupation["pay_rate"]
+                pay_rate = float(occupation["pay_rate"])
                 required_shifts_per_day = occupation["required_shifts_per_day"]
 
                 # Determine mini-game based on occupation_id
