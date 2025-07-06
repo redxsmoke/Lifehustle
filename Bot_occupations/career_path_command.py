@@ -117,10 +117,10 @@ class CareerPath(commands.Cog):
             embed = discord.Embed(
                 title="🕒 Shift Logged - here is your 🧾pay stub",
                 description=(
-                    f"You completed your shift as a **{occupation_name}** and earned **${pay_rate:.2f}**.\n"
-                    f"Your total completed shifts today: **{shifts_today}/{required_shifts_per_day}**\n\n"
-                    f"💵 ${pay_rate:.2f} has been deposited into your checking account.\n"
-                    f"**New Balance:** ${new_balance:.2f}\n\n"
+                    f"> You completed your shift as a **{occupation_name}** and earned **${pay_rate:.2f}**.\n"
+                    f"> Your total completed shifts today: **{shifts_today}/{required_shifts_per_day}**\n\n"
+                    f"> 💵 ${pay_rate:.2f} has been deposited into your checking account.\n"
+                    f"> **New Balance:** ${new_balance:.2f}\n\n"
                     f"*Paid. Hopefully this cash sticks around longer than your last situationship.*"
                 ),
                 color=COLOR_GREEN
