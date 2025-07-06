@@ -127,13 +127,13 @@ class CareerPath(commands.Cog):
                 color=COLOR_GREEN
             )
 
-            await ctx.send(embed=embed)
+            await ctx.followup.send(embed=embed)
             print("[workshift] Response sent.")
 
         except Exception as e:
             print(f"[workshift] Exception caught: {e}")
             try:
-                await ctx.send("An error occurred while logging your shift. Please try again later.")
+                await ctx.followup.send("An error occurred while logging your shift. Please try again later.")
             except:
                 print("[workshift] Failed to send error message to user.")
 
@@ -150,7 +150,7 @@ class CareerPath(commands.Cog):
                 color=discord.Color.orange()
             )
             view = ConfirmResignView(ctx.author)
-            await ctx.send(embed=embed, view=view, ephemeral=True)
+            await ctx.followup.send(embed=embed, view=view, ephemeral=True)
             print("[resign] Confirmation view sent.")
 
             await view.wait()
@@ -162,7 +162,7 @@ class CareerPath(commands.Cog):
                     description="No changes were made.",
                     color=COLOR_RED
                 )
-                await ctx.send(embed=embed, ephemeral=True)
+                await ctx.followup.send(embed=embed, ephemeral=True)
                 print("[resign] Resignation timed out, no changes.")
 
             elif view.value:
@@ -179,7 +179,7 @@ class CareerPath(commands.Cog):
                     description="You have successfully resigned from your job.",
                     color=COLOR_GREEN
                 )
-                await ctx.send(embed=embed, ephemeral=True)
+                await ctx.followup.send(embed=embed, ephemeral=True)
                 print("[resign] Success message sent.")
 
             else:
@@ -189,7 +189,7 @@ class CareerPath(commands.Cog):
         except Exception as e:
             print(f"[resign] Exception caught: {e}")
             try:
-                await ctx.send("An error occurred during resignation. Please try again later.", ephemeral=True)
+                await ctx.followup.send("An error occurred during resignation. Please try again later.", ephemeral=True)
             except:
                 print("[resign] Failed to send error message to user.")
 
