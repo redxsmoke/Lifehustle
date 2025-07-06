@@ -203,4 +203,4 @@ class CareerPath(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(CareerPath(bot, bot.pool))
+    await bot.add_cog(CareerPath(bot, bot.pool), override=True)
