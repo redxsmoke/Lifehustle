@@ -64,7 +64,7 @@ class CareerPath(commands.Cog):
                 pay_rate = occupation['pay_rate']
                 required_shifts_per_day = occupation['required_shifts_per_day']
                 new_balance = await conn.fetchval(
-                    "SELECT balance FROM users WHERE user_id = $1",
+                    "SELECT checking_account_balance FROM user_finances WHERE user_id = $1",
                     user_id
                 )
 
