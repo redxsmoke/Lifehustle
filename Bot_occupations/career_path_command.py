@@ -1,7 +1,9 @@
 import discord
 from discord.ext import commands, tasks
 import datetime
+import random
 from Bot_occupations.career_path_views import ConfirmResignView
+from occupation_mini_games import snake_breakroom
 from embeds import COLOR_GREEN, COLOR_RED
 
 class CareerPath(commands.Cog):
@@ -68,6 +70,26 @@ class CareerPath(commands.Cog):
                     "SELECT checking_account_balance FROM user_finances WHERE user_id = $1",
                     user_id
                 )
+
+                # After fetching occupation data...
+
+                possible_events = ["snake_breakroom"]
+                selected_event = random.choice(possible_events)
+
+                if selected_event in minigames_by_name:
+                    minigame = minigames_by_name[selected_event]
+                    embed, view = await minigame.play(
+                        self.db_pool,
+                        ctx.guild.id,
+                        user_id,
+                        occupation['cd_occupation_id'],
+                        pay_rate
+                    )
+                    await ctx.followup.send(embed=embed, view=view)
+                    return
+
+
+
 
                 try:
                     occupation = await conn.fetchrow(occ_query, user_id)

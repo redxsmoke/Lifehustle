@@ -1,0 +1,6 @@
+from . import snake_breakroom, coffee_spill, printer_jam
+
+minigames_by_name = {
+    "snake_breakroom": snake_breakroom,
+    
+}
