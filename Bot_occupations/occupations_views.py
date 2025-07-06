@@ -16,11 +16,11 @@ class OfferConfirmationView(View):
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         success = await assign_user_job(self.pool, self.user_id, self.occupation['cd_occupation_id'])
         if success:
-            await interaction.response.edit_message(
-                content=f"🥳 Congratulations! You have accepted the position as **{self.occupation['description']}** at **{self.occupation['company_name']}**.",
-                embed=None,
-                view=None
-            )
+                embed = discord.Embed(
+                    title="✅ Position Accepted!",
+                    description=f"> 🥳 Congratulations! You have accepted the position as **{self.occupation['description']}** at **{self.occupation['company_name']}**.",
+                    color=discord.Color.green()
+                )
         else:
             await interaction.response.send_message("⚠️ Failed to accept the job. Please try again.", ephemeral=True)
         self.stop()
