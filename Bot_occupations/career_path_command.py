@@ -127,13 +127,13 @@ class CareerPath(commands.Cog):
                 color=COLOR_GREEN
             )
 
-            await ctx.followup.send(embed=embed)
+            await ctx.send(embed=embed)
             print("[workshift] Response sent.")
 
         except Exception as e:
             print(f"[workshift] Exception caught: {e}")
             try:
-                await ctx.followup.send("An error occurred while logging your shift. Please try again later.")
+                await ctx.send("An error occurred while logging your shift. Please try again later.")
             except:
                 print("[workshift] Failed to send error message to user.")
 
@@ -157,7 +157,7 @@ class CareerPath(commands.Cog):
                 color=discord.Color.orange()
             )
             view = ConfirmResignView(ctx.author)
-            message = await ctx.followup.send(embed=confirm_embed, view=view, ephemeral=True)
+            message = await ctx.send(embed=confirm_embed, view=view, ephemeral=True)
             log("Confirmation sent")
 
             # Step 2: Wait for response or timeout
