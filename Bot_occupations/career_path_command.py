@@ -58,6 +58,10 @@ class CareerPath(commands.Cog):
                     WHERE u.user_id = $1
                     AND u.occupation_id IS NOT NULL;
                 """
+                occupation = await conn.fetchrow(occ_query, user_id)
+                print(f"[workshift] Occupation row: {occupation}")
+                occupation_name = occupation['description']
+
                 try:
                     occupation = await conn.fetchrow(occ_query, user_id)
                     print(f"[workshift] Occupation row: {occupation}")
