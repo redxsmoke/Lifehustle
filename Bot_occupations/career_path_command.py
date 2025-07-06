@@ -116,7 +116,7 @@ class CareerPath(commands.Cog):
                     raise
 
             embed = discord.Embed(
-                title=f"🕒 Shift Logged - here is your pay stub from **{company_name}**",
+                title=f"🕒 Shift Logged - here is your pay stub from ***{company_name}***",
                 description=(
                     f"> You completed your shift as a **{occupation_name}** and earned **${pay_rate:.2f}**.\n"
                     f"> Your total completed shifts today: **{shifts_today}/{required_shifts_per_day}**\n\n"
