@@ -163,9 +163,12 @@ async def register_commands(bot: discord.Client):
         if occupation_name == "Unemployed":
             embed.add_field(name="\u200b🛠 Shifts Worked Today", value="Unemployed", inline=False)
         elif required_shifts > 0:
-            embed.add_field(name="\u200b🛠 Shifts Worked Today", value=f"{shifts_worked} / {required_shifts}", inline=False)
-
-        embed.add_field(name="\u200b", value="\u200b", inline=False)
+            emoji = "✅" if shifts_worked == required_shifts else "⚠️"
+            embed.add_field(
+                name="\u200b🛠 Shifts Worked Today",
+                value=f"{emoji} {shifts_worked} / {required_shifts}",
+                inline=False
+            )
 
         embed.set_footer(text="LifeHustle Bot | Stay healthy and safe!")
 
