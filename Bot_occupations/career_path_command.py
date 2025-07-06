@@ -1,4 +1,6 @@
 import discord
+print(discord.__version__)
+
 from discord.ext import commands, tasks
 import datetime
 import random
@@ -28,6 +30,8 @@ class CareerPath(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send("Please use a subcommand: workshift or resign")
 
+    print(f"type(careerpath) = {type(careerpath)}")
+    print(f"dir(careerpath) = {dir(careerpath)}")
     @careerpath.command(name="workshift", description="Log a work shift and add your pay")
     async def workshift(self, ctx):
         await ctx.defer()
