@@ -115,11 +115,10 @@ async def register_commands(bot: discord.Client):
         weather_desc, weather_emoji, temp_c, temp_f = get_mock_weather_dynamic(now_utc)
         checking_account_balance = await get_user_checking_account_balance(interaction.user.id)
 
-        # --- NEW: Fetch shifts worked today and required shifts ---
         pool = globals.pool
         async with pool.acquire() as conn:
             user_job = await conn.fetchrow('''
-                SELECT u.occupation_id, o.required_shifts_per_day
+                SELECT u.occupation_id, o.required_shifts_per_day, o.description AS job_title
                 FROM users u
                 LEFT JOIN cd_occupations o ON u.occupation_id = o.cd_occupation_id
                 WHERE u.user_id = $1
@@ -127,8 +126,11 @@ async def register_commands(bot: discord.Client):
 
             shifts_worked = 0
             required_shifts = 0
+            occupation_name = "Unemployed"
+
             if user_job and user_job['occupation_id']:
                 required_shifts = user_job['required_shifts_per_day'] or 0
+                occupation_name = user_job['job_title'] or "Unknown"
 
                 shifts_worked = await conn.fetchval('''
                     SELECT COUNT(*)
@@ -146,24 +148,22 @@ async def register_commands(bot: discord.Client):
         )
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
 
-        value = f"`{time_emoji} {time_str}`"
-        embed.add_field(name="\u200b🕒 Time", value=value, inline=True)
-        value = f"`{date_str}`"
-        embed.add_field(name="\u200b📅 Date", value=value, inline=True)
+        embed.add_field(name="\u200b🕒 Time", value=f"`{time_emoji} {time_str}`", inline=True)
+        embed.add_field(name="\u200b📅 Date", value=f"`{date_str}`", inline=True)
 
         embed.add_field(name="\u200b", value="\u200b", inline=False)
 
-        value = f"`{checking_account_balance:,}`"
-        embed.add_field(name="\u200b💵 Cash on Hand", value=value, inline=True)
-        value = f"`{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C`"
-        embed.add_field(name="\u200b🌤 Weather", value=value, inline=True)
+        embed.add_field(name="\u200b💵 Cash on Hand", value=f"`{checking_account_balance:,}`", inline=True)
+        embed.add_field(name="\u200b🌤 Weather", value=f"`{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C`", inline=True)
 
-        # --- NEW FIELD ---
-        if user_job is None or user_job['occupation_id'] is None:
+        # NEW Occupation field
+        embed.add_field(name="\u200b🏢 Occupation", value=occupation_name, inline=False)
+
+        # Shifts worked field
+        if occupation_name == "Unemployed":
             embed.add_field(name="\u200b🛠 Shifts Worked Today", value="Unemployed", inline=False)
         elif required_shifts > 0:
             embed.add_field(name="\u200b🛠 Shifts Worked Today", value=f"{shifts_worked} / {required_shifts}", inline=False)
-
 
         embed.add_field(name="\u200b", value="\u200b", inline=False)
 
