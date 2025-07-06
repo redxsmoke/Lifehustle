@@ -1,7 +1,7 @@
 from discord import app_commands
 from discord.ext import commands
 from discord.ui import View
-from Bot_occupations.db_utils import assign_user_job, get_eligible_occupations, get_user
+from Boccupation_db_utilities import assign_user_job, get_eligible_occupations, get_user
 
 import discord
 

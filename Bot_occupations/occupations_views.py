@@ -4,7 +4,7 @@ from discord.ui import View, Select
 
 import discord
 
-from Bot_occupations.occupations_views import assign_user_job, get_eligible_occupations, get_user
+from occupation_db_utilities import assign_user_job, get_eligible_occupations, get_user
 
 class ApplyJob(commands.Cog):
     def __init__(self, bot):
