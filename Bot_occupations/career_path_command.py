@@ -1,3 +1,5 @@
+print("✅ DEBUG: Loaded career_path_command.py version 2025-07-06 18:45")
+
 import discord
 print(discord.__version__)
 
@@ -26,12 +28,14 @@ class CareerPath(commands.Cog):
         self.daily_shift_check.cancel()
 
     @commands.hybrid_group(name="careerpath", description="Manage your career path")
+    print(f"✅ careerpath group type = {type(careerpath)}")
+    print(f"✅ careerpath dir = {dir(careerpath)}")
+
     async def careerpath(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send("Please use a subcommand: workshift or resign")
 
-    print(f"type(careerpath) = {type(careerpath)}")
-    print(f"dir(careerpath) = {dir(careerpath)}")
+    print(f"✅ DEBUG: Declaring workshift with careerpath type = {type(careerpath)}")
     @careerpath.command(name="workshift", description="Log a work shift and add your pay")
     async def workshift(self, ctx):
         await ctx.defer()

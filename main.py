@@ -1,3 +1,4 @@
+
 # --- Standard Library ---
 import os
 import ssl
@@ -101,6 +102,9 @@ async def setup_database():
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool)
     await setup()  # Setup education and occupation tables
+
+
+
 
 
 # Entrypoint
