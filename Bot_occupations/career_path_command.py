@@ -28,7 +28,7 @@ class CareerPath(commands.Cog):
         if ctx.invoked_subcommand is None:
             await ctx.send("Please use a subcommand: workshift or resign")
 
-    @careerpath.command(name="workshift", description="Log a work shift and add your pay")
+    @careerpath.hybrid_command(name="workshift", description="Log a work shift and add your pay")
     async def workshift(self, ctx):
         await ctx.defer()
         user_id = ctx.author.id
