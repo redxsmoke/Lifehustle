@@ -6,6 +6,7 @@ import discord
 
 from Bot_occupations.occupation_db_utilities import assign_user_job, get_eligible_occupations, get_user
 
+
 class JobSelectView(View):
     def __init__(self, pool, options):
         super().__init__()
@@ -18,21 +19,19 @@ class JobSelectView(View):
             min_values=1,
             max_values=1
         )
-        # Assign the callback properly BEFORE adding the select to the view
-        async def select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
+        self.select_menu.callback = self.select_callback  # Bind the callback
         self.add_item(self.select_menu)
 
-    async def select_callback(self, select: discord.ui.Select, interaction: discord.Interaction):
+    async def select_callback(self, interaction: discord.Interaction):
         try:
-            selected_id = int(select.values[0])
+            selected_id = int(interaction.data["values"][0])
             print(f"[DEBUG] User {interaction.user.id} selected job {selected_id}")
 
             success = await assign_user_job(self.pool, interaction.user.id, selected_id)
-            selected_label = next(opt.label for opt in self.options if opt.value == select.values[0])
+            selected_label = next(opt.label for opt in self.options if opt.value == str(selected_id))
 
             if success:
                 self.select_menu.disabled = True
-                # Edit original message
                 await interaction.response.edit_message(
                     content=f"🎉 You are now employed as a **{selected_label}**!", view=self
                 )
@@ -44,12 +43,50 @@ class JobSelectView(View):
                 print(f"[DEBUG] Job assignment failed")
         except Exception as e:
             print(f"[ERROR] Exception in select_callback: {e}")
-            # Send ephemeral error message (make sure response sent exactly once)
             if not interaction.response.is_done():
                 await interaction.response.send_message(f"⚠️ An error occurred: {e}", ephemeral=True)
             else:
-                # If response already sent, just log error or notify user differently
                 print("[ERROR] Interaction response already sent.")
+
+
+class ApplyJob(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        self.pool = bot.pool
+
+    @app_commands.command(name="need_money", description="Apply for a new job!")
+    async def need_money(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+
+        user = await get_user(self.pool, interaction.user.id)
+
+        if not user:
+            async with self.pool.acquire() as conn:
+                await conn.execute('''
+                    INSERT INTO users (user_id, education_level_id, occupation_id)
+                    VALUES ($1, 1, NULL)
+                    ON CONFLICT (user_id) DO NOTHING
+                ''', interaction.user.id)
+            user_edu_level = 1
+        else:
+            user_edu_level = user.get('education_level_id') or 1
+
+        occupations = await get_eligible_occupations(self.pool, user_edu_level)
+
+        if not occupations:
+            await interaction.followup.send("You don't qualify for any jobs right now.", ephemeral=True)
+            return
+
+        options = [
+            discord.SelectOption(label=row['description'], value=str(row['cd_occupation_id']))
+            for row in occupations
+        ]
+
+        await interaction.followup.send(
+            "Choose a job to apply for:",
+            view=JobSelectView(self.pool, options),
+            ephemeral=True
+        )
 
 
 class JobStatus(commands.Cog):
