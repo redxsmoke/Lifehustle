@@ -33,7 +33,6 @@ class ApplyJob(commands.Cog):
             def __init__(self):
                 super().__init__()
 
-                # Add the select menu with options dynamically
                 self.select_menu = Select(
                     placeholder="Select a job to apply for",
                     options=options,
@@ -51,7 +50,6 @@ class ApplyJob(commands.Cog):
 
                     if success:
                         response_msg = f"🎉 You are now employed as a **{selected_label}**!"
-                        # Disable select menu so user can't re-select
                         self.select_menu.disabled = True
                         await interaction2.response.edit_message(content=response_msg, view=self)
                     else:
