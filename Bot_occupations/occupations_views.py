@@ -19,7 +19,7 @@ class JobSelectView(View):
             max_values=1
         )
         # Assign the callback properly BEFORE adding the select to the view
-        self.select_menu.callback = self.select_callback
+        async def select_callback(self, interaction: discord.Interaction, select: discord.ui.Select):
         self.add_item(self.select_menu)
 
     async def select_callback(self, select: discord.ui.Select, interaction: discord.Interaction):
