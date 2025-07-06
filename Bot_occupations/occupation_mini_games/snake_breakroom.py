@@ -34,22 +34,39 @@ class SnakeBreakroomView(View):
     async def call_animal_control(self, interaction: discord.Interaction, button: discord.ui.Button):
         async with self.pool.acquire() as conn:
             helper = await conn.fetchrow("""
-                SELECT discord_id FROM users
+                SELECT user_id FROM users
                 WHERE occupation_id = 61  -- Animal Control occupation ID
                 AND guild_id = $1
                 AND user_id != $2
                 LIMIT 1
             """, self.guild_id, self.user_id)
 
+            # Resolve display names
+            # Helper's display name
             if helper:
+                helper_member = interaction.guild.get_member(helper['user_id'])
+                if helper_member:
+                    helper_name = helper_member.display_name
+                else:
+                    user_obj = await interaction.client.fetch_user(helper['user_id'])
+                    helper_name = user_obj.name
+
+                # User's display name
+                user_member = interaction.guild.get_member(self.user_id)
+                if user_member:
+                    user_name = user_member.display_name
+                else:
+                    user_obj = await interaction.client.fetch_user(self.user_id)
+                    user_name = user_obj.name
+
                 bonus = self.pay_rate * 2
                 await conn.execute("""
                     UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2
                 """, bonus, self.user_id)
                 await conn.execute("""
                     UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2
-                """, bonus, helper['discord_id'])
-                desc = f"You called Animal Control! <@{helper['discord_id']}> rushes in. Both get a bonus of ${int(bonus)}!"
+                """, bonus, helper['user_id'])
+                desc = f"You called Animal Control! {helper_name} rushed in to help {user_name}. Both get a bonus of ${int(bonus)}!"
             else:
                 desc = "You called Animal Control but no one is available. No bonus awarded."
 
@@ -195,11 +212,29 @@ class AnimalControlSnakeView(View):
     async def call_backup(self, interaction: discord.Interaction, button: discord.ui.Button):
         async with self.pool.acquire() as conn:
             helpers = await conn.fetch("""
-                SELECT discord_id FROM users
+                SELECT user_id FROM users
                 WHERE occupation_id = 61
                 AND guild_id = $1
                 AND user_id != $2
             """, self.guild_id, self.user_id)
+
+            # Resolve helpers' display names
+            helper_names = []
+            for helper in helpers:
+                helper_member = interaction.guild.get_member(helper['user_id'])
+                if helper_member:
+                    helper_names.append(helper_member.display_name)
+                else:
+                    user_obj = await interaction.client.fetch_user(helper['user_id'])
+                    helper_names.append(user_obj.name)
+
+            # Resolve user's display name
+            user_member = interaction.guild.get_member(self.user_id)
+            if user_member:
+                user_name = user_member.display_name
+            else:
+                user_obj = await interaction.client.fetch_user(self.user_id)
+                user_name = user_obj.name
 
             bonus = int(self.pay_rate * 1.8)
             await conn.execute(
@@ -211,9 +246,9 @@ class AnimalControlSnakeView(View):
                 await conn.execute(
                     "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
                     bonus,
-                    helper['discord_id'],
+                    helper['user_id'],
                 )
-            desc = f"You call for backup and handle the snake safely. You and {len(helpers)} helpers receive ${bonus} each!"
+            desc = f"You call for backup and handle the snake safely. {user_name} and {len(helpers)} helpers ({', '.join(helper_names)}) receive ${bonus} each!"
 
         penalty_applied = await self.apply_penalty()
         if penalty_applied:

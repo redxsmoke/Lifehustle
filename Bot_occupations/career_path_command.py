@@ -3,16 +3,15 @@ from discord.ext import commands, tasks
 import datetime
 import random
 from Bot_occupations.career_path_views import ConfirmResignView
-from Bot_occupations.occupation_mini_games import snake_breakroom
+from Bot_occupations.occupation_mini_games.snake_breakroom import SnakeBreakroomView
 from embeds import COLOR_GREEN, COLOR_RED
 
 minigames_by_id = {
-    1: SnakeBreakroomView,  #Professional Cuddler 
+    1: SnakeBreakroomView,  # Professional Cuddler 
     2: SnakeBreakroomView,  # Senior Bubble Wrap Popper
     3: SnakeBreakroomView,  # Street Performer
     4: SnakeBreakroomView,  # Dog Walker
     5: SnakeBreakroomView,  # Human Statue
-    
 }
 
 class CareerPath(commands.Cog):
@@ -147,19 +146,6 @@ class CareerPath(commands.Cog):
 
 
                 try:
-                    occupation = await conn.fetchrow(occ_query, user_id)
-                    print(f"[workshift] Occupation row: {occupation}")
-                except Exception as e:
-                    print(f"[workshift] ERROR fetching occupation info: {e}")
-                    raise
-
-                if occupation is None:
-                    print("[workshift] No active occupation found.")
-                    await ctx.send("You don't currently have an active occupation.")
-                    return
-
-                print("[workshift] Inserting new shift log...")
-                try:
                     await conn.execute(
                         "INSERT INTO user_work_log(user_id, work_timestamp) VALUES ($1, NOW())",
                         user_id
@@ -169,7 +155,7 @@ class CareerPath(commands.Cog):
                     print(f"[workshift] ERROR inserting shift log: {e}")
                     raise
 
-                print("[workshift] Counting today's shifts...")
+                # Count today's shifts
                 try:
                     shifts_today = await conn.fetchval(
                         "SELECT COUNT(*) FROM user_work_log WHERE user_id = $1 AND work_timestamp >= CURRENT_DATE",
@@ -180,11 +166,11 @@ class CareerPath(commands.Cog):
                     print(f"[workshift] ERROR counting shifts: {e}")
                     raise
 
-                print("[workshift] Updating user balance...")
+                # Update user balance
                 try:
                     await conn.execute(
                         "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
-                        occupation['pay_rate'],
+                        pay_rate,
                         user_id
                     )
                     print("[workshift] Balance updated.")
@@ -192,27 +178,49 @@ class CareerPath(commands.Cog):
                     print(f"[workshift] ERROR updating balance: {e}")
                     raise
 
-            embed = discord.Embed(
-                title=f"🕒 Shift Logged - here is your pay stub from ***{company_name}***",
-                description=(
-                    f"> You completed your shift as a **{occupation_name}** and earned **${pay_rate:.2f}**.\n"
-                    f"> Your total completed shifts today: **{shifts_today}/{required_shifts_per_day}**\n\n"
-                    f"> 💵 ${pay_rate:.2f} has been deposited into your checking account.\n"
-                    f"> **New Balance:** ${new_balance:,.2f}\n\n"
-                    f"*Paid. Hopefully this cash sticks around longer than your last situationship.*"
-                ),
-                color=COLOR_GREEN
-            )
+                # Fetch new balance for embed display
+                try:
+                    new_balance = await conn.fetchval(
+                        "SELECT checking_account_balance FROM user_finances WHERE user_id = $1",
+                        user_id
+                    )
+                    print(f"[workshift] New balance fetched: {new_balance}")
+                except Exception as e:
+                    print(f"[workshift] ERROR fetching new balance: {e}")
+                    new_balance = 0.0  # fallback
 
-            await ctx.send(embed=embed)
-            print("[workshift] Response sent.")
+                # Determine mini-game based on occupation_id
+                view_class = minigames_by_id.get(occupation_id)
+                if view_class is None:
+                    await ctx.followup.send(
+                        f"🧹 You worked a shift as a **{occupation_name}**, but this job doesn't have a mini-game yet. No payout this time!"
+                    )
+                    return
+
+                # Send mini-game view
+                view = view_class(self.db_pool, ctx.guild.id, user_id, occupation_id, pay_rate)
+                await ctx.followup.send(
+                    f"🐍 Breakroom game starting for **{occupation_name}**!", view=view
+                )
+
+                # Send pay stub embed
+                embed = discord.Embed(
+                    title=f"🕒 Shift Logged - here is your pay stub from ***{company_name}***",
+                    description=(
+                        f"> You completed your shift as a **{occupation_name}** and earned **${pay_rate:.2f}**.\n"
+                        f"> Your total completed shifts today: **{shifts_today}/{required_shifts_per_day}**\n\n"
+                        f"> 💵 ${pay_rate:.2f} has been deposited into your checking account.\n"
+                        f"> **New Balance:** ${new_balance:,.2f}\n\n"
+                        f"*Paid. Hopefully this cash sticks around longer than your last situationship.*"
+                    ),
+                    color=COLOR_GREEN
+                )
+                await ctx.send(embed=embed)
+                print("[workshift] Response sent.")
 
         except Exception as e:
             print(f"[workshift] Exception caught: {e}")
-            try:
-                await ctx.send("An error occurred while logging your shift. Please try again later.")
-            except:
-                print("[workshift] Failed to send error message to user.")
+            await ctx.followup.send("❌ An error occurred while processing your shift. Please try again later.")
 
     @careerpath.command(name="resign", description="Resign from your job with confirmation")
     async def resign(self, ctx):
@@ -384,7 +392,7 @@ class CareerPath(commands.Cog):
             f"**Message from {await self._get_company_name(user_id)} HQ 🚨**\n"
             f"Hey {user.name},\n\n"
             f"You've been fired! The digital pink slip has arrived. "
-            f"Thanks for your time with us. Better luck next game! 🎮👋"
+            f"Thanks for your time with us. Better luck next time! 🎮👋"
         )
         try:
             await user.send(msg)
