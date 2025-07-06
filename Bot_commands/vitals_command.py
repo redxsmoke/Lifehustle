@@ -4,6 +4,7 @@ import datetime
 import random
 import globals  # your global DB pool
 
+
 # Helper functions you already have (keep these as is)
 def c_to_f(c):
     return c * 9 / 5 + 32
