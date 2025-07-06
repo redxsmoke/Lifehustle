@@ -108,7 +108,7 @@ class CareerPath(commands.Cog):
                 title="🕒 Shift Logged",
                 description=(
                     f"You earned **${occupation['pay_rate']}**.\n"
-                    f"Shifts today: **{shifts_today}/{occupation['required_shifts']}**."
+                    f"Shifts today: **{shifts_today}/{occupation['required_shifts_per_day']}**."
                 ),
                 color=COLOR_GREEN
             )
@@ -191,7 +191,7 @@ class CareerPath(commands.Cog):
             )
             SELECT
               u.user_id,
-              o.required_shifts,
+              o.required_shifts_per_day,
               COALESCE(sy.shifts_worked, 0) AS shifts_worked,
               u.occupation_failed_days,
               o.maxed_amount_failed_shifts
@@ -200,14 +200,14 @@ class CareerPath(commands.Cog):
             LEFT JOIN shifts_yesterday sy ON sy.user_id = u.user_id
             WHERE u.occupation_needs_warning = FALSE
               AND u.occupation_failed_days < o.maxed_amount_failed_shifts
-              AND COALESCE(sy.shifts_worked, 0) < o.required_shifts;
+              AND COALESCE(sy.shifts_worked, 0) < o.required_shifts_per_day;
             """
 
             failed_users = await conn.fetch(query)
 
             for record in failed_users:
                 user_id = record['user_id']
-                required = record['required_shifts']
+                required = record['required_shifts_per_day']
                 worked = record['shifts_worked']
                 failed_days = record['occupation_failed_days']
                 max_failed = record['maxed_amount_failed_shifts']
