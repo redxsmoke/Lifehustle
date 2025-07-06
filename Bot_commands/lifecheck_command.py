@@ -166,7 +166,7 @@ async def register_commands(bot: discord.Client):
             emoji = "✅" if shifts_worked == required_shifts else "⚠️"
             embed.add_field(
                 name="\u200b🛠 Today's Shifts",
-                value=f"```{emoji} {shifts_worked} / {required_shifts}```",
+                value=f"{emoji} {shifts_worked} / {required_shifts}",
                 inline=False
             )
 
