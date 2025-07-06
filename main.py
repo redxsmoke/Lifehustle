@@ -70,6 +70,7 @@ async def setup_hook():
     # Load your cog extensions - extensions can access pool via bot.pool
     await bot.load_extension("Bot_commands.bank_commands")
     await bot.load_extension("Bot_occupations.occupations_commands")
+    await bot.load_extension("Bot_occupations.careerpath_command")
 
     bot.add_view(TravelButtons())  # renamed to match change
 

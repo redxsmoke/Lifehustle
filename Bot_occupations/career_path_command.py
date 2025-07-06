@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 import datetime
-from .career_path_views import ConfirmResignView  # relative import within package
+from Bot_occupations.career_path_views import ConfirmResignView  # adjust if your folder structure differs
 
 class CareerPath(commands.Cog):
     def __init__(self, bot, db_pool):
@@ -177,4 +177,30 @@ class CareerPath(commands.Cog):
             f"Hey {ctx.author.display_name},\n\n"
             f"You ghosted your shifts yesterday! 👻 That’s a write-up on your virtual clipboard. "
             f"Miss too many, and the digital pink slip’s coming! 📨\n\n"
-            f"We believe in second chances — show up o
+            f"We believe in second chances — show up or get booted! 💼👢\n\n"
+            f"Need help? We got your back. Keep grinding! 🌟"
+        )
+        await ctx.send(msg)
+
+    async def _send_fired_message(self, user_id):
+        user = self.bot.get_user(user_id)
+        if user is None:
+            try:
+                user = await self.bot.fetch_user(user_id)
+            except:
+                return
+
+        msg = (
+            f"**Message from {await self._get_company_name(user_id)} HQ 🚨**\n"
+            f"Hey {user.name},\n\n"
+            f"You've been fired! The digital pink slip has arrived. "
+            f"Thanks for your time with us. Better luck next game! 🎮👋"
+        )
+        try:
+            await user.send(msg)
+        except:
+            pass
+
+
+async def setup(bot):
+    await bot.add_cog(CareerPath(bot, bot.pool))
