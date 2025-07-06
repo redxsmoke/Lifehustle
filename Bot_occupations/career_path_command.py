@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands, tasks
 import datetime
-from Bot_occupations.career_path_views import ConfirmResignView  # adjust if your folder structure differs
+from Bot_occupations.career_path_views import ConfirmResignView
 from embeds import COLOR_GREEN, COLOR_RED
 
 class CareerPath(commands.Cog):
@@ -15,7 +15,6 @@ class CareerPath(commands.Cog):
 
     @commands.hybrid_group(name="careerpath", description="Manage your career path")
     async def careerpath(self, ctx):
-        await ctx.defer()
         if ctx.invoked_subcommand is None:
             await ctx.send("Please use a subcommand: workshift or resign")
 
@@ -25,45 +24,39 @@ class CareerPath(commands.Cog):
         user_id = ctx.author.id
 
         async with self.db_pool.acquire() as conn:
-            # Check if user needs warning
             needs_warning = await conn.fetchval(
                 "SELECT occupation_needs_warning FROM users WHERE user_id = $1",
                 user_id
             )
             if needs_warning:
                 await self._send_warning_message(ctx)
-                # Clear warning flag
                 await conn.execute(
                     "UPDATE users SET occupation_needs_warning = FALSE WHERE user_id = $1",
                     user_id
                 )
 
-            # Get user's occupation info
             occ_query = """
-            SELECT o.occupation_id, o.pay_rate, o.required_shifts
-            FROM users u
-            JOIN cd_occupations o ON u.occupation_id = o.occupation_id
-            WHERE u.user_id = $1
-              AND u.occupation_id IS NOT NULL;
+                SELECT o.occupation_id, o.pay_rate, o.required_shifts
+                FROM users u
+                JOIN cd_occupations o ON u.occupation_id = o.occupation_id
+                WHERE u.user_id = $1
+                AND u.occupation_id IS NOT NULL;
             """
             occupation = await conn.fetchrow(occ_query, user_id)
             if occupation is None:
-                await ctx.send("You don't currently have an active occupation.")
+                await ctx.followup.send("You don't currently have an active occupation.")
                 return
 
-            # Insert new shift log
             await conn.execute(
                 "INSERT INTO user_work_log(user_id, work_timestamp) VALUES ($1, NOW())",
                 user_id
             )
 
-            # Count shifts today
             shifts_today = await conn.fetchval(
                 "SELECT COUNT(*) FROM user_work_log WHERE user_id = $1 AND work_timestamp >= CURRENT_DATE",
                 user_id
             )
 
-            # Update user balance
             await conn.execute(
                 "UPDATE users SET balance = balance + $1 WHERE user_id = $2",
                 occupation['pay_rate'],
@@ -78,7 +71,7 @@ class CareerPath(commands.Cog):
             ),
             color=COLOR_GREEN
         )
-        await ctx.send(embed=embed)
+        await ctx.followup.send(embed=embed)
 
     @careerpath.command(name="resign", description="Resign from your job with confirmation")
     async def resign(self, ctx):
@@ -90,7 +83,7 @@ class CareerPath(commands.Cog):
             color=discord.Color.orange()
         )
         view = ConfirmResignView(ctx.author)
-        await ctx.followup.send(embed=embed, view=view, ephemeral=False)
+        await ctx.followup.send(embed=embed, view=view, ephemeral=True)
 
         await view.wait()
 
@@ -101,7 +94,6 @@ class CareerPath(commands.Cog):
                 color=COLOR_RED
             )
             await ctx.followup.send(embed=embed, ephemeral=True)
-
         elif view.value:
             async with self.db_pool.acquire() as conn:
                 await conn.execute(
@@ -113,11 +105,11 @@ class CareerPath(commands.Cog):
                 description="You have successfully resigned from your job.",
                 color=COLOR_GREEN
             )
-            await ctx.followup.send(embed=embed, ephemeral=False)
-
+            await ctx.followup.send(embed=embed, ephemeral=True)
         else:
             # Cancelled - no action needed
             pass
+
 
     @tasks.loop(time=datetime.time(hour=0, minute=0, tzinfo=datetime.timezone.utc))
     async def daily_shift_check(self):
