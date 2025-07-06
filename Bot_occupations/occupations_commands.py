@@ -43,13 +43,26 @@ class ApplyJob(commands.Cog):
 
         class JobSelectView(View):
             @discord.ui.select(placeholder="Select a job to apply for", options=options)
-            async def select_callback(self, select: discord.ui.Select, interaction2: discord.Interaction):
-                selected_id = int(select.values[0])
-                await assign_user_job(self.pool, interaction.user.id, selected_id)
-                selected_label = next(opt.label for opt in options if opt.value == select.values[0])
-                await interaction2.response.send_message(
-                    f"🎉 You are now employed as a **{selected_label}**!", ephemeral=True
-                )
+            async def select(self, select: discord.ui.Select, interaction2: discord.Interaction):
+                try:
+                    selected_id = int(select.values[0])
+                    print(f"[DEBUG] User {interaction2.user.id} selected job ID {selected_id}")
+
+                    success = await assign_user_job(self.pool, interaction2.user.id, selected_id)
+                    if not success:
+                        print(f"[DEBUG] Failed to assign job ID {selected_id} to user {interaction2.user.id}")
+                        await interaction2.response.send_message("⚠️ Could not assign that job.", ephemeral=True)
+                        return
+
+                    selected_label = next(opt.label for opt in options if opt.value == select.values[0])
+                    print(f"[DEBUG] Successfully assigned job '{selected_label}' to user {interaction2.user.id}")
+
+                    await interaction2.response.send_message(
+                        f"🎉 You are now employed as a **{selected_label}**!", ephemeral=True
+                    )
+                except Exception as e:
+                    print(f"[ERROR] Exception in select: {e}")
+                    await interaction2.response.send_message(f"⚠️ Error: {e}", ephemeral=True)
 
         await interaction.followup.send("Choose a job to apply for:", view=JobSelectView(), ephemeral=True)
 
