@@ -7,16 +7,9 @@ from discord.ext import commands, tasks
 import datetime
 import random
 from Bot_occupations.career_path_views import ConfirmResignView
-from Bot_occupations.occupation_mini_games.snake_breakroom import SnakeBreakroomView
+
 from embeds import COLOR_GREEN, COLOR_RED
 
-minigames_by_id = {
-    1: SnakeBreakroomView,  # Professional Cuddler 
-    2: SnakeBreakroomView,  # Senior Bubble Wrap Popper
-    3: SnakeBreakroomView,  # Street Performer
-    4: SnakeBreakroomView,  # Dog Walker
-    5: SnakeBreakroomView,  # Human Statue
-}
 
 class CareerPath(commands.Cog):
     def __init__(self, bot, db_pool):
@@ -82,10 +75,11 @@ class CareerPath(commands.Cog):
                 print(f"[workshift] Occupation row: {occupation}")
 
                 if occupation is None:
+                    msg = "❌ You don't have a job yet. Use `/apply_job` to get hired!"
                     if hasattr(ctx, "followup"):
-                        await ctx.followup.send("❌ You don't have a job yet. Use `/apply_job` to get hired!")
+                        await ctx.followup.send(msg)
                     else:
-                        await ctx.send("❌ You don't have a job yet. Use `/apply_job` to get hired!")
+                        await ctx.send(msg)
                     return
 
                 occupation_id = occupation["cd_occupation_id"]
@@ -93,20 +87,6 @@ class CareerPath(commands.Cog):
                 company_name = occupation["company_name"]
                 pay_rate = float(occupation["pay_rate"])
                 required_shifts_per_day = occupation["required_shifts_per_day"]
-
-                # Determine mini-game based on occupation_id
-                view_class = minigames_by_id.get(occupation_id)
-
-                if view_class is None:
-                    no_minigame_msg = (
-                        f"🧹 You worked a shift as a **{occupation_name}**, "
-                        "but this job doesn't have a mini-game yet. No payout this time!"
-                    )
-                    if hasattr(ctx, "followup"):
-                        await ctx.followup.send(no_minigame_msg)
-                    else:
-                        await ctx.send(no_minigame_msg)
-                    return
 
                 # Insert a new shift log
                 await conn.execute(
@@ -136,42 +116,63 @@ class CareerPath(commands.Cog):
                     user_id
                 )
 
-                # Send the minigame view
-                view = view_class(self.db_pool, ctx.guild.id, user_id, occupation_id, pay_rate)
-                if hasattr(ctx, "followup"):
-                    await ctx.followup.send(
-                        f"🐍 Breakroom game starting for **{occupation_name}**!", view=view
-                    )
-                else:
-                    await ctx.send(
-                        f"🐍 Breakroom game starting for **{occupation_name}**!", view=view
-                    )
+            # --- MINIGAME HANDLING ---
+            from Bot_occupations.occupation_mini_games import snake_breakroom
 
-                # Send the paystub embed
-                embed = discord.Embed(
-                    title=f"🕒 Shift Logged - here is your pay stub from ***{company_name}***",
-                    description=(
-                        f"> You completed your shift as a **{occupation_name}** and earned **${pay_rate:.2f}**.\n"
-                        f"> Your total completed shifts today: **{shifts_today}/{required_shifts_per_day}**\n\n"
-                        f"> 💵 ${pay_rate:.2f} has been deposited into your checking account.\n"
-                        f"> **New Balance:** ${new_balance:,.2f}\n\n"
-                        f"*Paid. Hopefully this cash sticks around longer than your last situationship.*"
-                    ),
-                    color=COLOR_GREEN
+            minigames_by_id = {
+                1: snake_breakroom,  # Professional Cuddler
+                2: snake_breakroom,  # Senior Bubble Wrap Popper
+                3: snake_breakroom,  # Street Performer
+                4: snake_breakroom,  # Dog Walker
+                5: snake_breakroom,  # Human Statue
+            }
+
+            minigame_module = minigames_by_id.get(occupation_id)
+            if minigame_module is None:
+                no_minigame_msg = (
+                    f"🧹 You worked a shift as a **{occupation_name}**, "
+                    "but this job doesn't have a mini-game yet. No payout this time!"
                 )
                 if hasattr(ctx, "followup"):
-                    await ctx.followup.send(embed=embed)
+                    await ctx.followup.send(no_minigame_msg)
                 else:
-                    await ctx.send(embed=embed)
-                print("[workshift] Response sent.")
+                    await ctx.send(no_minigame_msg)
+                return
+
+            # Call the play function of the minigame module
+            embed, view = await minigame_module.play(self.db_pool, ctx.guild.id, user_id, occupation_id, pay_rate, None)
+
+            if hasattr(ctx, "followup"):
+                await ctx.followup.send(embed=embed, view=view)
+            else:
+                await ctx.send(embed=embed, view=view)
+
+            # Send the paystub embed separately
+            paystub_embed = discord.Embed(
+                title=f"🕒 Shift Logged - here is your pay stub from ***{company_name}***",
+                description=(
+                    f"> You completed your shift as a **{occupation_name}** and earned **${pay_rate:.2f}**.\n"
+                    f"> Your total completed shifts today: **{shifts_today}/{required_shifts_per_day}**\n\n"
+                    f"> 💵 ${pay_rate:.2f} has been deposited into your checking account.\n"
+                    f"> **New Balance:** ${new_balance:,.2f}\n\n"
+                    f"*Paid. Hopefully this cash sticks around longer than your last situationship.*"
+                ),
+                color=COLOR_GREEN
+            )
+            if hasattr(ctx, "followup"):
+                await ctx.followup.send(embed=paystub_embed)
+            else:
+                await ctx.send(embed=paystub_embed)
+
+            print("[workshift] Response sent.")
 
         except Exception as e:
             print(f"[workshift] Exception caught: {e}")
-            # Fallback to ctx.send if followup is missing on error too
+            error_msg = "❌ An error occurred while processing your shift. Please try again later."
             if hasattr(ctx, "followup"):
-                await ctx.followup.send("❌ An error occurred while processing your shift. Please try again later.")
+                await ctx.followup.send(error_msg)
             else:
-                await ctx.send("❌ An error occurred while processing your shift. Please try again later.")
+                await ctx.send(error_msg)
     @careerpath.command(name="resign", description="Resign from your job with confirmation")
     async def resign(self, ctx):
         import time
