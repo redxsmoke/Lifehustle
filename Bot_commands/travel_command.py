@@ -233,13 +233,27 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
             await reward_user(pool, user_id, effect)
             current_balance += effect
 
+    # ✅ THIS IS NOW PROPERLY ALIGNED (not under if/elif/else)
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            UPDATE user_vehicle_inventory
+            SET travel_count = travel_count + 1
+            WHERE user_id = $1 AND plate_number = $2
+            """,
+            user_id, vehicle.get("plate_number")
+        )
+
+    # ✅ Also update local copy for display
+    vehicle["travel_count"] = vehicle.get("travel_count", 0) + 1
+
     await interaction.followup.send(
         embed=discord.Embed(
             title=f"{'🚗' if method == 'car' else '🚴'} Travel Summary",
             description=(
                 f"You traveled using your {vehicle.get('vehicle_type', 'vehicle')} "
                 f"(Color: {vehicle.get('color', 'Unknown')}, Plate: {vehicle.get('plate', 'N/A')}).\n"
-                f"Travel Count: {vehicle.get('travel_count', 0) + 1}\n\n"
+                f"Travel Count: {vehicle['travel_count']}\n\n"
                 f"🎲 Outcome: {outcome_desc}\n"
                 f"💰 Balance: ${effect}\n\n"
                 f"Your current balance is: ${current_balance:,}."
@@ -248,6 +262,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
         ),
         ephemeral=True
     )
+
 async def on_sell_all_button_click(interaction: discord.Interaction, user_id, vehicles):
     # Send confirmation prompt
     confirm_view = ConfirmSellView(user_id, vehicles)
