@@ -104,13 +104,18 @@ async def setup_hook():
 
 # ** Add these global hooks to ensure user exists before any command **
 
+# For prefix commands (like !help)
 @bot.before_invoke
 async def before_any_command(ctx):
     await ensure_user_exists(bot.pool, ctx.author.id, str(ctx.author), ctx.guild.id)
 
-@bot.tree.before_invoke
-async def before_any_slash_command(interaction):
-    await ensure_user_exists(bot.pool, interaction.user.id, str(interaction.user), interaction.guild.id)
+# For slash commands (like /lifecheck, /workshift)
+@bot.event
+async def on_interaction(interaction: discord.Interaction):
+    if interaction.type == discord.InteractionType.application_command:
+        await ensure_user_exists(bot.pool, interaction.user.id, str(interaction.user), interaction.guild.id)
+    await bot.process_application_commands(interaction)  # important to let the command continue
+
 
 
 # DB Setup
