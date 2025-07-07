@@ -255,7 +255,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
         )
 
         if updated_info["condition"] == "Broken Down":
-            view = RepairOptionsView(vehicle, user_id)
+            view = RepairOptionsView(globals.pool, vehicle, user_id)
             msg = await interaction.followup.send(  # <-- assign message here
                 embed=embed_message(
                     "🚨 Vehicle Broken Down",

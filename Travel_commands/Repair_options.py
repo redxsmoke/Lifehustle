@@ -2,15 +2,15 @@ import discord
 from discord.ui import View, Button
 import random
 
-from globals import pool
 from embeds import embed_message, COLOR_RED
 from utilities import charge_user, update_vehicle_condition_and_description, reward_user
 from vehicle_logic import remove_vehicle_by_id
 from db_user import get_user_finances
 
 class RepairOptionsView(View):
-    def __init__(self, vehicle, user_id):
+    def __init__(self, pool, vehicle, user_id):
         super().__init__(timeout=120)
+        self.pool = pool
         self.vehicle = vehicle
         self.user_id = user_id
         print(f"[DEBUG] RepairOptionsView created for user_id={user_id} vehicle_id={vehicle.get('id')}")
@@ -20,7 +20,7 @@ class RepairOptionsView(View):
         print(f"[DEBUG] mechanic_repair button clicked by {interaction.user} (id={interaction.user.id})")
         try:
             cost = int(50 * random.uniform(1.5, 5.5))
-            finances = await get_user_finances(pool, self.user_id)
+            finances = await get_user_finances(self.pool, self.user_id)
             print(f"[DEBUG] User finances: {finances}")
 
             if finances.get("checking_account_balance", 0) < cost:
@@ -31,11 +31,11 @@ class RepairOptionsView(View):
                 )
                 return
 
-            await charge_user(pool, self.user_id, cost)
+            await charge_user(self.pool, self.user_id, cost)
             print(f"[DEBUG] Charged ${cost} to user {self.user_id}")
 
             await update_vehicle_condition_and_description(
-                pool, self.user_id, self.vehicle["id"],
+                self.pool, self.user_id, self.vehicle["id"],
                 self.vehicle["vehicle_type_id"], 150
             )
             print("[DEBUG] Vehicle condition reset to Poor Condition with travel count 150")
@@ -76,11 +76,11 @@ class RepairOptionsView(View):
                     )
                     return
 
-                await charge_user(pool, self.user_id, cost)
+                await charge_user(self.pool, self.user_id, cost)
                 print(f"[DEBUG] Charged ${cost} to user {self.user_id}")
 
                 await update_vehicle_condition_and_description(
-                    pool, self.user_id, self.vehicle["id"],
+                    self.pool, self.user_id, self.vehicle["id"],
                     self.vehicle["vehicle_type_id"], 150
                 )
                 print("[DEBUG] Vehicle condition reset to Poor Condition with travel count 150")
@@ -94,11 +94,11 @@ class RepairOptionsView(View):
 
             else:
                 cost = int(60 * random.uniform(3.0, 5.0))
-                await charge_user(pool, self.user_id, cost)
+                await charge_user(self.pool, self.user_id, cost)
                 print(f"[DEBUG] Charged ${cost} for drunk Uncle Bill scenario")
 
                 await update_vehicle_condition_and_description(
-                    pool, self.user_id, self.vehicle["id"],
+                    self.pool, self.user_id, self.vehicle["id"],
                     self.vehicle["vehicle_type_id"], 199
                 )
                 funny = "a raccoon is now living in your glovebox."
@@ -127,10 +127,10 @@ class RepairOptionsView(View):
         try:
             resale_value = self.vehicle.get("resale_value", 0)
 
-            await remove_vehicle_by_id(pool, self.vehicle["id"])
+            await remove_vehicle_by_id(self.pool, self.vehicle["id"])
             print(f"[DEBUG] Vehicle {self.vehicle['id']} removed from inventory")
 
-            await reward_user(pool, self.user_id, resale_value)
+            await reward_user(self.pool, self.user_id, resale_value)
             print(f"[DEBUG] Rewarded user {self.user_id} with ${resale_value}")
 
             await interaction.response.edit_message(
