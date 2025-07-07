@@ -265,6 +265,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
                 view=view,
                 ephemeral=True
             )
+            view.message = msg
             return  # stop travel here
 
         # Only if not broken down, update travel info

@@ -29,7 +29,7 @@ class RepairOptionsView(View):
 
         await charge_user(pool, self.user_id, cost)
         
-        # Reset to poor condition at 150 travel count
+        # Reset to poor condition at 150 travel countprint(f"Button clicked by {interaction.user}")
         await update_vehicle_condition_and_description(
             pool, self.user_id, self.vehicle["id"],
             self.vehicle["vehicle_type_id"], 150
