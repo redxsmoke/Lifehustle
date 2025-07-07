@@ -2,20 +2,25 @@ import json
 import asyncpg
 import datetime
 
-
 #------------ADD USER TO DB IF MISSING AND RUN COMMAND = TRUE--------------
+async def ensure_user_exists(pool, user_id: int, user_name: str, guild_id: int | None):
+    if guild_id is None:
+        # Skip insert if there's no guild (user is in a DM)
+        print(f"❌ Skipping user insert: guild_id is None for user {user_name}")
+        return
 
-async def ensure_user_exists(pool, user_id: int, user_name: str, guild_id: int):
-    await pool.execute("""
+    print(f"🔎 ensure_user_exists called for {user_name} ({user_id}) in guild {guild_id}")
+    
+    result = await pool.execute("""
         INSERT INTO users (user_id, user_name, guild_id)
         VALUES ($1, $2, $3)
         ON CONFLICT (user_id, guild_id) DO NOTHING
     """, user_id, user_name, guild_id)
-
+    
+    print(f"✅ DB Insert result: {result}")
 
 
 # ---------- USERS TABLE (Profile Info) ----------
-
 async def get_user(pool, user_id: int):
     async with pool.acquire() as conn:
         row = await conn.fetchrow('SELECT * FROM users WHERE user_id = $1', user_id)
@@ -41,7 +46,6 @@ async def upsert_user(pool, user_id: int, data: dict):
              data.get('last_seen'),
              1  # default education_level_id
         )
-
 
 
 # ---------- USER_FINANCES TABLE (Money, Debts, Paycheck Timestamp) ----------
@@ -77,6 +81,7 @@ async def upsert_user_finances(pool, user_id: int, finances: dict):
              last_claim
         )
 
+
 async def get_user_finances(pool, user_id: int):
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -93,8 +98,7 @@ async def get_user_finances(pool, user_id: int):
         return None
 
 
-
-
+# ---------- USER_GROCERY_INVENTORY ----------
 async def get_grocery_stash(pool, user_id):
     async with pool.acquire() as conn:
         rows = await conn.fetch("""
