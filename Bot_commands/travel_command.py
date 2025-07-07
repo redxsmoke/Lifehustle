@@ -231,7 +231,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
             UPDATE user_vehicle_inventory
             SET travel_count = travel_count + 1
             WHERE user_id = $1 AND plate_number = $2
-            RETURNING id, travel_count, vehicle_type_id, breakdown_threshold
+            RETURNING id, travel_count, vehicle_type_id, breakdown_threshold, condition_id
             """,
             user_id, vehicle.get("plate_number")
         )
