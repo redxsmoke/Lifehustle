@@ -19,7 +19,7 @@ from embeds import embed_message, COLOR_RED
 from views import TravelButtons  # renamed import to match change
 
 # New import for user DB functions
-from db_user import insert_user_if_not_exists, bulk_backfill_users, ensure_user_exists
+from db_user import ensure_user_exists
 
 # Rename imports to avoid name conflicts
 from Bot_commands.commands import register_commands as register_general_commands
