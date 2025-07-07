@@ -61,79 +61,34 @@ class RepairOptionsView(View):
 
 
     @discord.ui.button(label="🎩 Have a mechanic repair it", style=discord.ButtonStyle.primary)
-    async def mechanic_repair(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def mechanic_repair(self, interaction: discord.Interaction, button: Button):
         print(f"[DEBUG] mechanic_repair button clicked by {interaction.user} (id={interaction.user.id})")
         try:
-            # Calculate parts and labor costs
-            parts_cost = int(20 * random.uniform(1.0, 2.0))
-            labor_cost = int(60 * random.uniform(1.5, 7.5))
-
-            # Check if the user repairing is a mechanic
-            async with self.pool.acquire() as conn:
-                user_record = await conn.fetchrow(
-                    "SELECT occupation_id FROM users WHERE user_id = $1",
-                    self.user_id
-                )
-
-            if user_record and user_record["occupation_id"] == 62:
-                # User is mechanic: labor cost waived
-                cost = parts_cost
-                is_self_mechanic = True
-            else:
-                cost = parts_cost + labor_cost
-                is_self_mechanic = False
-
+            # Base total repair cost
+            cost = int(50 * random.uniform(1.5, 5.5))
             finances = await get_user_finances(self.pool, self.user_id)
+
             if finances.get("checking_account_balance", 0) < cost:
                 embed = discord.Embed(
-                    description=f"🚫 You need ${cost:,} to pay for parts{' and labor' if not is_self_mechanic else ''} but don't have enough funds.",
+                    description=f"🚫 You need ${cost:,} to pay the mechanic but don't have enough funds.",
                     color=COLOR_RED
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
                 return
 
-            await charge_user(self.pool, self.user_id, cost)
+            # Check if the user is a mechanic
+            async with self.pool.acquire() as conn:
+                user_record = await conn.fetchrow("SELECT occupation_id FROM users WHERE user_id = $1", self.user_id)
 
-            embed_description = ""
+            is_self_mechanic = user_record and user_record["occupation_id"] == 62
 
             if is_self_mechanic:
-                # User is their own mechanic — no mechanic payment
-                embed_description = (
-                    f"🎩 As a skilled mechanic yourself, you paid **${parts_cost:,}** for parts to fix your vehicle.\n"
-                )
+                parts_cost = int(cost * 0.35)  # Pay only for parts
+                await charge_user(self.pool, self.user_id, parts_cost)
             else:
-                # User is not mechanic — pay another mechanic if available
-                async with self.pool.acquire() as conn:
-                    mechanic_record = await conn.fetchrow(
-                        "SELECT user_id FROM users WHERE occupation_id = 62 LIMIT 1"
-                    )
+                await charge_user(self.pool, self.user_id, cost)
 
-                    if mechanic_record:
-                        mechanic_discord_id = mechanic_record["user_id"]
-                        mechanic_member = interaction.guild.get_member(mechanic_discord_id)
-                        mechanic_mention = mechanic_member.mention if mechanic_member else "The Mechanic"
-                        # Add payment to mechanic's balance
-                        await conn.execute(
-                            """
-                            UPDATE finances
-                            SET checking_account_balance = checking_account_balance + $1
-                            WHERE user_id = $2
-                            """,
-                            cost,
-                            mechanic_user_id
-                        )
-
-                        mechanic_member = interaction.guild.get_member(mechanic_discord_id) if mechanic_discord_id else None
-                        mechanic_mention = mechanic_member.mention if mechanic_member else "The Mechanic"
-
-                        embed_description = (
-                            f"🎩 {mechanic_mention} fixed your vehicle and you paid them **${cost:,}**.\n"
-                        )
-                    else:
-                        # No mechanic found; just normal payment
-                        embed_description = f"🎩 Mechanic repaired your vehicle for **${cost:,}**.\n"
-
-            # Update vehicle condition etc.
+            # Repair logic
             new_travel_count = get_random_travel_count(self.vehicle["vehicle_type_id"])
             if new_travel_count is None:
                 await interaction.response.send_message(
@@ -151,6 +106,37 @@ class RepairOptionsView(View):
                 new_breakdown_threshold
             )
 
+            # Build embed message
+            embed_description = ""
+
+            if is_self_mechanic:
+                embed_description = (
+                    f"🎩 As a skilled mechanic yourself, you paid **${parts_cost:,}** for parts to fix your vehicle.\n"
+                )
+            else:
+                # Look for another mechanic to pay
+                async with self.pool.acquire() as conn:
+                    mechanic_record = await conn.fetchrow(
+                        "SELECT user_id FROM users WHERE occupation_id = 62 AND user_id != $1 LIMIT 1",
+                        self.user_id
+                    )
+
+                if mechanic_record:
+                    mechanic_user_id = mechanic_record["user_id"]
+                    mechanic_member = interaction.guild.get_member(mechanic_user_id)
+                    mechanic_mention = mechanic_member.mention if mechanic_member else "The Mechanic"
+
+                    await reward_user(self.pool, mechanic_user_id, cost)
+
+                    embed_description = (
+                        f"🎩 {mechanic_mention} fixed your vehicle and you paid them **${cost:,}**.\n"
+                    )
+                else:
+                    embed_description = (
+                        f"🎩 The local shop fixed your vehicle and charged you **${cost:,}**.\n"
+                    )
+
+            # Add odometer message
             if is_self_mechanic:
                 embed_description += (
                     f"You tweaked your odometer and reset your travel count to **{new_travel_count}**."
@@ -165,11 +151,13 @@ class RepairOptionsView(View):
                 color=COLOR_GREEN
             )
             await interaction.response.edit_message(embed=embed, view=None)
+
         except Exception as e:
             print(f"[ERROR] Exception in mechanic_repair callback: {e}")
             await interaction.response.send_message(
                 "⚠️ Something went wrong during mechanic repair. Please try again later.", ephemeral=True
             )
+
 
 
     @discord.ui.button(label="🍺 Have Uncle Bill take a look", style=discord.ButtonStyle.secondary)
