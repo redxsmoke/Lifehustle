@@ -11,7 +11,7 @@ import datetime
 from embeds import COLOR_GREEN, COLOR_RED
 from discord import app_commands, Interaction
 from discord.ext import commands
-from db_user import get_user, upsert_user, get_user_finances
+from db_user import get_user, upsert_user, get_user_finances, fetch_vehicle_with_pricing
 from vehicle_logic import ConfirmSellView, sell_all_vehicles
 from .lifecheck_command import get_mock_weather_dynamic
 from Travel_commands.Repair_options import RepairOptionsView
@@ -236,7 +236,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
 
         updated_vehicle = await conn.fetchrow(
             """
-            SELECT id, travel_count, vehicle_type_id, breakdown_threshold
+            SELECT id, travel_count, vehicle_type_id, breakdown_threshold, condition
             FROM user_vehicle_inventory
             WHERE user_id = $1 AND plate_number = $2
             """,
@@ -255,8 +255,11 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
         )
 
         if updated_info["condition"] == "Broken Down":
-            view = RepairOptionsView(globals.pool, vehicle, user_id)
-            msg = await interaction.followup.send(  # <-- assign message here
+            # Fetch full vehicle info INCLUDING pricing before showing RepairOptionsView
+            vehicle_full = await fetch_vehicle_with_pricing(globals.pool, user_id, updated_vehicle["id"])
+            view = RepairOptionsView(globals.pool, vehicle_full, user_id)
+
+            msg = await interaction.followup.send(
                 embed=embed_message(
                     "🚨 Vehicle Broken Down",
                     "Your vehicle is broken down and can't be used for travel. Please repair it first.\n\nChoose a repair option below:",
@@ -265,7 +268,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
                 view=view,
                 ephemeral=True
             )
-            view.message = msg  # <-- now msg is defined
+            view.message = msg
             return  # stop travel here
 
         # Only if not broken down, update travel info
@@ -295,6 +298,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
         ),
         ephemeral=True
     )
+
 
 async def on_sell_all_button_click(interaction: discord.Interaction, user_id, vehicles):
     confirm_view = ConfirmSellView(user_id, vehicles)

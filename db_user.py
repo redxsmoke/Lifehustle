@@ -161,3 +161,14 @@ async def get_grocery_stash(pool, user_id):
             ORDER BY cgc.name, cgt.name;
         """, user_id)
     return rows
+
+#-------------USER RESALE OF VEHICLE-------------
+async def fetch_vehicle_with_pricing(pool, vehicle_id: int):
+    sql = """
+        SELECT uvi.*, cvt.cost AS base_price, uvi.resale_percent
+        FROM user_vehicle_inventory uvi
+        JOIN cd_vehicle_type cvt ON uvi.vehicle_type_id = cvt.id
+        WHERE uvi.id = $1
+    """
+    record = await pool.fetchrow(sql, vehicle_id)
+    return record
