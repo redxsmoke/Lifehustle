@@ -11,21 +11,7 @@ CREATE TABLE IF NOT EXISTS cd_education_levels (
 );
 """
  
-
-CREATE_CD_OCCUPATIONS = """
-CREATE TABLE cd_occupations (
-    cd_occupation_id SERIAL PRIMARY KEY,
-    company_name TEXT,
-    description TEXT NOT NULL,
-    pay_rate NUMERIC(10, 2) NOT NULL,
-    required_shifts_per_day INT NOT NULL,
-    education_level_id INT NOT NULL,
-    other_requirements TEXT,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
-);
-"""
-
+ 
 CREATE_CD_DESTINATIONS = """
 CREATE TABLE IF NOT EXISTS cd_destinations (
     cd_destination_id SERIAL PRIMARY KEY,
@@ -45,13 +31,6 @@ CREATE TABLE IF NOT EXISTS user_work_log (
 );
 """
 
-ALTER_USERS_TABLE = """
-ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS occupation_id INTEGER REFERENCES cd_occupations(cd_occupation_id),
-    ADD COLUMN IF NOT EXISTS job_start_date TIMESTAMP,
-    ADD COLUMN IF NOT EXISTS job_termination_date TIMESTAMP,
-    ADD COLUMN IF NOT EXISTS education_level_id INTEGER REFERENCES cd_education_levels(cd_education_level_id);
-"""
 
 EDUCATION_LEVELS = [
     (1, "None", 0, "No formal education"),
@@ -62,68 +41,7 @@ EDUCATION_LEVELS = [
     (6, "PhD", 5, "Doctorate, highest academic level"),
 ]
 
-OCCUPATIONS = [
-    (1, 'SnuggleWorks Inc.', 'Professional Cuddler', 40, 1, 1, 'Must love hugs', True),
-    (2, 'BubblePop Labs', 'Senior Bubble Wrap Popper', 35, 1, 6, 'PhD in stress relief', True),
-    (3, 'StreetStars Co.', 'Street Performer', 30, 1, 1, 'Charismatic personality', True),
-    (4, 'Paws & Claws LLC', 'Dog Walker', 45, 1, 1, 'Love for animals', True),
-    (5, 'Still Statues Ltd.', 'Human Statue', 50, 1, 1, 'Ability to stand still for hours', True),
-    (6, 'LineBusters', 'Professional Line Sitter', 30, 1, 1, 'Patience and perseverance', True),
-    (7, 'MemeStream', 'Freelance Meme Curator', 45, 1, 2, 'Social media savvy', True),
-    (8, 'TestTube Inc.', 'Test Subject', 50, 1, 2, 'Willingness to participate', True),
-    (9, 'Bean Brewmasters', 'Coffee Taster', 55, 1, 2, 'Highly sensitive palate', True),
-    (10, 'ParkPatrol', 'Parking Enforcement Officer', 60, 1, 2, 'Attention to detail', True),
-    (11, 'FreshMart', 'Grocery Store Clerk', 50, 2, 2, None, True),
-    (12, 'DashDrivers', 'Delivery Driver', 70, 2, 2, 'Driver’s license', True),
-    (13, 'Tears & Cheers', 'Professional Mourner', 70, 2, 2, 'Empathy and acting skills', True),
-    (14, 'PawsTasters', 'Pet Food Taster', 60, 2, 2, 'Strong stomach required', True),
-    (15, 'WhistleWorks', 'Professional Whistler', 80, 2, 2, 'Exceptional whistling talent', True),
-    (16, 'Cool Scoops Inc.', 'Ice Cream Truck Driver', 65, 2, 2, 'Driving license', True),
-    (17, 'Setup Squad', 'Event Setup Crew', 55, 2, 2, 'Physical fitness', True),
-    (18, 'Clean Team', 'Janitor', 50, 2, 2, 'Reliability', True),
-    (19, 'Service Pros', 'Waiter/Waitress', 60, 2, 2, 'Good communication skills', True),
-    (20, 'ThrillRides Co.', 'Amusement Park Ride Operator', 65, 2, 2, 'Safety conscious', True),
-    (21, 'Office Heroes', 'Office Assistant', 100, 3, 3, 'Basic computer skills', True),
-    (22, 'Flavor Factory', 'Ice Cream Flavor Developer', 90, 3, 3, 'Creative palate', True),
-    (23, 'Slide Testers', 'Waterslide Tester', 120, 3, 3, 'Thrill-seeking', True),
-    (24, 'SniffRight', 'Odor Judge', 100, 3, 3, 'Nose for smells', True),
-    (25, 'Buzz Media', 'Social Media Manager', 110, 3, 3, 'Social media savvy', True),
-    (26, 'MediAssist', 'Medical Assistant', 130, 3, 3, 'Medical knowledge', True),
-    (27, 'Creative Pixels', 'Graphic Designer', 125, 3, 3, 'Creativity', True),
-    (28, 'LabWorks', 'Lab Technician', 115, 3, 3, 'Detail-oriented', True),
-    (29, 'Event Masters', 'Event Coordinator', 120, 3, 3, 'Organization skills', True),
-    (30, 'Law Partners', 'Legal Assistant', 110, 3, 3, 'Knowledge of legal procedures', True),
-    (31, 'CodeSmiths', 'Software Developer', 200, 4, 4, 'Programming skills', True),
-    (32, 'VR Builders', 'VR World Architect', 150, 4, 4, 'Creativity + coding skills', True),
-    (33, 'Number Crunchers', 'Accountant', 180, 4, 4, 'Finance knowledge', True),
-    (34, 'Market Insight', 'Market Research Analyst', 170, 4, 4, 'Analytical skills', True),
-    (35, 'BuildTech', 'Engineer', 190, 4, 4, 'Engineering degree', True),
-    (36, 'TeachWell', 'Teacher', 160, 4, 4, 'Teaching skills', True),
-    (37, 'NewsFlash', 'Journalist', 150, 4, 4, 'Strong writing skills', True),
-    (38, 'Design Pros', 'Architect', 190, 4, 4, 'Design skills', True),
-    (39, 'Tech Advisors', 'IT Consultant', 180, 4, 4, 'Technical knowledge', True),
-    (40, 'Biz Analysts', 'Business Analyst', 170, 4, 4, 'Analytical skills', True),
-    (41, 'Science Hub', 'Research Scientist', 250, 5, 5, 'Scientific knowledge', True),
-    (42, 'Uni Scholars', 'University Lecturer', 220, 5, 5, 'Teaching and research skills', True),
-    (43, 'Data Wizards', 'Data Scientist', 240, 5, 5, 'Advanced data analysis', True),
-    (44, 'MindCare', 'Clinical Psychologist', 230, 5, 5, 'Psychological knowledge', True),
-    (45, 'EcoConsult', 'Environmental Consultant', 210, 5, 5, 'Environmental expertise', True),
-    (46, 'PharmaLife', 'Pharmacist', 260, 5, 5, 'Medical knowledge', True),
-    (47, 'City Planners', 'Urban Planner', 220, 5, 5, 'Planning skills', True),
-    (48, 'Econ Experts', 'Economist', 230, 5, 5, 'Economic expertise', True),
-    (49, 'StatsLab', 'Statistician', 240, 5, 5, 'Statistical analysis', True),
-    (50, 'PolicyWorks', 'Policy Analyst', 210, 5, 5, 'Policy knowledge', True),
-    (51, 'MedDoc Group', 'Medical Doctor', 300, 6, 6, 'Medical license', True),
-    (52, 'Professors United', 'University Professor', 220, 6, 6, 'Teaching skills', True),
-    (53, 'Unicorn Wranglers', 'Head Honcho of Unicorn Wrangling', 250, 6, 6, 'Mythical creature expertise', True),
-    (54, 'Time Auditors Inc.', 'Time-Traveling Tax Auditor', 300, 6, 6, 'Paradox-proof accounting', True),
-    (55, 'Chief Labs', 'Chief Scientist', 280, 6, 6, 'Leadership and science', True),
-    (56, 'Aero Dynamics', 'Aerospace Engineer', 290, 6, 6, 'Aeronautics expertise', True),
-    (57, 'Thinkers Club', 'Philosopher', 210, 6, 6, 'Deep thinking', True),
-    (58, 'GeneWorks', 'Geneticist', 270, 6, 6, 'Genetic research', True),
-    (59, 'Quantum Labs', 'Quantum Physicist', 300, 6, 6, 'Quantum mechanics expertise', True),
-    (60, 'Galactic Embassy', 'Galactic Ambassador', 300, 6, 6, 'Diplomacy and charm', True),
-]
+ 
 
 async def seed_education_levels(conn):
     query = """

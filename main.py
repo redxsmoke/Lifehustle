@@ -17,7 +17,7 @@ from config import DISCORD_BOT_TOKEN, DATABASE_URL
 from db_pool import init_db
 from embeds import embed_message, COLOR_RED
 from views import TravelButtons  # renamed import to match change
-from create_education_occupation_tables import setup
+
 
 # Rename imports to avoid name conflicts
 from Bot_commands.commands import register_commands as register_general_commands
