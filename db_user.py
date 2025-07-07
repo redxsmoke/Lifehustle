@@ -19,10 +19,12 @@ async def ensure_user_exists(pool, user_id: int, user_name: str, guild_id: int |
         print(f"ℹ️ User already exists in DB: {user_name} ({user_id}) in guild {guild_id}")
         return
 
-    # Try insert
+    # Insert with occupation_failed_days default to 0
     result = await pool.execute("""
-        INSERT INTO users (user_id, user_name, guild_id)
-        VALUES ($1, $2, $3)
+        INSERT INTO users (
+            user_id, user_name, guild_id, occupation_failed_days
+        )
+        VALUES ($1, $2, $3, 0)
         ON CONFLICT (user_id, guild_id) DO NOTHING
     """, user_id, user_name, guild_id)
 
