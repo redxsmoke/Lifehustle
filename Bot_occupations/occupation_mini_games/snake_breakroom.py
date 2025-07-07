@@ -94,7 +94,7 @@ class SnakeBreakroomView(View):
         ]
         await self.handle_outcome(interaction, outcomes)
 
-    @discord.ui.button(label="Grab it by the neck", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="Grab it by the neck", style=discord.ButtonStyle.primary)
     async def grab_by_neck(self, interaction: discord.Interaction, button: discord.ui.Button):
         outcomes = [
             {"type": "positive", "text": "You grabbed the snake and danced with it. Somehow this earned you a bonus of ${amount}."},
@@ -106,7 +106,7 @@ class SnakeBreakroomView(View):
         ]
         await self.handle_outcome(interaction, outcomes)
 
-    @discord.ui.button(label="Put a bucket over it", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="Put a bucket over it", style=discord.ButtonStyle.primary)
     async def put_bucket(self, interaction: discord.Interaction, button: discord.ui.Button):
         outcomes = [
             {"type": "positive", "text": "Genius! The bucket trap worked. Bonus awarded: ${amount}."},
@@ -118,7 +118,7 @@ class SnakeBreakroomView(View):
         ]
         await self.handle_outcome(interaction, outcomes)
 
-    @discord.ui.button(label="Distract it with snacks", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="Distract it with snacks", style=discord.ButtonStyle.primary)
     async def distract_with_snacks(self, interaction: discord.Interaction, button: discord.ui.Button):
         outcomes = [
             {"type": "positive", "text": "Snake loves chips! You bought time and earned a bonus of ${amount}."},
@@ -194,7 +194,7 @@ class AnimalControlSnakeView(View):
         ]
         await self.resolve(interaction, outcomes)
 
-    @discord.ui.button(label="Calm the freaked out employee", style=discord.ButtonStyle.success)
+    @discord.ui.button(label="Calm the freaked out employee", style=discord.ButtonStyle.primary)
     async def calm_employee(self, interaction: discord.Interaction, button: discord.ui.Button):
         outcomes = [
             ("positive", "You bring calm with a clipboard and confidence. Bonus time."),
@@ -206,7 +206,7 @@ class AnimalControlSnakeView(View):
         ]
         await self.resolve(interaction, outcomes)
 
-    @discord.ui.button(label="Call for backup", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="Call for backup", style=discord.ButtonStyle.primary)
     async def call_backup(self, interaction: discord.Interaction, button: discord.ui.Button):
         outcomes = [
             ("positive", "Backup arrives and handles everything perfectly. Like clockwork."),
@@ -218,7 +218,7 @@ class AnimalControlSnakeView(View):
         ]
         await self.resolve(interaction, outcomes)
 
-    @discord.ui.button(label="Focus on paperwork", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="Focus on paperwork", style=discord.ButtonStyle.primary)
     async def paperwork(self, interaction: discord.Interaction, button: discord.ui.Button):
         outcomes = [
             ("positive", "You handle the backlog while someone else catches the snake. Genius."),
