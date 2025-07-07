@@ -32,6 +32,7 @@ async def ensure_user_exists(pool, user_id: int, user_name: str, guild_id: int |
 
 
 
+
 # ---------- USERS TABLE (Profile Info) ----------
 async def get_user(pool, user_id: int):
     async with pool.acquire() as conn:
