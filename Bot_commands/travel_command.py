@@ -224,7 +224,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
 
     async with pool.acquire() as conn:
         await conn.execute(
-            \"\"\"
+            "\"\"
             UPDATE user_vehicle_inventory
             SET travel_count = travel_count + 1
             WHERE user_id = $1 AND plate_number = $2
