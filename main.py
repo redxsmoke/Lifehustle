@@ -1,4 +1,3 @@
-
 # --- Standard Library ---
 import os
 import ssl
@@ -75,6 +74,9 @@ async def setup_hook():
 
     bot.add_view(TravelButtons())  # renamed to match change
 
+    # Register the test say command cog
+    bot.add_cog(TestCommands(bot))
+
     try:
         synced = await tree.sync()
         print(f"✅ Synced {len(synced)} slash commands.")
@@ -82,6 +84,17 @@ async def setup_hook():
         print(f"❌ Error syncing commands in setup_hook: {e}")
 
     print("🛠️ setup_hook finished.")
+
+
+# New Cog for /say command
+class TestCommands(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+
+    @app_commands.command(name="say", description="Make the bot say a message")
+    @app_commands.describe(message="Message for the bot to send")
+    async def say(self, interaction: discord.Interaction, message: str):
+        await interaction.response.send_message(message)
 
 
 # DB Setup
@@ -102,9 +115,6 @@ async def setup_database():
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool)
     await setup()  # Setup education and occupation tables
-
-
-
 
 
 # Entrypoint
