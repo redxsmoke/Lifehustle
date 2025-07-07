@@ -376,14 +376,14 @@ async def select_weighted_travel_outcome(pool, travel_type):
     if is_day:
         weights = {
             "neutral": 0.5,
-            "negative": 0.15,
-            "positive": 0.35,
+            "loss": 0.15,
+            "gain": 0.35,
         }
     else:
         weights = {
             "neutral": 0.5,
-            "negative": 0.35,
-            "positive": 0.15,
+            "loss": 0.35,
+            "gain": 0.15,
         }
     print(f"[DEBUG] Fetching travel outcomes for: {travel_type}")
     async with pool.acquire() as conn:

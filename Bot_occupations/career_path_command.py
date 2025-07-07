@@ -148,6 +148,14 @@ class CareerPath(commands.Cog):
             else:
                 await ctx.send(embed=embed, view=view)
             await view.wait()
+            outcome_type = getattr(view, "outcome_type", "neutral")  # default to neutral if missing
+
+            if outcome_type == "positive":
+                embed_color = COLOR_GREEN
+            elif outcome_type == "negative":
+                embed_color = COLOR_RED
+            else:
+                embed_color = COLOR_GREEN 
 
             game_summary = getattr(view, "outcome_summary", None)
 
@@ -170,8 +178,9 @@ class CareerPath(commands.Cog):
             paystub_embed = discord.Embed(
                 title=f"🕒 Shift Logged - here is your pay stub from ***{company_name}***",
                 description=paystub_description,
-                color=COLOR_GREEN
+                color=embed_color
             )
+
 
             if hasattr(ctx, "followup"):
                 await ctx.followup.send(embed=paystub_embed)

@@ -24,6 +24,15 @@ class ApplyJob(commands.Cog):
                 ''', interaction.user.id)
             user_edu_level = 1
         else:
+            # Here is the check to prevent applying if user already has a job
+            if user.get('occupation_id') is not None:
+                embed = discord.Embed(
+                    description="🦥 Chill, job hopper! Your current job isn’t your side piece. Quit it before trying to swipe right on another!",
+                    color=discord.Color.red()
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+
             user_edu_level = user.get('education_level_id') or 1
 
         occupations = await get_eligible_occupations(self.pool, user_edu_level)
@@ -42,6 +51,7 @@ class ApplyJob(commands.Cog):
             view=view,
             ephemeral=True
         )
+
 
 class JobStatus(commands.Cog):
     def __init__(self, bot):

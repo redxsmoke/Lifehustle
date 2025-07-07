@@ -74,6 +74,7 @@ class SnakeBreakroomView(View):
                     desc = choice['text'].format(helper=helper_name)
 
             self.outcome_summary = desc
+            self.outcome_type = choice['type'] 
             await interaction.response.defer()
             self.stop()
         except Exception as e:
@@ -244,6 +245,7 @@ class AnimalControlSnakeView(View):
             message += f" You were fined ${penalty}."
 
         self.outcome_summary = message
+        self.outcome_type = category 
         await interaction.response.defer()
         self.stop()
 # ------------------------------
