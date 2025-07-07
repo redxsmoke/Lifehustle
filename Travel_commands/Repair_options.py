@@ -79,7 +79,7 @@ class RepairOptionsView(View):
         print(f"[DEBUG] RepairOptionsView created for user_id={user_id} vehicle_id={vehicle.get('id')}")
 
     def get_resale_value(self, vehicle) -> int:
-        vehicle_type = vehicle.get("type", "").strip()
+        vehicle_type = vehicle.get("vehicle_type", "").strip()
         base_price = BASE_PRICES.get(vehicle_type, 0)
 
         resale_percent = vehicle.get("resale_percent")
