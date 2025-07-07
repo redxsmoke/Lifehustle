@@ -119,6 +119,7 @@ async def update_vehicle_condition_and_description(pool, user_id, vehicle_id, ve
         "description": description
     }
 
+
 # ───────────────────────────────────────────────
 # Parse amount strings like '1000', '1k', '2.5m', or 'all'
 # ───────────────────────────────────────────────
