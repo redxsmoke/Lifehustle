@@ -65,7 +65,11 @@ class RepairOptionsView(View):
         self.user_id = user_id
         self.awaiting_confirmation = False
 
+        # Debug: show full vehicle dict
+        print(f"[DEBUG] Vehicle passed to RepairOptionsView: {vehicle}")
+
         resale_value = self.get_resale_value(vehicle)
+
         self.sell_button = Button(
             label=f"💸 Sell for Parts (${resale_value:,})", style=discord.ButtonStyle.danger
         )
@@ -75,9 +79,17 @@ class RepairOptionsView(View):
         print(f"[DEBUG] RepairOptionsView created for user_id={user_id} vehicle_id={vehicle.get('id')}")
 
     def get_resale_value(self, vehicle) -> int:
-        base_price = BASE_PRICES.get(vehicle.get("type"), 0)
-        resale_percent = vehicle.get("resale_percent", 0.10)
-        return int(base_price * resale_percent)
+        vehicle_type = vehicle.get("type", "").strip()
+        base_price = BASE_PRICES.get(vehicle_type, 0)
+
+        resale_percent = vehicle.get("resale_percent")
+        if resale_percent is None:
+            resale_percent = 0.10  # fallback
+
+        resale = int(base_price * resale_percent)
+
+        print(f"[DEBUG] Resale calc -> type: '{vehicle_type}', base: {base_price}, percent: {resale_percent}, resale: {resale}")
+        return resale
 
     @discord.ui.button(label="📽️ Have a mechanic repair it", style=discord.ButtonStyle.primary)
     async def mechanic_repair(self, interaction: discord.Interaction, button: Button):
