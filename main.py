@@ -134,7 +134,7 @@ async def setup_database():
 # Entrypoint
 async def main():
     await create_pool()
-    await add_unique_constraint
+    await add_unique_constraint()
     await setup_database()
     print("✅ Starting bot...")
     await bot.start(DISCORD_BOT_TOKEN)
