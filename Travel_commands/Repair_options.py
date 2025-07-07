@@ -45,15 +45,20 @@ class RepairOptionsView(View):
         print(f"[DEBUG] RepairOptionsView created for user_id={user_id} vehicle_id={vehicle.get('id')}")
 
     def get_resale_value(self, vehicle) -> int:
-        base_price = vehicle.get("cost", 0)
+        # Try base_price first, then cost
+        base_price = vehicle.get("base_price")
+        if base_price is None:
+            base_price = vehicle.get("cost", 0)
+
         resale_percent = vehicle.get("resale_percent")
         if resale_percent is None:
-            resale_percent = 0.10  # fallback
+            resale_percent = 0.10
 
-        resale = int(base_price * float(resale_percent))  # handle Decimal
+        resale = int(base_price * float(resale_percent))
 
         print(f"[DEBUG] Resale calc -> base: {base_price}, percent: {resale_percent}, resale: {resale}")
         return resale
+
 
     @discord.ui.button(label="🎩 Have a mechanic repair it", style=discord.ButtonStyle.primary)
     async def mechanic_repair(self, interaction: discord.Interaction, button: Button):
