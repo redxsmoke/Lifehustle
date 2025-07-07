@@ -32,23 +32,22 @@ def condition_from_usage(travel_count: int) -> str:
 # TRAVEL UTILITIES
 # ───────────────────────────────────────────────
 
-async def update_vehicle_condition_and_description(pool, user_id, vehicle_id, vehicle_type_id, travel_count, breakdown_threshold, interaction=None):
-    """
-    Increment travel_count, recalculate condition_id, pick a random new appearance,
-    update the user_vehicle_inventory record, and return the new state.
-    Sends an ephemeral embed message if the condition changes.
-    """
-    # Determine new condition string with breakdown threshold logic:
-    if breakdown_threshold is not None and travel_count >= breakdown_threshold:
-        new_cond_str = "Broken Down"
+def condition_and_resale_percent(travel_count: int, breakdown_threshold: int = 200) -> tuple[str, float]:
+    if travel_count < 50:
+        return "Brand New", 0.75
+    elif travel_count < 100:
+        return "Good Condition", 0.50
+    elif travel_count < 150:
+        return "Fair Condition", 0.30
+    elif travel_count < breakdown_threshold:
+        return "Poor Condition", 0.15
     else:
-        # Cap condition at "Poor Condition" if breakdown threshold not yet reached
-        if travel_count >= 200:
-            new_cond_str = "Poor Condition"
-        else:
-            new_cond_str = condition_from_usage(travel_count)
-    
-    # Map to numeric condition_id
+        return "Broken Down", 0.05
+
+async def update_vehicle_condition_and_description(pool, user_id, vehicle_id, vehicle_type_id, travel_count, breakdown_threshold, interaction=None):
+    # Get condition string and resale percent
+    new_cond_str, resale_percent = condition_and_resale_percent(travel_count, breakdown_threshold)
+
     condition_map = {
         "Brand New": 1,
         "Good Condition": 2,
@@ -65,7 +64,7 @@ async def update_vehicle_condition_and_description(pool, user_id, vehicle_id, ve
         )
         if not old_row:
             raise ValueError(f"Vehicle {vehicle_id} not found for user {user_id}")
-        old_condition_id = old_row["condition_id"]
+
         vehicle_type_id = old_row["vehicle_type_id"]
 
         desc_row = await conn.fetchrow(
@@ -83,12 +82,14 @@ async def update_vehicle_condition_and_description(pool, user_id, vehicle_id, ve
             """
             UPDATE user_vehicle_inventory
             SET
-              travel_count          = $1,
-              condition_id          = $2,
-              appearance_description = $3
-            WHERE id = $4 AND user_id = $5
+            travel_count           = $1,
+            condition_id           = $2,
+            resale_percent         = $3,
+            appearance_description = $4,
+            breakdown_threshold    = $5
+            WHERE id = $6 AND user_id = $7
             """,
-            travel_count, new_cond_id, description, vehicle_id, user_id
+            travel_count, new_cond_id, resale_percent, description, breakdown_threshold, vehicle_id, user_id
         )
 
     # Determine if message should be sent
