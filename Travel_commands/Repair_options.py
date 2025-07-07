@@ -175,9 +175,9 @@ class RepairOptionsView(View):
                     title="Uncle Bill... Drunk Repair",
                     description=(
                         f"🍻 Uncle Bill had one too many...\n"
-                        f">\u200B He *sort of* fixed it but {funny}\n"
-                        f">\u200B Your travel count is now **{new_travel_count}**.\n"
-                        f">\u200B You were charged **${cost:,}**."
+                        f"> \u200B He *sort of* fixed it but {funny}\n"
+                        f"> \u200B Your travel count is now **{new_travel_count}**.\n"
+                        f"> \u200B You were charged **${cost:,}**."
                     ),
                     color=COLOR_GREEN
                 )
