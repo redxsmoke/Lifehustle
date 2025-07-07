@@ -16,6 +16,7 @@ class RepairOptionsView(View):
 
     @discord.ui.button(label="🛠️ Have a mechanic repair it", style=discord.ButtonStyle.primary)
     async def mechanic_repair(self, interaction: discord.Interaction, button: Button):
+        print(f"Button clicked by {interaction.user}")
         cost = int(50 * random.uniform(1.5, 5.5))
         finances = await get_user_finances(pool, self.user_id)
         
