@@ -32,13 +32,17 @@ def condition_from_usage(travel_count: int) -> str:
 # TRAVEL UTILITIES
 # ───────────────────────────────────────────────
 
-async def update_vehicle_condition_and_description(pool, user_id: int, vehicle_id: int, vehicle_type_id: int, travel_count: int):
+async def update_vehicle_condition_and_description(pool, user_id, vehicle_id, vehicle_type_id, travel_count, breakdown_threshold):
     """
     Increment travel_count, recalculate condition_id, pick a random new appearance,
     update the user_vehicle_inventory record, and return the new state.
     """
-    # Determine new human-readable condition
-    new_cond_str = condition_from_usage(travel_count)
+    # Override condition if travel_count exceeds breakdown_threshold
+    if breakdown_threshold is not None and travel_count >= breakdown_threshold:
+        new_cond_str = "Broken Down"
+    else:
+        new_cond_str = condition_from_usage(travel_count)
+    
     # Map to numeric condition_id
     condition_map = {
         "Brand New": 1,
@@ -90,6 +94,7 @@ async def update_vehicle_condition_and_description(pool, user_id: int, vehicle_i
         "condition": new_cond_str,
         "description": description
     }
+
 
 # ───────────────────────────────────────────────
 # Parse amount strings like '1000', '1k', '2.5m', or 'all'
