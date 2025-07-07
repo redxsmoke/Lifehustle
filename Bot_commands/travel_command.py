@@ -279,9 +279,9 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
             description=(
                 f"You traveled using your {vehicle.get('vehicle_type', 'vehicle')} "
                 f"(Color: {vehicle.get('color', 'Unknown')}, Plate: {vehicle.get('plate_number', 'N/A')}).\n"
-                f"Travel Count: {travel_count}\n"
-                f"Condition: {condition_str}\n"
-                f"Appearance: {appearance_desc}\n\n"
+                f"- Travel Count: {travel_count}\n"
+                f"- Condition: {condition_str}\n"
+                f"- Appearance: {appearance_desc}\n\n"
                 f"🎲 Outcome: {outcome_desc}\n"
                 f"💰 Balance: ${effect}\n\n"
                 f"Your current balance is: ${current_balance:,}."
