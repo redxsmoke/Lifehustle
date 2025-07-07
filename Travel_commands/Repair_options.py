@@ -308,3 +308,4 @@ class RepairOptionsView(View):
             await interaction.response.send_message(
                 "❌ Something went wrong selling the vehicle. Please try again later.", ephemeral=True
             )
+            #
