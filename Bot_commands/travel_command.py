@@ -248,16 +248,31 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
             updated_vehicle["id"],
             updated_vehicle["vehicle_type_id"],
             updated_vehicle["travel_count"],
-            updated_vehicle["breakdown_threshold"]
+            updated_vehicle["breakdown_threshold"],
+            interaction=interaction
         )
 
+        if updated_info["condition"] == "Broken Down":
+            await interaction.followup.send(
+                embed=embed_message(
+                    "🚨 Vehicle Broken Down",
+                    "Your vehicle is broken down and can't be used for travel. Please repair it first.",
+                    COLOR_RED
+                ),
+                ephemeral=True
+            )
+            return  # stop travel here
+
+        # Only if not broken down, update travel info
         travel_count = updated_info["travel_count"]
         condition_str = updated_info["condition"]
         appearance_desc = updated_info["description"]
     else:
+        # fallback if no updated vehicle info
         travel_count = vehicle.get("travel_count", 0) + 1
         condition_str = vehicle.get("condition", "Unknown")
         appearance_desc = vehicle.get("appearance_description", "No description available.")
+
 
     await interaction.followup.send(
         embed=discord.Embed(
