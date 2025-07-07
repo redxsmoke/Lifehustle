@@ -159,7 +159,9 @@ class RepairOptionsView(View):
                         f"> He *sort of* fixed it but {funny}\n"
                         f"> Your travel count is now **{new_travel_count}**. "
                         f"> You were charged **${cost:,}**."
-                    )
+                    ),
+                    view = None 
+                )
                 print("[DEBUG] Edited message after drunk Uncle Bill scenario")
 
         except Exception as e:
