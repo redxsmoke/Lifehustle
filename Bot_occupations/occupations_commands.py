@@ -27,7 +27,7 @@ class ApplyJob(commands.Cog):
             # Here is the check to prevent applying if user already has a job
             if user.get('occupation_id') is not None:
                 embed = discord.Embed(
-                    description="🦥 Chill, job hopper! Your current job isn’t your side piece. Quit it before trying to swipe right on another!",
+                    description="🦥 Chill, job hopper! Your current job isn’t your side piece. Quit it before trying to swipe right on another! Use /careerpath resign to quit your current job",
                     color=discord.Color.red()
                 )
                 await interaction.followup.send(embed=embed, ephemeral=True)
