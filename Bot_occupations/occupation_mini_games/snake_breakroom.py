@@ -74,7 +74,7 @@ class SnakeBreakroomView(View):
                     desc = choice['text'].format(helper=helper_name)
 
             self.outcome_summary = desc
-            await interaction.response.edit_message(content=desc, embed=None, view=None)
+            await interaction.response.defer()
             self.stop()
         except Exception as e:
             print(f"Error in handle_outcome: {e}")
@@ -244,7 +244,7 @@ class AnimalControlSnakeView(View):
             message += f" You were fined ${penalty}."
 
         self.outcome_summary = message
-        await interaction.response.edit_message(content=message, embed=None, view=None)
+        await interaction.response.defer()
         self.stop()
 # ------------------------------
 # Dispatcher function to select appropriate minigame based on occupation_id
