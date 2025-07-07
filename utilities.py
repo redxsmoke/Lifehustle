@@ -109,6 +109,11 @@ async def update_vehicle_condition_and_description(pool, user_id, vehicle_id, ve
         if old_condition_id != new_cond_id:
             send_message = True
 
+    # DEBUG prints
+    print(f"[DEBUG] old_condition_id = {old_condition_id} ({old_cond_name})")
+    print(f"[DEBUG] new_cond_id = {new_cond_id} ({new_cond_name})")
+    print(f"[DEBUG] send_message = {send_message}")
+
     # Send ephemeral interaction message if requested and condition changed
     if interaction is not None and send_message:
         embed = embed_message(
@@ -116,7 +121,11 @@ async def update_vehicle_condition_and_description(pool, user_id, vehicle_id, ve
             description=f"> Your vehicle's condition changed from **{old_cond_name}** to **{new_cond_name}**.",
             color=COLOR_RED
         )
-        await interaction.followup.send(embed=embed, ephemeral=True)
+        try:
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            print("[DEBUG] Condition change message sent successfully.")
+        except Exception as e:
+            print(f"[ERROR] Failed to send condition change message: {e}")
 
     return {
         "travel_count": travel_count,
