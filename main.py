@@ -69,13 +69,7 @@ async def on_ready():
     #     print(f"Guild with ID {YOUR_GUILD_ID} not found on startup.")
 
 
-@bot.event
-async def on_member_join(member):
-    # Optional: Insert the new member into users table on join
-    # Can keep or remove if you want purely lazy insert on commands
-    await insert_user_if_not_exists(bot.pool, member.id, str(member), member.guild.id)
-    print(f"Inserted new member {member} into the database.")
-
+ 
 
 @bot.event
 async def setup_hook():
@@ -104,17 +98,18 @@ async def setup_hook():
 
 # ** Add these global hooks to ensure user exists before any command **
 
-# For prefix commands (like !help)
-@bot.before_invoke
-async def before_any_command(ctx):
-    await ensure_user_exists(bot.pool, ctx.author.id, str(ctx.author), ctx.guild.id)
 
 # For slash commands (like /lifecheck, /workshift)
 @bot.event
 async def on_interaction(interaction: discord.Interaction):
     if interaction.type == discord.InteractionType.application_command:
-        await ensure_user_exists(bot.pool, interaction.user.id, str(interaction.user), interaction.guild.id)
-    await bot.process_application_commands(interaction)  # important to let the command continue
+        await ensure_user_exists(
+            bot.pool,
+            interaction.user.id,
+            str(interaction.user),
+            interaction.guild.id if interaction.guild else None,
+        )
+    await bot.process_application_commands(interaction)
 
 
 
