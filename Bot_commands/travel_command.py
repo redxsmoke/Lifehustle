@@ -193,7 +193,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
     pool = globals.pool
     user_id = interaction.user.id
 
-    cost = 10 if method == "car" else 5 if method == "bike" else 0
+    cost = 10 if method == "car" else -10 if method == "bike" else 0
     finances = await get_user_finances(pool, user_id)
 
     if finances.get("checking_account_balance", 0) < cost:

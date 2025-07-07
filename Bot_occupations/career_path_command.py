@@ -75,7 +75,7 @@ class CareerPath(commands.Cog):
                 print(f"[workshift] Occupation row: {occupation}")
 
                 if occupation is None:
-                    msg = "❌ You don't have a job yet. Use `/apply_job` to get hired!"
+                    msg = "❌ You don't have a job yet. Use `/need_work` to get hired!"
                     if hasattr(ctx, "followup"):
                         await ctx.followup.send(msg)
                     else:
