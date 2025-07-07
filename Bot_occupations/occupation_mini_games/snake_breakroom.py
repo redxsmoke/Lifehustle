@@ -50,17 +50,17 @@ class SnakeBreakroomView(View):
                 if helper:
                     helper_member = interaction.guild.get_member(helper['user_id'])
                     if helper_member:
-                        helper_name = helper_member.display_name
+                        helper_name = helper_member.mention
                     else:
                         user_obj = await interaction.client.fetch_user(helper['user_id'])
-                        helper_name = user_obj.name
+                        helper_name = f"<@{user_obj.id}>"
 
                     user_member = interaction.guild.get_member(self.user_id)
                     if user_member:
-                        user_name = user_member.display_name
+                        user_name = user_member.mention
                     else:
                         user_obj = await interaction.client.fetch_user(self.user_id)
-                        user_name = user_obj.name
+                        user_name = f"<@{user_obj.id}>"
 
                     bonus = self.pay_rate * 2
                     await conn.execute(
@@ -274,17 +274,17 @@ class AnimalControlSnakeView(View):
                 for helper in helpers:
                     helper_member = interaction.guild.get_member(helper['user_id'])
                     if helper_member:
-                        helper_names.append(helper_member.display_name)
+                        helper_names.append(helper_member.mention)
                     else:
                         user_obj = await interaction.client.fetch_user(helper['user_id'])
-                        helper_names.append(user_obj.name)
+                        helper_names.append(f"<@{user_obj.id}>")
 
                 user_member = interaction.guild.get_member(self.user_id)
                 if user_member:
-                    user_name = user_member.display_name
+                    user_name = user_member.mention
                 else:
                     user_obj = await interaction.client.fetch_user(self.user_id)
-                    user_name = user_obj.name
+                    user_name = f"<@{user_obj.id}>"
 
                 bonus = int(self.pay_rate * 1.8)
                 await conn.execute(
