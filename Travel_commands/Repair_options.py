@@ -73,7 +73,7 @@ class RepairOptionsView(View):
 
             await interaction.response.edit_message(
                 content=f"🛠️ Mechanic repaired your vehicle for **${cost:,}**. "
-                        f"The mechanic also tweaked your odometer and reset your Travel count set to **{new_travel_count}**.",
+                        f"The mechanic also tweaked your odometer and reset your travel count **{new_travel_count}**.",
                 view=None
             )
             print("[DEBUG] Edited message after mechanic repair")
@@ -150,6 +150,7 @@ class RepairOptionsView(View):
                     199,  # Keeping this fixed for drunk scenario as before
                     random.randint(200, 299)
                 )
+                new_travel_count = 199  # Fix: define this variable before using it in the message
                 funny = "a raccoon is now living in your glovebox."
                 print("[DEBUG] Vehicle travel count reset to 199, condition remains broken")
 
