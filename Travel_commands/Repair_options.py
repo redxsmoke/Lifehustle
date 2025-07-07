@@ -73,7 +73,7 @@ class RepairOptionsView(View):
 
             await interaction.response.edit_message(
                 content=f"🛠️ Mechanic repaired your vehicle for **${cost:,}**. "
-                        f"Travel count set to **{new_travel_count}** and breakdown threshold to **{new_breakdown_threshold}**.",
+                        f"The mechanic also tweaked your odometer and reset your Travel count set to **{new_travel_count}**.",
                 view=None
             )
             print("[DEBUG] Edited message after mechanic repair")
@@ -132,7 +132,7 @@ class RepairOptionsView(View):
 
                 await interaction.response.edit_message(
                     content=f"🧰 Uncle Bill fixed your vehicle for **${cost:,}**. "
-                            f"Travel count set to **{new_travel_count}** and breakdown threshold to **{new_breakdown_threshold}**.",
+                            f"He also tinkered with your odometer and reset your travel count to **{new_travel_count}**.",
                     view=None
                 )
                 print("[DEBUG] Edited message after Uncle Bill fix")
@@ -154,10 +154,12 @@ class RepairOptionsView(View):
                 print("[DEBUG] Vehicle travel count reset to 199, condition remains broken")
 
                 await interaction.response.edit_message(
-                    content=f"🍻 Uncle Bill had one too many... "
-                            f"he *sort of* fixed it but {funny}\nYou were charged **${cost:,}**.",
-                    view=None
-                )
+                    content=(
+                        f"🍻 Uncle Bill had one too many... "
+                        f"> He *sort of* fixed it but {funny}\n"
+                        f"> Your travel count is now **{new_travel_count}**. "
+                        f"> You were charged **${cost:,}**."
+                    )
                 print("[DEBUG] Edited message after drunk Uncle Bill scenario")
 
         except Exception as e:
