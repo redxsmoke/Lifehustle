@@ -13,23 +13,21 @@ class SnakeBreakroomView(View):
         self.user_id = user_id
         self.user_occupation_id = user_occupation_id
         self.pay_rate = pay_rate
-        self.penalty_chance = 0.07  # 7% chance of penalty
-        self.penalty_amount = int(pay_rate * 0.1)  # 10% pay dock penalty
         self.outcome_summary = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
 
-    async def apply_penalty(self):
-        if random.random() < self.penalty_chance:
-            async with self.pool.acquire() as conn:
-                await conn.execute(
-                    "UPDATE user_finances SET checking_account_balance = checking_account_balance - $1 WHERE user_id = $2",
-                    self.penalty_amount,
-                    self.user_id,
-                )
-            return True
-        return False
+    async def apply_penalty(self, min_penalty=20, max_penalty=100, max_multiplier=3):
+        # Random penalty amount between min and max multiplied by a random multiplier between 1 and max_multiplier
+        penalty_amount = random.randint(min_penalty, max_penalty) * random.randint(1, max_multiplier)
+        async with self.pool.acquire() as conn:
+            await conn.execute(
+                "UPDATE user_finances SET checking_account_balance = checking_account_balance - $1 WHERE user_id = $2",
+                penalty_amount,
+                self.user_id,
+            )
+        return penalty_amount
 
     @discord.ui.button(label="Call Animal Control", style=discord.ButtonStyle.primary)
     async def call_animal_control(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -62,7 +60,7 @@ class SnakeBreakroomView(View):
                         user_obj = await interaction.client.fetch_user(self.user_id)
                         user_name = f"<@{user_obj.id}>"
 
-                    bonus = self.pay_rate * 2
+                    bonus = random.randint(20, 500) * random.randint(1, 4)
                     await conn.execute(
                         "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
                         bonus,
@@ -73,13 +71,18 @@ class SnakeBreakroomView(View):
                         bonus,
                         helper['user_id'],
                     )
-                    desc = f"You called Animal Control! {helper_name} from Fur Get About It Animal Control rushed in to help {user_name}. Both get a bonus of ${int(bonus)}!"
+                    desc = (
+                        f"You called Animal Control! {helper_name} from Fur Get About It Animal Control rushed in to help {user_name}. "
+                        f"Both get a bonus of ${bonus}!"
+                    )
                 else:
-                    desc = "You called Animal Control but no one is available. No bonus awarded."
-
-            penalty_applied = await self.apply_penalty()
-            if penalty_applied:
-                desc += f"\n\nYour boss docked your pay for causing a fuss over a harmless snake. You lost ${self.penalty_amount}."
+                    # No helper found, generic message, no penalty
+                    desc = (
+                        "You called Animal Control but no one showed up. Animal Control was late and your boss docked your pay for their poor punctuality or something."
+                    )
+                    # Apply penalty because of late arrival
+                    penalty_amount = await self.apply_penalty()
+                    desc += f"\n\nYour pay was docked by ${penalty_amount}."
 
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
@@ -88,89 +91,146 @@ class SnakeBreakroomView(View):
             print(f"Error in call_animal_control: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
-                self.stop()
+            self.stop()
 
     @discord.ui.button(label="Grab it by the neck", style=discord.ButtonStyle.danger)
     async def grab_by_neck(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            multiplier = random.uniform(1.1, 1.5)
-            success = random.random() < 0.4  # 40% success chance
-            bonus = int(self.pay_rate * multiplier)
+            outcome_roll = random.random()
+            desc = ""
+            penalty_amount = None
+            bonus = None
 
             async with self.pool.acquire() as conn:
-                if success:
+                if outcome_roll < 0.33:
+                    # Negative outcome - penalty
+                    penalty_amount = random.randint(20, 100) * random.randint(1, 3)
+                    await conn.execute(
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance - $1 WHERE user_id = $2",
+                        penalty_amount,
+                        self.user_id,
+                    )
+                    desc = (
+                        "You tried to grab the snake by the neck but it bit you viciously! "
+                        f"You lost ${penalty_amount} in medical bills and emotional trauma."
+                    )
+                elif outcome_roll < 0.66:
+                    # Neutral outcome - no bonus/penalty
+                    desc = (
+                        "You tried to grab the snake but it slipped away laughing at your incompetence. Snake 1, you 0."
+                    )
+                else:
+                    # Positive outcome - bonus
+                    bonus = random.randint(20, 500) * random.randint(1, 4)
                     await conn.execute(
                         "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
                         bonus,
                         self.user_id,
                     )
-                    desc = f"You grabbed the snake by the neck and totally nailed it! The snake didn’t stand a chance against your heroic grip. Bonus: ${bonus} (x{multiplier:.2f})."
-                else:
-                    desc = "You tried to grab the snake, but it slipped away laughing at your incompetence. Snake 1, you 0."
-
-            penalty_applied = await self.apply_penalty()
-            if penalty_applied:
-                desc += f"\n\nYou tried to grab the snake and it bit you. The EMTs think you're a moron. You paid ${self.penalty_amount} in medical bills and an infinite amount in emotional damage."
+                    desc = (
+                        f"You grabbed the snake by the neck and totally nailed it! The snake didn’t stand a chance against your heroic grip. Bonus: ${bonus}!"
+                    )
 
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
             self.stop()
+
         except Exception as e:
             print(f"Error in grab_by_neck: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
-                self.stop()
+            self.stop()
 
     @discord.ui.button(label="Put a bucket over it", style=discord.ButtonStyle.secondary)
     async def put_bucket(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            desc = (
-                "You put a bucket over the snake and walked away, hoping someone else deals with it. "
-                "Not exactly team spirit, but hey — no trouble (or bonus) for you either."
-            )
-
-            penalty_applied = await self.apply_penalty()
-            if penalty_applied:
-                desc += f"\n\nYour boss noticed your lack of initiative. Pay docked by ${self.penalty_amount}."
-
-            self.outcome_summary = desc
-            await interaction.response.edit_message(content=desc, embed=None, view=None)
-            self.stop()
-        except Exception as e:
-            print(f"Error in put_bucket: {e}")
-            if not interaction.response.is_done():
-                await interaction.response.send_message("Something went wrong!", ephemeral=True)
-                self.stop()
-
-    @discord.ui.button(label="Distract it with snacks", style=discord.ButtonStyle.success)
-    async def distract_with_snacks(self, interaction: discord.Interaction, button: discord.ui.Button):
-        try:
-            success = random.random() < 0.5
-            bonus = int(self.pay_rate * 1.5)
+            outcome_roll = random.random()
+            desc = ""
+            penalty_amount = None
 
             async with self.pool.acquire() as conn:
-                if success:
+                if outcome_roll < 0.33:
+                    # Negative outcome - penalty
+                    penalty_amount = random.randint(20, 100) * random.randint(1, 3)
+                    await conn.execute(
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance - $1 WHERE user_id = $2",
+                        penalty_amount,
+                        self.user_id,
+                    )
+                    desc = (
+                        f"Your boss noticed your lack of initiative and docked your pay by ${penalty_amount}."
+                    )
+                elif outcome_roll < 0.66:
+                    # Neutral outcome - no penalty or bonus
+                    desc = (
+                        "You put a bucket over the snake and walked away, hoping someone else deals with it. Not exactly team spirit, but no trouble for you either."
+                    )
+                else:
+                    # Positive outcome - bonus
+                    bonus = random.randint(20, 500) * random.randint(1, 4)
                     await conn.execute(
                         "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
                         bonus,
                         self.user_id,
                     )
-                    desc = f"You distracted the snake with snacks and it calmed down! Bonus ${bonus} awarded."
-                else:
-                    desc = "Your distraction backfired and the snake got angrier. No bonus this time."
-
-            penalty_applied = await self.apply_penalty()
-            if penalty_applied:
-                desc += f"\n\nManagement isn’t thrilled. They’re considering replacing you with a cardboard cutout. You lost ${self.penalty_amount} from your pay."
+                    desc = (
+                        f"You cleverly trapped the snake under the bucket and earned a bonus of ${bonus} for your initiative!"
+                    )
 
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
             self.stop()
+
+        except Exception as e:
+            print(f"Error in put_bucket: {e}")
+            if not interaction.response.is_done():
+                await interaction.response.send_message("Something went wrong!", ephemeral=True)
+            self.stop()
+
+    @discord.ui.button(label="Distract it with snacks", style=discord.ButtonStyle.success)
+    async def distract_with_snacks(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            outcome_roll = random.random()
+            desc = ""
+            penalty_amount = None
+            bonus = None
+
+            async with self.pool.acquire() as conn:
+                if outcome_roll < 0.33:
+                    # Negative outcome - penalty
+                    penalty_amount = random.randint(20, 100) * random.randint(1, 3)
+                    await conn.execute(
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance - $1 WHERE user_id = $2",
+                        penalty_amount,
+                        self.user_id,
+                    )
+                    desc = (
+                        f"Your distraction backfired and the snake got angrier. Management docked your pay by ${penalty_amount}."
+                    )
+                elif outcome_roll < 0.66:
+                    # Neutral outcome
+                    desc = "You distracted the snake with snacks but it didn't calm down much. No bonus this time."
+                else:
+                    # Positive outcome - bonus
+                    bonus = random.randint(20, 500) * random.randint(1, 4)
+                    await conn.execute(
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
+                        bonus,
+                        self.user_id,
+                    )
+                    desc = (
+                        f"You successfully distracted the snake with snacks! Bonus of ${bonus} awarded."
+                    )
+
+            self.outcome_summary = desc
+            await interaction.response.edit_message(content=desc, embed=None, view=None)
+            self.stop()
+
         except Exception as e:
             print(f"Error in distract_with_snacks: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
-                self.stop()
+            self.stop()
 
 async def play_snake_breakroom(pool, guild_id, user_id, user_occupation_id, pay_rate):
     embed = discord.Embed(
@@ -198,74 +258,111 @@ class AnimalControlSnakeView(View):
         self.user_id = user_id
         self.user_occupation_id = user_occupation_id
         self.pay_rate = pay_rate
-        self.penalty_chance = 0.02  # 2% chance penalty for pros
-        self.penalty_amount = int(pay_rate * 0.05)  # 5% pay dock penalty for rare screwups
         self.outcome_summary = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
 
-    async def apply_penalty(self):
-        if random.random() < self.penalty_chance:
-            async with self.pool.acquire() as conn:
-                await conn.execute(
-                    "UPDATE user_finances SET checking_account_balance = checking_account_balance - $1 WHERE user_id = $2",
-                    self.penalty_amount,
-                    self.user_id,
-                )
-            return True
-        return False
+    async def apply_penalty(self, min_penalty=20, max_penalty=100, max_multiplier=3):
+        penalty_amount = random.randint(min_penalty, max_penalty) * random.randint(1, max_multiplier)
+        async with self.pool.acquire() as conn:
+            await conn.execute(
+                "UPDATE user_finances SET checking_account_balance = checking_account_balance - $1 WHERE user_id = $2",
+                penalty_amount,
+                self.user_id,
+            )
+        return penalty_amount
 
     @discord.ui.button(label="Safely capture the snake", style=discord.ButtonStyle.primary)
     async def safe_capture(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            bonus = int(self.pay_rate * 2.5)
+            outcome_roll = random.random()
+            desc = ""
+            penalty_amount = None
+            bonus = None
+
             async with self.pool.acquire() as conn:
-                await conn.execute(
-                    "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
-                    bonus,
-                    self.user_id,
-                )
-            desc = f"You expertly capture the snake with your equipment. Bonus ${bonus} awarded!"
-            penalty_applied = await self.apply_penalty()
-            if penalty_applied:
-                desc += f"\n\nEven pros have off days! Minor mishap cost you ${self.penalty_amount}."
+                if outcome_roll < 0.33:
+                    # Negative outcome - penalty
+                    penalty_amount = random.randint(20, 100) * random.randint(1, 3)
+                    await conn.execute(
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance - $1 WHERE user_id = $2",
+                        penalty_amount,
+                        self.user_id,
+                    )
+                    desc = (
+                        f"You tried to safely capture the snake but it slipped away and you got hurt. "
+                        f"You lost ${penalty_amount} in medical bills."
+                    )
+                elif outcome_roll < 0.66:
+                    # Neutral outcome
+                    desc = (
+                        "You safely captured the snake without incident. No bonus, but no trouble either."
+                    )
+                else:
+                    # Positive outcome - bonus
+                    bonus = random.randint(20, 500) * random.randint(1, 4)
+                    await conn.execute(
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
+                        bonus,
+                        self.user_id,
+                    )
+                    desc = f"You expertly capture the snake with your equipment. Bonus ${bonus} awarded!"
+
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
             self.stop()
+
         except Exception as e:
             print(f"Error in safe_capture: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
-                self.stop()
+            self.stop()
 
     @discord.ui.button(label="Calm the freaked out employee", style=discord.ButtonStyle.success)
     async def calm_employee(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            success = random.random() < 0.8
-            bonus = int(self.pay_rate * 1.2)
+            outcome_roll = random.random()
+            desc = ""
+            penalty_amount = None
+            bonus = None
+
             async with self.pool.acquire() as conn:
-                if success:
+                if outcome_roll < 0.33:
+                    # Negative outcome - penalty
+                    penalty_amount = random.randint(20, 100) * random.randint(1, 3)
+                    await conn.execute(
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance - $1 WHERE user_id = $2",
+                        penalty_amount,
+                        self.user_id,
+                    )
+                    desc = (
+                        f"You tried to calm the employee but made things worse. You lost ${penalty_amount} due to stress leave."
+                    )
+                elif outcome_roll < 0.66:
+                    # Neutral outcome
+                    desc = (
+                        "You calmed the panicked employee successfully but didn't get a bonus."
+                    )
+                else:
+                    # Positive outcome - bonus
+                    bonus = random.randint(20, 500) * random.randint(1, 4)
                     await conn.execute(
                         "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
                         bonus,
                         self.user_id,
                     )
                     desc = f"You calm the panicked employee with your expert knowledge. Bonus ${bonus}!"
-                else:
-                    desc = "The employee panics even more. No bonus this time."
 
-            penalty_applied = await self.apply_penalty()
-            if penalty_applied:
-                desc += f"\n\nYour calming skills slipped! You lost ${self.penalty_amount}."
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
             self.stop()
+
         except Exception as e:
             print(f"Error in calm_employee: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
-                self.stop()
+            self.stop()
 
     @discord.ui.button(label="Call for backup", style=discord.ButtonStyle.secondary)
     async def call_backup(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -298,48 +395,73 @@ class AnimalControlSnakeView(View):
                     user_obj = await interaction.client.fetch_user(self.user_id)
                     user_name = f"<@{user_obj.id}>"
 
-                bonus = int(self.pay_rate * 1.8)
-                await conn.execute(
-                    "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
-                    bonus,
-                    self.user_id,
-                )
-                for helper in helpers:
+                if helpers:
+                    bonus = random.randint(20, 500) * random.randint(1, 4)
                     await conn.execute(
                         "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
                         bonus,
-                        helper['user_id'],
+                        self.user_id,
                     )
-                desc = f"You call for backup and handle the snake safely. {user_name} and {len(helpers)} helpers ({', '.join(helper_names)}) receive ${bonus} each!"
+                    for helper in helpers:
+                        await conn.execute(
+                            "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
+                            bonus,
+                            helper['user_id'],
+                        )
+                    desc = (
+                        f"You call for backup and handle the snake safely. {user_name} and "
+                        f"{len(helpers)} helpers ({', '.join(helper_names)}) receive ${bonus} each!"
+                    )
+                else:
+                    desc = "You called for backup but no one came to help. No bonus awarded."
 
-            penalty_applied = await self.apply_penalty()
-            if penalty_applied:
-                desc += f"\n\nYour backup plan backfired a bit! You lost ${self.penalty_amount}."
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
             self.stop()
+
         except Exception as e:
             print(f"Error in call_backup: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
-                self.stop()
+            self.stop()
 
     @discord.ui.button(label="Focus on paperwork", style=discord.ButtonStyle.danger)
     async def paperwork(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
-            desc = "You decide to focus on paperwork instead of the snake. No bonus, but at least no trouble!"
+            outcome_roll = random.random()
+            desc = ""
+            penalty_amount = None
 
-            penalty_applied = await self.apply_penalty()
-            if penalty_applied:
-                desc += f"\n\nYour boss isn't thrilled with your choice. You lost ${self.penalty_amount}."
+            if outcome_roll < 0.33:
+                penalty_amount = random.randint(20, 100) * random.randint(1, 3)
+                async with self.pool.acquire() as conn:
+                    await conn.execute(
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance - $1 WHERE user_id = $2",
+                        penalty_amount,
+                        self.user_id,
+                    )
+                desc = f"You decide to focus on paperwork instead of the snake. Your boss docked your pay by ${penalty_amount}."
+            elif outcome_roll < 0.66:
+                desc = "You decide to focus on paperwork instead of the snake. No bonus, but at least no trouble!"
+            else:
+                bonus = random.randint(20, 500) * random.randint(1, 4)
+                async with self.pool.acquire() as conn:
+                    await conn.execute(
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
+                        bonus,
+                        self.user_id,
+                    )
+                desc = f"You decided paperwork was more important, but got a surprise bonus of ${bonus} for efficiency!"
+
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
             self.stop()
+
         except Exception as e:
             print(f"Error in paperwork: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
-                self.stop()
+            self.stop()
 
 async def play_animal_control_snake(pool, guild_id, user_id, user_occupation_id, pay_rate):
     embed = discord.Embed(
