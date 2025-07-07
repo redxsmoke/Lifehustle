@@ -79,8 +79,8 @@ class RepairOptionsView(View):
             embed = discord.Embed(
                 title="Mechanic Repair Successful",
                 description=(
-                    f"🛠️ Mechanic repaired your vehicle for **${cost:,}**.\n"
-                    f"The mechanic also tweaked your odometer and reset your travel count to **{new_travel_count}**."
+                    f"> 🛠️ Mechanic repaired your vehicle for **${cost:,}**.\n"
+                    f"> The mechanic also tweaked your odometer and reset your travel count to **{new_travel_count}**."
                 ),
                 color=COLOR_GREEN
             )
@@ -114,7 +114,7 @@ class RepairOptionsView(View):
                     print("[DEBUG] Not enough funds for Uncle Bill fix")
                     embed = discord.Embed(
                         title="Uncle Bill Repair Failed",
-                        description=f"🚫 You need **${cost:,}** to pay Uncle Bill but don't have enough funds.",
+                        description=f"> 🚫 You need **${cost:,}** to pay Uncle Bill but don't have enough funds.",
                         color=COLOR_RED
                     )
                     await interaction.followup.send(embed=embed, ephemeral=True)
@@ -147,8 +147,8 @@ class RepairOptionsView(View):
                 embed = discord.Embed(
                     title="Uncle Bill Repair Successful",
                     description=(
-                        f"🧰 Uncle Bill fixed your vehicle for **${cost:,}**.\n"
-                        f"He also tinkered with your odometer and reset your travel count to **{new_travel_count}**."
+                        f"> 🧰 Uncle Bill fixed your vehicle for **${cost:,}**.\n"
+                        f"> He also tinkered with your odometer and reset your travel count to **{new_travel_count}**."
                     ),
                     color=COLOR_GREEN
                 )
