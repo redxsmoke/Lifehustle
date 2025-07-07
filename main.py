@@ -100,8 +100,7 @@ async def setup_database():
     await drop_vehicle_appearence_table(globals.pool)
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool)
-    await setup()  # Setup education and occupation tables
-
+ 
 
 
 
