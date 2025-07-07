@@ -103,12 +103,8 @@ async def setup_hook():
 @bot.event
 async def on_interaction(interaction: discord.Interaction):
     if interaction.type == discord.InteractionType.application_command:
-        await ensure_user_exists(
-            bot.pool,
-            interaction.user.id,
-            str(interaction.user),
-            interaction.guild.id if interaction.guild else None,
-        )
+        guild_id = interaction.guild.id if interaction.guild else None
+        await ensure_user_exists(bot.pool, interaction.user.id, str(interaction.user), guild_id)
     await bot.process_application_commands(interaction)
 
 
