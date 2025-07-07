@@ -168,16 +168,16 @@ class RepairOptionsView(View):
                     random.randint(200, 299)
                 )
                 new_travel_count = 199
-                funny = "a raccoon is now living in your glovebox."
+                funny = "now it sounds like a lawn mower with a cold."
                 print("[DEBUG] Vehicle travel count reset to 199, condition remains broken")
 
                 embed = discord.Embed(
                     title="Uncle Bill... Drunk Repair",
                     description=(
                         f"🍻 Uncle Bill had one too many...\n"
-                        f"> \u200B He *sort of* fixed it but {funny}\n"
-                        f"> \u200B Your travel count is now **{new_travel_count}**.\n"
-                        f"> \u200B You were charged **${cost:,}**."
+                        f"> \u200B \u200B He *sort of* fixed it but {funny}\n"
+                        f"> \u200B \u200B Your travel count is now **{new_travel_count}**.\n"
+                        f"> \u200B \u200B You were charged **${cost:,}**."
                     ),
                     color=COLOR_GREEN
                 )
