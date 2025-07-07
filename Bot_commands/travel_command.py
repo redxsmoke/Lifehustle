@@ -81,7 +81,7 @@ async def handle_travel(interaction: Interaction, method: str):
 
     if method == 'car':
         cars = [v for v in working_vehicles if v.get("vehicle_type") in (
-            "Beater Car", "Sedan", "Sports Car", "Pickup Truck", "Motorcycle"
+            "Beater Car", "Sedan Car", "Sports Car", "Pickup Truck", "Motorcycle"
         )]
         if not cars:
             await interaction.followup.send(
