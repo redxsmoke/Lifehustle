@@ -27,7 +27,7 @@ from embeds import embed_message, COLOR_GREEN
 from views import select_weighted_travel_outcome, VehicleUseView
 
 def condition_from_usage(travel_count: int, breakdown_threshold: int = 200) -> str:
-    if travel_count < 50:
+    if 0 <= travel_count < 50:
         return "Brand New"
     elif travel_count < 100:
         return "Good Condition"
