@@ -146,6 +146,7 @@ class CareerPath(commands.Cog):
                 await ctx.followup.send(embed=embed, view=view)
             else:
                 await ctx.send(embed=embed, view=view)
+            await view.wait()
 
             game_summary = getattr(view, "outcome_summary", None)
 
@@ -159,7 +160,7 @@ class CareerPath(commands.Cog):
 
             # Append mini-game outcome if present
             if game_summary:
-                paystub_description += f"\n**Mini-Game Outcome:**\n{game_summary.strip()}\n"
+                paystub_description += f"\n**Outcome from snake in the break room:**\n{game_summary.strip()}\n"
 
             # Add final flavor line
             paystub_description += "\n*Paid. Hopefully this cash sticks around longer than your last situationship.*"
