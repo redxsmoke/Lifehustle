@@ -147,18 +147,30 @@ class CareerPath(commands.Cog):
             else:
                 await ctx.send(embed=embed, view=view)
 
+            game_summary = getattr(view, "outcome_summary", None)
+
             # Send the paystub embed separately
+            paystub_description = (
+                f"> You completed your shift as a **{occupation_name}** and earned **${pay_rate:.2f}**.\n"
+                f"> Your total completed shifts today: **{shifts_today}/{required_shifts_per_day}**\n\n"
+                f"> 💵 ${pay_rate:.2f} has been deposited into your checking account.\n"
+                f"> **New Balance:** ${new_balance:,.2f}\n"
+            )
+
+            # Append mini-game outcome if present
+            if game_summary:
+                paystub_description += f"\n**Mini-Game Outcome:**\n{game_summary.strip()}\n"
+
+            # Add final flavor line
+            paystub_description += "\n*Paid. Hopefully this cash sticks around longer than your last situationship.*"
+
+            # Build embed
             paystub_embed = discord.Embed(
                 title=f"🕒 Shift Logged - here is your pay stub from ***{company_name}***",
-                description=(
-                    f"> You completed your shift as a **{occupation_name}** and earned **${pay_rate:.2f}**.\n"
-                    f"> Your total completed shifts today: **{shifts_today}/{required_shifts_per_day}**\n\n"
-                    f"> 💵 ${pay_rate:.2f} has been deposited into your checking account.\n"
-                    f"> **New Balance:** ${new_balance:,.2f}\n\n"
-                    f"*Paid. Hopefully this cash sticks around longer than your last situationship.*"
-                ),
+                description=paystub_description,
                 color=COLOR_GREEN
             )
+
             if hasattr(ctx, "followup"):
                 await ctx.followup.send(embed=paystub_embed)
             else:

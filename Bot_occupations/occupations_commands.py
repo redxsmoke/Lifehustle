@@ -2,9 +2,8 @@ from discord import app_commands
 from discord.ext import commands
 import discord
 
-from Bot_occupations.occupations_views import JobSelectView
 from Bot_occupations.occupation_db_utilities import get_user, get_eligible_occupations
-
+from Bot_occupations.occupations_views import JobSelectView  # Make sure this file exists and is correct!
 
 class ApplyJob(commands.Cog):
     def __init__(self, bot):

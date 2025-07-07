@@ -15,6 +15,7 @@ class SnakeBreakroomView(View):
         self.pay_rate = pay_rate
         self.penalty_chance = 0.07  # 7% chance of penalty
         self.penalty_amount = int(pay_rate * 0.1)  # 10% pay dock penalty
+        self.outcome_summary = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
@@ -34,15 +35,18 @@ class SnakeBreakroomView(View):
     async def call_animal_control(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
             async with self.pool.acquire() as conn:
-                helper = await conn.fetchrow("""
+                helper = await conn.fetchrow(
+                    """
                     SELECT user_id FROM users
                     WHERE occupation_id = 61  -- Animal Control occupation ID
                     AND guild_id = $1
                     AND user_id != $2
                     LIMIT 1
-                """, self.guild_id, self.user_id)
+                    """,
+                    self.guild_id,
+                    self.user_id,
+                )
 
-                # Resolve display names
                 if helper:
                     helper_member = interaction.guild.get_member(helper['user_id'])
                     if helper_member:
@@ -59,12 +63,16 @@ class SnakeBreakroomView(View):
                         user_name = user_obj.name
 
                     bonus = self.pay_rate * 2
-                    await conn.execute("""
-                        UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2
-                    """, bonus, self.user_id)
-                    await conn.execute("""
-                        UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2
-                    """, bonus, helper['user_id'])
+                    await conn.execute(
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
+                        bonus,
+                        self.user_id,
+                    )
+                    await conn.execute(
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
+                        bonus,
+                        helper['user_id'],
+                    )
                     desc = f"You called Animal Control! {helper_name} rushed in to help {user_name}. Both get a bonus of ${int(bonus)}!"
                 else:
                     desc = "You called Animal Control but no one is available. No bonus awarded."
@@ -73,6 +81,7 @@ class SnakeBreakroomView(View):
             if penalty_applied:
                 desc += f"\n\nYour boss docked your pay for causing a fuss over a harmless snake. You lost ${self.penalty_amount}."
 
+            self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
         except Exception as e:
             print(f"Error in call_animal_control: {e}")
@@ -88,9 +97,11 @@ class SnakeBreakroomView(View):
 
             async with self.pool.acquire() as conn:
                 if success:
-                    await conn.execute("""
-                        UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2
-                    """, bonus, self.user_id)
+                    await conn.execute(
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
+                        bonus,
+                        self.user_id,
+                    )
                     desc = f"You grabbed the snake by the neck and totally nailed it! The snake didn’t stand a chance against your heroic grip. Bonus: ${bonus} (x{multiplier:.2f})."
                 else:
                     desc = "You tried to grab the snake, but it slipped away laughing at your incompetence. Snake 1, you 0."
@@ -99,6 +110,7 @@ class SnakeBreakroomView(View):
             if penalty_applied:
                 desc += f"\n\nYou tried to grab the snake and it bit you. The EMTs think you're a moron. You paid ${self.penalty_amount} in medical bills and an infinite amount in emotional damage."
 
+            self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
         except Exception as e:
             print(f"Error in grab_by_neck: {e}")
@@ -117,6 +129,7 @@ class SnakeBreakroomView(View):
             if penalty_applied:
                 desc += f"\n\nYour boss noticed your lack of initiative. Pay docked by ${self.penalty_amount}."
 
+            self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
         except Exception as e:
             print(f"Error in put_bucket: {e}")
@@ -131,9 +144,11 @@ class SnakeBreakroomView(View):
 
             async with self.pool.acquire() as conn:
                 if success:
-                    await conn.execute("""
-                        UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2
-                    """, bonus, self.user_id)
+                    await conn.execute(
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
+                        bonus,
+                        self.user_id,
+                    )
                     desc = f"You distracted the snake with snacks and it calmed down! Bonus ${bonus} awarded."
                 else:
                     desc = "Your distraction backfired and the snake got angrier. No bonus this time."
@@ -142,6 +157,7 @@ class SnakeBreakroomView(View):
             if penalty_applied:
                 desc += f"\n\nManagement isn’t thrilled. They’re considering replacing you with a cardboard cutout. You lost ${self.penalty_amount} from your pay."
 
+            self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
         except Exception as e:
             print(f"Error in distract_with_snacks: {e}")
@@ -176,6 +192,7 @@ class AnimalControlSnakeView(View):
         self.pay_rate = pay_rate
         self.penalty_chance = 0.02  # 2% chance penalty for pros
         self.penalty_amount = int(pay_rate * 0.05)  # 5% pay dock penalty for rare screwups
+        self.outcome_summary = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
@@ -205,6 +222,7 @@ class AnimalControlSnakeView(View):
             penalty_applied = await self.apply_penalty()
             if penalty_applied:
                 desc += f"\n\nEven pros have off days! Minor mishap cost you ${self.penalty_amount}."
+            self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
         except Exception as e:
             print(f"Error in safe_capture: {e}")
@@ -230,6 +248,7 @@ class AnimalControlSnakeView(View):
             penalty_applied = await self.apply_penalty()
             if penalty_applied:
                 desc += f"\n\nYour calming skills slipped! You lost ${self.penalty_amount}."
+            self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
         except Exception as e:
             print(f"Error in calm_employee: {e}")
@@ -240,12 +259,16 @@ class AnimalControlSnakeView(View):
     async def call_backup(self, interaction: discord.Interaction, button: discord.ui.Button):
         try:
             async with self.pool.acquire() as conn:
-                helpers = await conn.fetch("""
+                helpers = await conn.fetch(
+                    """
                     SELECT user_id FROM users
                     WHERE occupation_id = 61
                     AND guild_id = $1
                     AND user_id != $2
-                """, self.guild_id, self.user_id)
+                    """,
+                    self.guild_id,
+                    self.user_id,
+                )
 
                 helper_names = []
                 for helper in helpers:
@@ -280,6 +303,7 @@ class AnimalControlSnakeView(View):
             penalty_applied = await self.apply_penalty()
             if penalty_applied:
                 desc += f"\n\nYour backup plan backfired a bit! You lost ${self.penalty_amount}."
+            self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
         except Exception as e:
             print(f"Error in call_backup: {e}")
@@ -294,6 +318,7 @@ class AnimalControlSnakeView(View):
             penalty_applied = await self.apply_penalty()
             if penalty_applied:
                 desc += f"\n\nYour boss isn't thrilled with your choice. You lost ${self.penalty_amount}."
+            self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
         except Exception as e:
             print(f"Error in paperwork: {e}")
