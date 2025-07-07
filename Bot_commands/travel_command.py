@@ -245,7 +245,10 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
         )
 
     # ✅ Also update local copy for display
-    vehicle["travel_count"] = vehicle.get("travel_count", 0) + 1
+    travel_count = vehicle.get("travel_count", 0) + 1
+    ...
+    f"Travel Count: {travel_count}\n\n"
+
 
     await interaction.followup.send(
         embed=discord.Embed(
