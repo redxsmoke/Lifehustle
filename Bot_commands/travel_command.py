@@ -216,6 +216,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
 
     await charge_user(pool, user_id, cost)
     current_balance = finances.get("checking_account_balance", 0) - cost
+
     print(f"[DEBUG] Travel method passed: {method}")
     outcome = await select_weighted_travel_outcome(pool, method)
     print(f"[DEBUG] Outcome result for {method}: {outcome}")
@@ -233,8 +234,8 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
             await reward_user(pool, user_id, effect)
             current_balance += effect
 
-    # ✅ THIS IS NOW PROPERLY ALIGNED (not under if/elif/else)
     async with pool.acquire() as conn:
+        # Increment travel_count
         await conn.execute(
             """
             UPDATE user_vehicle_inventory
@@ -244,19 +245,43 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
             user_id, vehicle.get("plate_number")
         )
 
-    # ✅ Also update local copy for display
-    travel_count = vehicle.get("travel_count", 0) + 1
-    ...
-    f"Travel Count: {travel_count}\n\n"
+        # Fetch updated vehicle info needed for condition update
+        updated_vehicle = await conn.fetchrow(
+            """
+            SELECT id, travel_count, vehicle_type_id
+            FROM user_vehicle_inventory
+            WHERE user_id = $1 AND plate_number = $2
+            """,
+            user_id, vehicle.get("plate_number")
+        )
 
+    if updated_vehicle:
+        updated_info = await update_vehicle_condition_and_description(
+            pool,
+            user_id,
+            updated_vehicle["id"],
+            updated_vehicle["vehicle_type_id"],
+            updated_vehicle["travel_count"]
+        )
+
+        travel_count = updated_info["travel_count"]
+        condition_str = updated_info["condition"]
+        appearance_desc = updated_info["description"]
+    else:
+        # fallback if vehicle not found (shouldn't happen)
+        travel_count = vehicle.get("travel_count", 0) + 1
+        condition_str = vehicle.get("condition", "Unknown")
+        appearance_desc = vehicle.get("appearance_description", "No description available.")
 
     await interaction.followup.send(
         embed=discord.Embed(
             title=f"{'🚗' if method == 'car' else '🚴'} Travel Summary",
             description=(
                 f"You traveled using your {vehicle.get('vehicle_type', 'vehicle')} "
-                f"(Color: {vehicle.get('color', 'Unknown')}, Plate: {vehicle.get('plate', 'N/A')}).\n"
-                f"Travel Count: {vehicle['travel_count']}\n\n"
+                f"(Color: {vehicle.get('color', 'Unknown')}, Plate: {vehicle.get('plate_number', 'N/A')}).\n"
+                f"Travel Count: {travel_count}\n"
+                f"Condition: {condition_str}\n"
+                f"Appearance: {appearance_desc}\n\n"
                 f"🎲 Outcome: {outcome_desc}\n"
                 f"💰 Balance: ${effect}\n\n"
                 f"Your current balance is: ${current_balance:,}."
@@ -265,7 +290,6 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
         ),
         ephemeral=True
     )
-
 async def on_sell_all_button_click(interaction: discord.Interaction, user_id, vehicles):
     # Send confirmation prompt
     confirm_view = ConfirmSellView(user_id, vehicles)
