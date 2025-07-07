@@ -168,7 +168,7 @@ class RepairOptionsView(View):
                     random.randint(200, 299)
                 )
                 new_travel_count = 199
-                funny = "now it sounds like a lawn mower with a cold."
+                funny = "now it roars like a grumpy blender."
                 print("[DEBUG] Vehicle travel count reset to 199, condition remains broken")
 
                 embed = discord.Embed(
