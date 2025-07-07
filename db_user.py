@@ -163,7 +163,7 @@ async def get_grocery_stash(pool, user_id):
     return rows
 
 #-------------USER RESALE OF VEHICLE-------------
-async def fetch_vehicle_with_pricing(pool, vehicle_id: int):
+async def fetch_vehicle_with_pricing(pool, user_id, vehicle_id: int):
     sql = """
         SELECT uvi.*, cvt.cost AS base_price, uvi.resale_percent
         FROM user_vehicle_inventory uvi
