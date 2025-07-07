@@ -3,6 +3,17 @@ import asyncpg
 import datetime
 
 
+#------------ADD USER TO DB IF MISSING AND RUN COMMAND = TRUE--------------
+
+async def ensure_user_exists(pool, user_id: int, user_name: str, guild_id: int):
+    await pool.execute("""
+        INSERT INTO users (user_id, user_name, guild_id)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (user_id, guild_id) DO NOTHING
+    """, user_id, user_name, guild_id)
+
+
+
 # ---------- USERS TABLE (Profile Info) ----------
 
 async def get_user(pool, user_id: int):

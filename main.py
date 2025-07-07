@@ -18,6 +18,8 @@ from db_pool import init_db
 from embeds import embed_message, COLOR_RED
 from views import TravelButtons  # renamed import to match change
 
+# New import for user DB functions
+from db_user import insert_user_if_not_exists, bulk_backfill_users, ensure_user_exists
 
 # Rename imports to avoid name conflicts
 from Bot_commands.commands import register_commands as register_general_commands
@@ -37,6 +39,7 @@ import globals
 # Bot Setup
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True  # <<< Needed to receive member info and join events!
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
@@ -56,6 +59,22 @@ async def on_app_command_error(interaction: discord.Interaction, error):
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
+
+    # Bulk backfill users on startup (optional, can remove if you want lazy insert only)
+    # guild = bot.get_guild(YOUR_GUILD_ID)  # Replace YOUR_GUILD_ID with your actual guild ID as int
+    # if guild:
+    #     print(f"Starting bulk backfill for guild: {guild.name} ({guild.id})")
+    #     await bulk_backfill_users(bot.pool, guild)
+    # else:
+    #     print(f"Guild with ID {YOUR_GUILD_ID} not found on startup.")
+
+
+@bot.event
+async def on_member_join(member):
+    # Optional: Insert the new member into users table on join
+    # Can keep or remove if you want purely lazy insert on commands
+    await insert_user_if_not_exists(bot.pool, member.id, str(member), member.guild.id)
+    print(f"Inserted new member {member} into the database.")
 
 
 @bot.event
@@ -83,6 +102,17 @@ async def setup_hook():
     print("🛠️ setup_hook finished.")
 
 
+# ** Add these global hooks to ensure user exists before any command **
+
+@bot.before_invoke
+async def before_any_command(ctx):
+    await ensure_user_exists(bot.pool, ctx.author.id, str(ctx.author), ctx.guild.id)
+
+@bot.tree.before_invoke
+async def before_any_slash_command(interaction):
+    await ensure_user_exists(bot.pool, interaction.user.id, str(interaction.user), interaction.guild.id)
+
+
 # DB Setup
 async def create_pool():
     ssl_context = ssl.create_default_context()
@@ -100,9 +130,6 @@ async def setup_database():
     await drop_vehicle_appearence_table(globals.pool)
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool)
- 
-
-
 
 
 # Entrypoint
