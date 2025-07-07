@@ -83,10 +83,12 @@ class SnakeBreakroomView(View):
 
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
+            self.stop()
         except Exception as e:
             print(f"Error in call_animal_control: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
+                self.stop()
 
     @discord.ui.button(label="Grab it by the neck", style=discord.ButtonStyle.danger)
     async def grab_by_neck(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -112,10 +114,12 @@ class SnakeBreakroomView(View):
 
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
+            self.stop()
         except Exception as e:
             print(f"Error in grab_by_neck: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
+                self.stop()
 
     @discord.ui.button(label="Put a bucket over it", style=discord.ButtonStyle.secondary)
     async def put_bucket(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -131,10 +135,12 @@ class SnakeBreakroomView(View):
 
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
+            self.stop()
         except Exception as e:
             print(f"Error in put_bucket: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
+                self.stop()
 
     @discord.ui.button(label="Distract it with snacks", style=discord.ButtonStyle.success)
     async def distract_with_snacks(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -159,10 +165,12 @@ class SnakeBreakroomView(View):
 
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
+            self.stop()
         except Exception as e:
             print(f"Error in distract_with_snacks: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
+                self.stop()
 
 async def play_snake_breakroom(pool, guild_id, user_id, user_occupation_id, pay_rate):
     embed = discord.Embed(
@@ -224,10 +232,12 @@ class AnimalControlSnakeView(View):
                 desc += f"\n\nEven pros have off days! Minor mishap cost you ${self.penalty_amount}."
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
+            self.stop()
         except Exception as e:
             print(f"Error in safe_capture: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
+                self.stop()
 
     @discord.ui.button(label="Calm the freaked out employee", style=discord.ButtonStyle.success)
     async def calm_employee(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -250,10 +260,12 @@ class AnimalControlSnakeView(View):
                 desc += f"\n\nYour calming skills slipped! You lost ${self.penalty_amount}."
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
+            self.stop()
         except Exception as e:
             print(f"Error in calm_employee: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
+                self.stop()
 
     @discord.ui.button(label="Call for backup", style=discord.ButtonStyle.secondary)
     async def call_backup(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -305,10 +317,12 @@ class AnimalControlSnakeView(View):
                 desc += f"\n\nYour backup plan backfired a bit! You lost ${self.penalty_amount}."
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
+            self.stop()
         except Exception as e:
             print(f"Error in call_backup: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
+                self.stop()
 
     @discord.ui.button(label="Focus on paperwork", style=discord.ButtonStyle.danger)
     async def paperwork(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -320,10 +334,12 @@ class AnimalControlSnakeView(View):
                 desc += f"\n\nYour boss isn't thrilled with your choice. You lost ${self.penalty_amount}."
             self.outcome_summary = desc
             await interaction.response.edit_message(content=desc, embed=None, view=None)
+            self.stop()
         except Exception as e:
             print(f"Error in paperwork: {e}")
             if not interaction.response.is_done():
                 await interaction.response.send_message("Something went wrong!", ephemeral=True)
+                self.stop()
 
 async def play_animal_control_snake(pool, guild_id, user_id, user_occupation_id, pay_rate):
     embed = discord.Embed(
