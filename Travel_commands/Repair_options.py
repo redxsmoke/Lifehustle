@@ -106,7 +106,7 @@ class RepairOptionsView(View):
             print(f"[DEBUG] Uncle Bill choice: {choice}")
 
             if choice == "fix":
-                cost = int(20 * random.uniform(1.0, 9.5))
+                cost = int(20 * random.uniform(1.0, 1.5))
                 finances = await get_user_finances(self.pool, self.user_id)
                 print(f"[DEBUG] User finances: {finances}")
 
@@ -148,7 +148,7 @@ class RepairOptionsView(View):
                     title="Uncle Bill Repair Successful",
                     description=(
                         f">\u200B 🧰 Uncle Bill fixed your vehicle for **${cost:,}**.\n"
-                        f">\u200B He also tinkered with your odometer and reset your travel count to **{new_travel_count}**."
+                        f">\u200B He also tinkered with your odometer and reset your travel count to **{new_travel_count}** What a great guy!."
                     ),
                     color=COLOR_GREEN
                 )
