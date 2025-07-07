@@ -147,8 +147,8 @@ class RepairOptionsView(View):
                 embed = discord.Embed(
                     title="Uncle Bill Repair Successful",
                     description=(
-                        f"> 🧰 Uncle Bill fixed your vehicle for **${cost:,}**.\n"
-                        f"> He also tinkered with your odometer and reset your travel count to **{new_travel_count}**."
+                        f">\u200B 🧰 Uncle Bill fixed your vehicle for **${cost:,}**.\n"
+                        f">\u200B He also tinkered with your odometer and reset your travel count to **{new_travel_count}**."
                     ),
                     color=COLOR_GREEN
                 )
@@ -175,9 +175,9 @@ class RepairOptionsView(View):
                     title="Uncle Bill... Drunk Repair",
                     description=(
                         f"🍻 Uncle Bill had one too many...\n"
-                        f"> He *sort of* fixed it but {funny}\n"
-                        f"> Your travel count is now **{new_travel_count}**.\n"
-                        f"> You were charged **${cost:,}**."
+                        f">\u200B He *sort of* fixed it but {funny}\n"
+                        f">\u200B Your travel count is now **{new_travel_count}**.\n"
+                        f">\u200B You were charged **${cost:,}**."
                     ),
                     color=COLOR_GREEN
                 )
