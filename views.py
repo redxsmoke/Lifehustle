@@ -463,7 +463,8 @@ class VehicleUseButton(Button):
             finances = await get_user_finances(pool, user_id)
 
           
-            outcome = await select_weighted_travel_outcome(pool, travel_type)
+            outcome = await select_weighted_travel_outcome(pool, self.method)
+
 
             updated_finances = await get_user_finances(pool, user_id)
             updated_balance = updated_finances.get("checking_account_balance", 0)
