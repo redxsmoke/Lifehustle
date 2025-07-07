@@ -8,40 +8,6 @@ from vehicle_logic import remove_vehicle_by_id
 from db_user import get_user_finances
 
 def get_random_travel_count(vehicle_type_id: int) -> int | None:
-    # Returns a random travel count based on vehicle type, or None if bike (id=5)
-    if vehicle_type_id == 1:  # Beater Car
-        return random.randint(150, 199)
-    elif vehicle_type_id == 2:  # Sedan
-        return random.randint(100, 149)
-    elif vehicle_type_id == 3:  # Sports Car
-        return random.randint(50, 115)
-    elif vehicle_type_id == 4:  # Pickup Truck
-        return random.randint(65, 185)
-    elif vehicle_type_id == 6:  # Motorcycle
-        return random.randint(25, 100)
-    elif vehicle_type_id == 5:  # Bike (excluded)
-        return None
-    else:
-        return 150  # Fallback default
-
-import discord
-from discord.ui import View, Button
-import random
-
-from embeds import embed_message, COLOR_RED, COLOR_GREEN
-from utilities import charge_user, update_vehicle_condition_and_description, reward_user
-from vehicle_logic import remove_vehicle_by_id
-from db_user import get_user_finances
-
-BASE_PRICES = {
-    "Bike": 100,
-    "Beater Car": 500,
-    "Sedan Car": 1000,
-    "Sports Car": 2500,
-    "Pickup Truck": 1800
-}
-
-def get_random_travel_count(vehicle_type_id: int) -> int | None:
     if vehicle_type_id == 1:
         return random.randint(150, 199)
     elif vehicle_type_id == 2:
@@ -79,23 +45,17 @@ class RepairOptionsView(View):
         print(f"[DEBUG] RepairOptionsView created for user_id={user_id} vehicle_id={vehicle.get('id')}")
 
     def get_resale_value(self, vehicle) -> int:
-        try:
-            vehicle_type_id = int(vehicle.get("vehicle_type_id"))
-        except (TypeError, ValueError):
-            vehicle_type_id = 0  # fallback or invalid
-
-        base_price = BASE_PRICES.get(vehicle_type_id, 0)
-
+        base_price = vehicle.get("cost", 0)
         resale_percent = vehicle.get("resale_percent")
         if resale_percent is None:
             resale_percent = 0.10  # fallback
 
         resale = int(base_price * float(resale_percent))  # handle Decimal
 
-        print(f"[DEBUG] Resale calc -> id: {vehicle_type_id}, base: {base_price}, percent: {resale_percent}, resale: {resale}")
+        print(f"[DEBUG] Resale calc -> base: {base_price}, percent: {resale_percent}, resale: {resale}")
         return resale
 
-    @discord.ui.button(label="📽️ Have a mechanic repair it", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="🎩 Have a mechanic repair it", style=discord.ButtonStyle.primary)
     async def mechanic_repair(self, interaction: discord.Interaction, button: Button):
         print(f"[DEBUG] mechanic_repair button clicked by {interaction.user} (id={interaction.user.id})")
         try:
@@ -131,7 +91,7 @@ class RepairOptionsView(View):
 
             embed = discord.Embed(
                 description=(
-                    f"📽️ Mechanic repaired your vehicle for **${cost:,}**.\n"
+                    f"🎩 Mechanic repaired your vehicle for **${cost:,}**.\n"
                     f"The mechanic also tweaked your odometer and reset your travel count **{new_travel_count}**."
                 ),
                 color=COLOR_GREEN
@@ -182,7 +142,7 @@ class RepairOptionsView(View):
 
                 embed = discord.Embed(
                     description=(
-                        f"🧰 Uncle Bill fixed your vehicle for **${cost:,}**.\n"
+                        f"🪰 Uncle Bill fixed your vehicle for **${cost:,}**.\n"
                         f"He also tinkered with your odometer and reset your travel count to **{new_travel_count}**."
                     ),
                     color=COLOR_GREEN
@@ -279,5 +239,3 @@ class RepairOptionsView(View):
             await interaction.response.send_message(
                 "❌ Something went wrong selling the vehicle. Please try again later.", ephemeral=True
             )
-
- 
