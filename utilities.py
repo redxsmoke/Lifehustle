@@ -65,6 +65,7 @@ async def update_vehicle_condition_and_description(pool, user_id, vehicle_id, ve
         if not old_row:
             raise ValueError(f"Vehicle {vehicle_id} not found for user {user_id}")
 
+        old_condition_id = old_row["condition_id"]
         vehicle_type_id = old_row["vehicle_type_id"]
 
         desc_row = await conn.fetchrow(
@@ -82,11 +83,11 @@ async def update_vehicle_condition_and_description(pool, user_id, vehicle_id, ve
             """
             UPDATE user_vehicle_inventory
             SET
-            travel_count           = $1,
-            condition_id           = $2,
-            resale_percent         = $3,
-            appearance_description = $4,
-            breakdown_threshold    = $5
+                travel_count           = $1,
+                condition_id           = $2,
+                resale_percent         = $3,
+                appearance_description = $4,
+                breakdown_threshold    = $5
             WHERE id = $6 AND user_id = $7
             """,
             travel_count, new_cond_id, resale_percent, description, breakdown_threshold, vehicle_id, user_id
