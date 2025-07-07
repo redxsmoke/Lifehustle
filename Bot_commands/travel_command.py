@@ -25,6 +25,7 @@ from vehicle_logic import get_user_vehicles
 from embeds import embed_message, COLOR_GREEN
 from views import select_weighted_travel_outcome, VehicleUseView
 
+
 def condition_from_usage(travel_count: int) -> str:
     if travel_count < 50:
         return "Brand New"
@@ -37,164 +38,153 @@ def condition_from_usage(travel_count: int) -> str:
     else:
         return "Broken Down"
 
-def register_commands(tree: app_commands.CommandTree):
-    @tree.command(name="travel", description="Travel to work using buttons")
-    async def travel(interaction: Interaction):
-        pool = globals.pool
-        if pool is None:
-            await interaction.response.send_message(
-                "⚠️ The database isn’t ready yet. Try again in a moment.", ephemeral=True
-            )
-            return
 
-        user_id = interaction.user.id
-        user = await get_user(pool, user_id)
-        if not user:
-            await interaction.response.send_message(
-                embed=embed_message(
-                    "❌ No Account", "Use `/start` to create an account.", discord.Color.red()
-                ),
-                ephemeral=True
-            )
-            return
+# ------------------------------
+# Repair Options UI for Broken Vehicle
+# ------------------------------
+class RepairOptionsView(discord.ui.View):
+    def __init__(self, user_id, vehicle, current_balance):
+        super().__init__(timeout=120)
+        self.user_id = user_id
+        self.vehicle = vehicle
+        self.current_balance = current_balance
+        self.result_message = None
 
-        from views import TravelButtons
-        view = TravelButtons()
-        await interaction.response.defer(ephemeral=True)
-        msg = await interaction.followup.send(
-            embed=embed_message(
-                "🚗 Travel",
-                "> Choose your travel method:",
-                discord.Color.blue()
-            ),
-            view=view,
-            ephemeral=True
+    async def update_condition_and_notify(self, interaction: Interaction, new_condition: str, new_travel_count: int, cost: int, message: str):
+        # Update the vehicle condition and travel count in DB
+        async with globals.pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE user_vehicle_inventory
+                SET condition = $1, travel_count = $2
+                WHERE user_id = $3 AND plate_number = $4
+                """,
+                new_condition, new_travel_count, self.user_id, self.vehicle.get("plate_number")
+            )
+
+        # Deduct cost
+        if cost > 0:
+            await charge_user(globals.pool, self.user_id, cost)
+            self.current_balance -= cost
+
+        # Notify user about condition change
+        await interaction.response.edit_message(
+            content=f"🔧 {message}\n💰 Repair cost: ${cost}\n🛠️ Vehicle condition is now: **{new_condition}**\n💵 Your new balance: ${self.current_balance}",
+            view=None
         )
-        view.message = msg
+        self.stop()
 
-    
+    @discord.ui.button(label="Have a mechanic repair it", style=discord.ButtonStyle.primary)
+    async def mechanic_repair(self, interaction: Interaction, button: discord.ui.Button):
+        # Cost between $50 * (1.5 to 5.5 multiplier)
+        multiplier = random.uniform(1.5, 5.5)
+        cost = int(50 * multiplier)
+        new_condition = "Poor Condition"
+        new_travel_count = 150  # reset travel count to 150
 
-async def handle_travel(interaction: Interaction, method: str):
-    pool = globals.pool
-    user_id = interaction.user.id
-
-    vehicles = await get_user_vehicles(pool, user_id)
-    working_vehicles = [v for v in vehicles if v.get("condition") != "Broken Down"]
-
-    if method == 'car':
-        cars = [v for v in working_vehicles if v.get("vehicle_type") in (
-            "Beater Car", "Sedan", "Sports Car", "Pickup Truck", "Motorcycle"
-        )]
-        if not cars:
-            await interaction.followup.send(
-                embed=embed_message(
-                    "❌🔧 **No Available Vehicle**",
-                    "> Looks like your cars are on vacation or broken down. No joyrides today!",
-                    discord.Color.red()
-                ),
-                ephemeral=True
-            )
-            return
-
-        if len(cars) == 1:
-            await handle_travel_with_vehicle(interaction, cars[0], method)
-        else:
-            view = VehicleUseView(user_id=user_id, vehicles=cars, method=method)
-            embed = embed_message(
-                "🚗 Your Cars",
-                "> You have multiple vehicles. Please choose one to travel with:",
-                discord.Color.blue()
-            )
-            msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
-            view.message = msg
-        return
-
-    elif method == 'bike':
-        bikes = [v for v in working_vehicles if v.get("vehicle_type") == "Bike"]
-        if not bikes:
-            await interaction.followup.send(
-                embed=embed_message(
-                    "❌🔧 **No Available Vehicle**",
-                    "> No bike? No fun! Get one or fix that broken two-wheeler first.",
-                    discord.Color.red()
-                ),
-                ephemeral=True
-            )
-            return
-
-        if len(bikes) == 1:
-            # Auto use the only bike - send confirmation
-            await handle_travel_with_vehicle(interaction, bikes[0], method)
-        else:
-            view = VehicleUseView(user_id=user_id, vehicles=bikes, method=method)
-            embed = embed_message(
-                "🚴 Your Bikes",
-                "> You have multiple bikes. Please choose one to travel with:",
-                discord.Color.green()
-            )
-            msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
-            view.message = msg
-
-    elif method in ('subway', 'bus'):
-        cost = 10 if method == 'subway' else 5
-        finances = await get_user_finances(pool, user_id)
-
+        # Check if user has enough balance
+        finances = await get_user_finances(globals.pool, self.user_id)
         if finances.get("checking_account_balance", 0) < cost:
-            await interaction.followup.send(
-                embed=embed_message(
-                    "❌ Insufficient Funds",
-                    f"> Yikes! You need ${cost} to ride the {method}, but your wallet says only ${finances.get('checking_account_balance', 0)}. Maybe find some couch change?",
-                    discord.Color.red()
-                ),
+            await interaction.response.send_message(
+                f"🚫 You don't have enough money (${cost} needed) for the mechanic repair.",
                 ephemeral=True
             )
             return
 
-        await charge_user(pool, user_id, cost)
-
-        # --- Outcome and effect ---
-        outcome = await select_weighted_travel_outcome(pool, method)
-
-        updated_finances = await get_user_finances(pool, user_id)
-        updated_balance = updated_finances.get("checking_account_balance", 0)
-
-        embed_text = (
-            f"> You traveled by **{method.title()}** for ${cost}.\n"
-            f"> Your updated balance is: **${updated_balance}**."
+        await self.update_condition_and_notify(
+            interaction,
+            new_condition,
+            new_travel_count,
+            cost,
+            "Your mechanic has repaired the vehicle!"
         )
 
-        if outcome:
-            desc = outcome.get("description", "")
-            effect = outcome.get("effect_amount", 0)
+    @discord.ui.button(label="Have Uncle Bill take a look", style=discord.ButtonStyle.secondary)
+    async def uncle_bill(self, interaction: Interaction, button: discord.ui.Button):
+        # Two outcomes: positive or negative
 
-            if effect < 0 and updated_balance >= -effect:
-                await charge_user(pool, user_id, -effect)
-                updated_balance -= -effect
-            elif effect > 0:
-                await reward_user(pool, user_id, effect)
-                updated_balance += effect
+        # Check user balance for positive repair cost ($20 * 1 to 9.5 multiplier)
+        multiplier = random.uniform(1, 9.5)
+        repair_cost = int(20 * multiplier)
 
-            embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Balance: ${effect}"
+        # Negative wreck cost ($60 * 3.0 to 5.0 multiplier)
+        wreck_multiplier = random.uniform(3.0, 5.0)
+        wreck_cost = int(60 * wreck_multiplier)
 
-        await interaction.followup.send(
-            embed=embed_message(
-                f"{'🚇' if method == 'subway' else '🚌'} Travel Summary",
-                embed_text,
-                COLOR_GREEN
-            ),
-            ephemeral=True
+        finances = await get_user_finances(globals.pool, self.user_id)
+        user_balance = finances.get("checking_account_balance", 0)
+
+        outcome = random.choice(["positive", "negative"])
+
+        if outcome == "positive":
+            if user_balance < repair_cost:
+                await interaction.response.send_message(
+                    f"🚫 You don't have enough money (${repair_cost} needed) for Uncle Bill's repair.",
+                    ephemeral=True
+                )
+                return
+
+            new_condition = "Poor Condition"
+            new_travel_count = 150
+            await self.update_condition_and_notify(
+                interaction,
+                new_condition,
+                new_travel_count,
+                repair_cost,
+                "Uncle Bill fixed your vehicle for parts!"
+            )
+        else:
+            # Uncle Bill got a bit drunk but managed to get it running, funny message, reset to 199 travel count
+            new_condition = "Broken Down"
+            new_travel_count = 199
+            if user_balance < wreck_cost:
+                await interaction.response.send_message(
+                    f"🚫 You don't have enough money (${wreck_cost} needed) to pay Uncle Bill after his mishap.",
+                    ephemeral=True
+                )
+                return
+
+            funny_reasons = [
+                "the engine sounds like deranged cats throwing a rave under the hood",
+                "it makes a noise like a blender full of rocks",
+                "the muffler is now loudly singing opera",
+                "it smells like burnt popcorn every time you start it",
+                "there's a mysterious leak that smells like old socks",
+            ]
+            funny_reason = random.choice(funny_reasons)
+
+            await self.update_condition_and_notify(
+                interaction,
+                new_condition,
+                new_travel_count,
+                wreck_cost,
+                f"Uncle Bill had a few too many before popping the hood — he got it running, but it sounds like {funny_reason}."
+            )
+
+    @discord.ui.button(label="Sell it for parts", style=discord.ButtonStyle.danger)
+    async def sell_for_parts(self, interaction: Interaction, button: discord.ui.Button):
+        # Reuse your sell logic or trigger selling the vehicle
+        # For now, just confirm and stop
+
+        # Assuming you have a sell_vehicle_by_id function (you can implement or reuse your existing logic)
+        from vehicle_logic import remove_vehicle_by_id
+
+        await remove_vehicle_by_id(globals.pool, self.vehicle.get("id"))
+
+        # Give user the resale value for parts (say 50% of resale_value)
+        resale_value = self.vehicle.get("resale_value", 0)
+        parts_value = int(resale_value * 0.5)
+
+        finances = await get_user_finances(globals.pool, self.user_id)
+        finances["checking_account_balance"] += parts_value
+        await upsert_user_finances(globals.pool, self.user_id, finances)
+
+        await interaction.response.edit_message(
+            content=f"🚙 You sold your vehicle for parts and received ${parts_value}. Your new balance is ${finances['checking_account_balance']}.",
+            view=None
         )
-        return
+        self.stop()
 
-    else:
-        await interaction.followup.send(
-            embed=embed_message(
-                "❌ Invalid Travel Method",
-                "> Are you hacking us?! How did you select this as a travel option 🤔? Pick one of these: drive, bike, subway, or bus.",
-                discord.Color.red()
-            ),
-            ephemeral=True
-        )
 
 async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, method: str):
     pool = globals.pool
@@ -214,6 +204,22 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
         )
         return
 
+    # Check if vehicle is broken down BEFORE charging for travel
+    if vehicle.get("condition") == "Broken Down":
+        # Show repair options UI
+        view = RepairOptionsView(user_id, vehicle, finances.get("checking_account_balance", 0))
+        await interaction.response.send_message(
+            embed=embed_message(
+                "🚨 Vehicle Broken Down",
+                "Your vehicle is broken down! What do you want to do?",
+                discord.Color.red()
+            ),
+            view=view,
+            ephemeral=True
+        )
+        return  # Do NOT proceed with travel if broken down
+
+    # Charge user for travel
     await charge_user(pool, user_id, cost)
     current_balance = finances.get("checking_account_balance", 0) - cost
 
