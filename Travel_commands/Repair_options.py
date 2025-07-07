@@ -105,13 +105,13 @@ class RepairOptionsView(View):
                 # User is not mechanic — pay another mechanic if available
                 async with self.pool.acquire() as conn:
                     mechanic_record = await conn.fetchrow(
-                        "SELECT user_id, discord_id FROM users WHERE occupation_id = 62 LIMIT 1"
+                        "SELECT user_id FROM users WHERE occupation_id = 62 LIMIT 1"
                     )
 
                     if mechanic_record:
-                        mechanic_user_id = mechanic_record["user_id"]
-                        mechanic_discord_id = mechanic_record.get("discord_id")
-
+                        mechanic_discord_id = mechanic_record["user_id"]
+                        mechanic_member = interaction.guild.get_member(mechanic_discord_id)
+                        mechanic_mention = mechanic_member.mention if mechanic_member else "The Mechanic"
                         # Add payment to mechanic's balance
                         await conn.execute(
                             """
@@ -151,16 +151,20 @@ class RepairOptionsView(View):
                 new_breakdown_threshold
             )
 
-            embed_description += (
-                f"The mechanic also tweaked your odometer and reset your travel count to **{new_travel_count}**."
-            )
+            if is_self_mechanic:
+                embed_description += (
+                    f"You tweaked your odometer and reset your travel count to **{new_travel_count}**."
+                )
+            else:
+                embed_description += (
+                    f"The mechanic also tweaked your odometer and reset your travel count to **{new_travel_count}**."
+                )
 
             embed = discord.Embed(
                 description=embed_description,
                 color=COLOR_GREEN
             )
             await interaction.response.edit_message(embed=embed, view=None)
-
         except Exception as e:
             print(f"[ERROR] Exception in mechanic_repair callback: {e}")
             await interaction.response.send_message(
