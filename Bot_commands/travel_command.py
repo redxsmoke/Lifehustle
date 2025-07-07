@@ -225,20 +225,13 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
             current_balance += effect
 
     async with pool.acquire() as conn:
-        await conn.execute(
+        # Increment travel count and fetch updated vehicle info including breakdown_threshold
+        updated_vehicle = await conn.fetchrow(
             """
             UPDATE user_vehicle_inventory
             SET travel_count = travel_count + 1
             WHERE user_id = $1 AND plate_number = $2
-            """,
-            user_id, vehicle.get("plate_number")
-        )
-
-        updated_vehicle = await conn.fetchrow(
-            """
-            SELECT id, travel_count, vehicle_type_id, breakdown_threshold, condition
-            FROM user_vehicle_inventory
-            WHERE user_id = $1 AND plate_number = $2
+            RETURNING id, travel_count, vehicle_type_id, breakdown_threshold
             """,
             user_id, vehicle.get("plate_number")
         )
@@ -255,7 +248,6 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
         )
 
         if updated_info["condition"] == "Broken Down":
-            # Fetch full vehicle info INCLUDING pricing before showing RepairOptionsView
             vehicle_full = await fetch_vehicle_with_pricing(globals.pool, user_id, updated_vehicle["id"])
             view = RepairOptionsView(globals.pool, vehicle_full, user_id)
 
@@ -271,7 +263,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
             view.message = msg
             return  # stop travel here
 
-        # Only if not broken down, update travel info
+        # Use updated info for embed
         travel_count = updated_info["travel_count"]
         condition_str = updated_info["condition"]
         appearance_desc = updated_info["description"]
@@ -298,6 +290,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
         ),
         ephemeral=True
     )
+
 
 
 async def on_sell_all_button_click(interaction: discord.Interaction, user_id, vehicles):

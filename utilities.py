@@ -16,14 +16,14 @@ from embeds import embed_message, COLOR_RED
 # VEHICLE CONDITION THRESHOLDS
 # ───────────────────────────────────────────────
 
-def condition_from_usage(travel_count: int) -> str:
+def condition_from_usage(travel_count: int, breakdown_threshold: int = 200) -> str:
     if travel_count < 50:
         return "Brand New"
     elif travel_count < 100:
         return "Good Condition"
     elif travel_count < 150:
         return "Fair Condition"
-    elif travel_count < 200:
+    elif travel_count < breakdown_threshold:
         return "Poor Condition"
     else:
         return "Broken Down"
@@ -45,9 +45,7 @@ def condition_and_resale_percent(travel_count: int, breakdown_threshold: int = 2
         return "Broken Down", 0.05
 
 async def update_vehicle_condition_and_description(pool, user_id, vehicle_id, vehicle_type_id, travel_count, breakdown_threshold, interaction=None):
-    # Get condition string and resale percent
-    new_cond_str, resale_percent = condition_and_resale_percent(travel_count, breakdown_threshold)
-
+    # Map condition names to IDs
     condition_map = {
         "Brand New": 1,
         "Good Condition": 2,
@@ -55,19 +53,23 @@ async def update_vehicle_condition_and_description(pool, user_id, vehicle_id, ve
         "Poor Condition": 4,
         "Broken Down": 5,
     }
-    new_cond_id = condition_map[new_cond_str]
 
+    # Fetch the old condition_id before update
     async with pool.acquire() as conn:
         old_row = await conn.fetchrow(
-            "SELECT condition_id, vehicle_type_id FROM user_vehicle_inventory WHERE id = $1 AND user_id = $2",
+            "SELECT condition_id FROM user_vehicle_inventory WHERE id = $1 AND user_id = $2",
             vehicle_id, user_id
         )
         if not old_row:
             raise ValueError(f"Vehicle {vehicle_id} not found for user {user_id}")
-
         old_condition_id = old_row["condition_id"]
-        vehicle_type_id = old_row["vehicle_type_id"]
 
+    # Determine new condition and resale percent based on travel_count and threshold
+    new_cond_str, resale_percent = condition_and_resale_percent(travel_count, breakdown_threshold)
+    new_cond_id = condition_map[new_cond_str]
+
+    # Fetch a new appearance description matching vehicle_type and new condition
+    async with pool.acquire() as conn:
         desc_row = await conn.fetchrow(
             """
             SELECT description
@@ -79,26 +81,27 @@ async def update_vehicle_condition_and_description(pool, user_id, vehicle_id, ve
         )
         description = desc_row["description"] if desc_row else "No description available."
 
+        # Update the vehicle info in DB
         await conn.execute(
             """
             UPDATE user_vehicle_inventory
             SET
-                travel_count           = $1,
-                condition_id           = $2,
-                resale_percent         = $3,
-                appearance_description = $4,
-                breakdown_threshold    = $5
+              travel_count           = $1,
+              condition_id           = $2,
+              resale_percent         = $3,
+              appearance_description = $4,
+              breakdown_threshold    = $5
             WHERE id = $6 AND user_id = $7
             """,
             travel_count, new_cond_id, resale_percent, description, breakdown_threshold, vehicle_id, user_id
         )
 
-    # Determine if message should be sent
-    send_message = False
+    # Prepare condition names for message
     reverse_map = {v: k for k, v in condition_map.items()}
     old_cond_name = reverse_map.get(old_condition_id, "Unknown")
-    new_cond_name = reverse_map.get(new_cond_id, "Unknown")
+    new_cond_name = new_cond_str  # already got from logic above
 
+    send_message = False
     if new_cond_name == "Broken Down":
         if old_cond_name != "Broken Down":
             send_message = True
@@ -106,6 +109,7 @@ async def update_vehicle_condition_and_description(pool, user_id, vehicle_id, ve
         if old_condition_id != new_cond_id:
             send_message = True
 
+    # Send ephemeral interaction message if requested and condition changed
     if interaction is not None and send_message:
         embed = embed_message(
             title="🚨 Vehicle Condition Change",
