@@ -7,6 +7,23 @@ from utilities import charge_user, update_vehicle_condition_and_description, rew
 from vehicle_logic import remove_vehicle_by_id
 from db_user import get_user_finances
 
+def get_random_travel_count(vehicle_type_id: int) -> int | None:
+    # Returns a random travel count based on vehicle type, or None if bike (id=5)
+    if vehicle_type_id == 1:  # Beater Car
+        return random.randint(150, 199)
+    elif vehicle_type_id == 2:  # Sedan
+        return random.randint(100, 149)
+    elif vehicle_type_id == 3:  # Sports Car
+        return random.randint(50, 115)
+    elif vehicle_type_id == 4:  # Pickup Truck
+        return random.randint(65, 185)
+    elif vehicle_type_id == 6:  # Motorcycle
+        return random.randint(25, 100)
+    elif vehicle_type_id == 5:  # Bike (excluded)
+        return None
+    else:
+        return 150  # Fallback default
+
 class RepairOptionsView(View):
     def __init__(self, pool, vehicle, user_id):
         super().__init__(timeout=120)
@@ -34,15 +51,29 @@ class RepairOptionsView(View):
             await charge_user(self.pool, self.user_id, cost)
             print(f"[DEBUG] Charged ${cost} to user {self.user_id}")
 
+            # New randomized travel count and breakdown threshold
+            new_travel_count = get_random_travel_count(self.vehicle["vehicle_type_id"])
+            if new_travel_count is None:
+                await interaction.response.send_message(
+                    "❌ This vehicle type cannot be repaired by mechanic.",
+                    ephemeral=True
+                )
+                return
+            new_breakdown_threshold = random.randint(200, 299)
+
             await update_vehicle_condition_and_description(
-                self.pool, self.user_id, self.vehicle["id"],
-                self.vehicle["vehicle_type_id"], 150
+                self.pool,
+                self.user_id,
+                self.vehicle["id"],
+                self.vehicle["vehicle_type_id"],
+                new_travel_count,
+                new_breakdown_threshold
             )
-            print("[DEBUG] Vehicle condition reset to Poor Condition with travel count 150")
+            print(f"[DEBUG] Vehicle condition reset with travel count {new_travel_count} and breakdown threshold {new_breakdown_threshold}")
 
             await interaction.response.edit_message(
                 content=f"🛠️ Mechanic repaired your vehicle for **${cost:,}**. "
-                        f"Condition reset to **Poor Condition** with travel count 150.",
+                        f"Travel count set to **{new_travel_count}** and breakdown threshold to **{new_breakdown_threshold}**.",
                 view=None
             )
             print("[DEBUG] Edited message after mechanic repair")
@@ -65,7 +96,7 @@ class RepairOptionsView(View):
 
             if choice == "fix":
                 cost = int(20 * random.uniform(1.0, 9.5))
-                finances = await get_user_finances(pool, self.user_id)
+                finances = await get_user_finances(self.pool, self.user_id)
                 print(f"[DEBUG] User finances: {finances}")
 
                 if finances.get("checking_account_balance", 0) < cost:
@@ -79,15 +110,29 @@ class RepairOptionsView(View):
                 await charge_user(self.pool, self.user_id, cost)
                 print(f"[DEBUG] Charged ${cost} to user {self.user_id}")
 
+                # New randomized travel count and breakdown threshold
+                new_travel_count = get_random_travel_count(self.vehicle["vehicle_type_id"])
+                if new_travel_count is None:
+                    await interaction.response.send_message(
+                        "❌ This vehicle type cannot be repaired by Uncle Bill.",
+                        ephemeral=True
+                    )
+                    return
+                new_breakdown_threshold = random.randint(200, 299)
+
                 await update_vehicle_condition_and_description(
-                    self.pool, self.user_id, self.vehicle["id"],
-                    self.vehicle["vehicle_type_id"], 150
+                    self.pool,
+                    self.user_id,
+                    self.vehicle["id"],
+                    self.vehicle["vehicle_type_id"],
+                    new_travel_count,
+                    new_breakdown_threshold
                 )
-                print("[DEBUG] Vehicle condition reset to Poor Condition with travel count 150")
+                print(f"[DEBUG] Vehicle condition reset with travel count {new_travel_count} and breakdown threshold {new_breakdown_threshold}")
 
                 await interaction.response.edit_message(
                     content=f"🧰 Uncle Bill fixed your vehicle for **${cost:,}**. "
-                            f"Condition reset to **Poor Condition** with travel count 150.",
+                            f"Travel count set to **{new_travel_count}** and breakdown threshold to **{new_breakdown_threshold}**.",
                     view=None
                 )
                 print("[DEBUG] Edited message after Uncle Bill fix")
@@ -98,8 +143,12 @@ class RepairOptionsView(View):
                 print(f"[DEBUG] Charged ${cost} for drunk Uncle Bill scenario")
 
                 await update_vehicle_condition_and_description(
-                    self.pool, self.user_id, self.vehicle["id"],
-                    self.vehicle["vehicle_type_id"], 199
+                    self.pool,
+                    self.user_id,
+                    self.vehicle["id"],
+                    self.vehicle["vehicle_type_id"],
+                    199,  # Keeping this fixed for drunk scenario as before
+                    random.randint(200, 299)
                 )
                 funny = "a raccoon is now living in your glovebox."
                 print("[DEBUG] Vehicle travel count reset to 199, condition remains broken")
