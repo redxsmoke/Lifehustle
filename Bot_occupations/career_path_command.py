@@ -125,6 +125,7 @@ class CareerPath(commands.Cog):
                 3: snake_breakroom,  # Street Performer
                 4: snake_breakroom,  # Dog Walker
                 5: snake_breakroom,  # Human Statue
+                61: snake_breakroom #Animal Control
             }
 
             minigame_module = minigames_by_id.get(occupation_id)
