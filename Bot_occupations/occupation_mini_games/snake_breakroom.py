@@ -73,7 +73,7 @@ class SnakeBreakroomView(View):
                         bonus,
                         helper['user_id'],
                     )
-                    desc = f"You called Animal Control! {helper_name} rushed in to help {user_name}. Both get a bonus of ${int(bonus)}!"
+                    desc = f"You called Animal Control! {helper_name} from Fur Get About It Animal Control rushed in to help {user_name}. Both get a bonus of ${int(bonus)}!"
                 else:
                     desc = "You called Animal Control but no one is available. No bonus awarded."
 
