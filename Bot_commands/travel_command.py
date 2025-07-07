@@ -256,7 +256,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
 
         if updated_info["condition"] == "Broken Down":
             view = RepairOptionsView(vehicle, user_id)
-            await interaction.followup.send(
+            msg = await interaction.followup.send(  # <-- assign message here
                 embed=embed_message(
                     "🚨 Vehicle Broken Down",
                     "Your vehicle is broken down and can't be used for travel. Please repair it first.\n\nChoose a repair option below:",
@@ -265,7 +265,7 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
                 view=view,
                 ephemeral=True
             )
-            view.message = msg
+            view.message = msg  # <-- now msg is defined
             return  # stop travel here
 
         # Only if not broken down, update travel info
@@ -277,7 +277,6 @@ async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, me
         travel_count = vehicle.get("travel_count", 0) + 1
         condition_str = vehicle.get("condition", "Unknown")
         appearance_desc = vehicle.get("appearance_description", "No description available.")
-
 
     await interaction.followup.send(
         embed=discord.Embed(
