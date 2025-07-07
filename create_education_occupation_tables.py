@@ -159,7 +159,6 @@ async def setup():
 
     try:
         await conn.execute(CREATE_CD_EDUCATION_LEVELS)
-        await conn.execute(DROP_CD_OCCUPATIONS)
         await conn.execute(CREATE_CD_OCCUPATIONS)
         await conn.execute(CREATE_CD_DESTINATIONS)
         await conn.execute(CREATE_USER_WORK_LOG)
