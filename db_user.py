@@ -4,20 +4,30 @@ import datetime
 
 #------------ADD USER TO DB IF MISSING AND RUN COMMAND = TRUE--------------
 async def ensure_user_exists(pool, user_id: int, user_name: str, guild_id: int | None):
+    print(f"🔎 ensure_user_exists called for {user_name} ({user_id}) in guild {guild_id}")
+    
     if guild_id is None:
-        # Skip insert if there's no guild (user is in a DM)
         print(f"❌ Skipping user insert: guild_id is None for user {user_name}")
         return
 
-    print(f"🔎 ensure_user_exists called for {user_name} ({user_id}) in guild {guild_id}")
-    
+    # Check if user exists already
+    existing = await pool.fetchval("""
+        SELECT 1 FROM users WHERE user_id = $1 AND guild_id = $2
+    """, user_id, guild_id)
+
+    if existing:
+        print(f"ℹ️ User already exists in DB: {user_name} ({user_id}) in guild {guild_id}")
+        return
+
+    # Try insert
     result = await pool.execute("""
         INSERT INTO users (user_id, user_name, guild_id)
         VALUES ($1, $2, $3)
         ON CONFLICT (user_id, guild_id) DO NOTHING
     """, user_id, user_name, guild_id)
-    
+
     print(f"✅ DB Insert result: {result}")
+
 
 
 # ---------- USERS TABLE (Profile Info) ----------
