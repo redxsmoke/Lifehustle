@@ -12,6 +12,8 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
+from db_user import add_unique_constraint
+
 # --- Local Imports ---
 from config import DISCORD_BOT_TOKEN, DATABASE_URL
 from db_pool import init_db
@@ -126,11 +128,13 @@ async def setup_database():
     await drop_vehicle_appearence_table(globals.pool)
     await create_vehicle_appearance_table(globals.pool)
     await seed_vehicle_appearance(globals.pool)
+    
 
 
 # Entrypoint
 async def main():
     await create_pool()
+    await add_unique_constraint
     await setup_database()
     print("✅ Starting bot...")
     await bot.start(DISCORD_BOT_TOKEN)

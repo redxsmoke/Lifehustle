@@ -38,6 +38,31 @@ async def ensure_user_exists(pool, user_id: int, user_name: str, guild_id: int |
         print(f"❌ Exception during insert: {e}")
 
 
+import asyncio
+import asyncpg
+import os
+
+DATABASE_URL = os.getenv("DATABASE_URL")  # Or hardcode your connection string here
+
+async def add_unique_constraint():
+    conn = await asyncpg.connect(DATABASE_URL)
+    try:
+        await conn.execute("""
+            ALTER TABLE users
+            ADD CONSTRAINT users_user_id_guild_id_unique UNIQUE (user_id, guild_id);
+        """)
+        print("✅ Unique constraint added on (user_id, guild_id).")
+    except asyncpg.exceptions.DuplicateObjectError:
+        print("⚠️ Unique constraint already exists.")
+    except Exception as e:
+        print(f"❌ Error adding unique constraint: {e}")
+    finally:
+        await conn.close()
+
+if __name__ == "__main__":
+    asyncio.run(add_unique_constraint())
+
+
 
 
 # ---------- USERS TABLE (Profile Info) ----------
