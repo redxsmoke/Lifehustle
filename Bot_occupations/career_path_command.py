@@ -233,7 +233,7 @@ class CareerPath(commands.Cog):
                 multiplier = random.randint(1, 10)
                 bonus = 10 * multiplier
 
-            # ✅ Assign it to view for later use in the outcome message
+            total_pay = pay_rate + bonus
             view.bonus_amount = bonus
 
             # 👍 Continue with paystub...
