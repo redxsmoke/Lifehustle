@@ -227,10 +227,10 @@ class CareerPath(commands.Cog):
 
             minigame_module = random.choice(mini_game_modules)
 
+            mini_game_result = None  
+
             if minigame_module == run_quick_math_game:
                 mini_game_result = await run_quick_math_game(ctx.interaction)
-                # run_quick_math_game probably returns a dict like below
-                # You may not have a message or 'dock' or 'penalty' keys
                 message = None
             else:
                 embed, view = await minigame_module.play(
@@ -251,7 +251,10 @@ class CareerPath(commands.Cog):
                     "penalty": getattr(view, "penalty_amount", 0),
                 }
 
-            # Calculate bonus and total pay
+            if mini_game_result is None:
+                await ctx.send("❌ Mini-game did not complete correctly. Please try again.")
+                return
+
             result_type = mini_game_result.get('result', 'neutral')
 
             if result_type == 'correct':
