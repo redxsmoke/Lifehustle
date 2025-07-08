@@ -216,7 +216,7 @@ class WhichDidThatButton(discord.ui.Button):
 async def play(pool, guild_id, user_id, user_occupation_id, pay_rate, extra=None):
     # Fetch the user's job name from DB
     async with pool.acquire() as conn:
-        user_job = await conn.fetchval("SELECT description FROM cd_occupations WHERE id = $1", user_occupation_id)
+        user_job = await conn.fetchval("SELECT description FROM cd_occupations WHERE cd_occupation_id = $1", user_occupation_id)
 
     if not user_job:
         embed = discord.Embed(

@@ -78,7 +78,7 @@ class CareerPath(commands.Cog):
         async def setup(self):
             # Fetch user job name from DB to get config
             async with self.pool.acquire() as conn:
-                user_job = await conn.fetchval("SELECT description FROM cd_occupations WHERE id = $1", self.user_occupation_id)
+                user_job = await conn.fetchval("SELECT description FROM cd_occupations WHERE cd_occupation_id = $1", self.user_occupation_id)
             if not user_job:
                 return False
             self.job_key = user_job.lower()
