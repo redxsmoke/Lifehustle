@@ -13,6 +13,7 @@ from embeds import COLOR_GREEN, COLOR_RED
 # Added imports for mini-games from occupation_mini_games folder
 from Bot_occupations.occupation_mini_games import whichdidthat
 from Bot_occupations.occupation_mini_games import snake_breakroom
+from Bot_occupations.occupation_mini_games.quickchange import run_quick_math_game
 from Bot_occupations.occupation_mini_games.shared import build_paystub_embed
 
 
@@ -153,12 +154,31 @@ class CareerPath(commands.Cog):
                 pay_rate = float(occupation["pay_rate"])
                 required_shifts_per_day = occupation["required_shifts_per_day"]
 
-                # Insert a new shift log
+                                # Insert a new shift log
                 await conn.execute(
                     "INSERT INTO user_work_log(user_id, work_timestamp) VALUES ($1, NOW())",
                     user_id
                 )
                 print("[workshift] Shift log inserted.")
+
+                                # Run the quick math mini-game
+                mini_game_result = await run_quick_math_game(ctx.interaction)
+
+                # Adjust pay based on mini-game result
+                if mini_game_result['result'] == 'correct':
+                    bonus = mini_game_result['bonus']
+                elif mini_game_result['result'] == 'wrong':
+                    bonus = -mini_game_result['dock']  # dock is negative bonus
+                elif mini_game_result['result'] == 'timeout':
+                    bonus = -mini_game_result['penalty']  # penalty is negative bonus
+                else:
+                    bonus = 0
+
+                outcome_summary = mini_game_result.get('message', "No mini-game outcome.")
+                total_pay = pay_rate + bonus
+
+                
+
 
                 # Count shifts today
                 shifts_today = await conn.fetchval(
@@ -183,11 +203,14 @@ class CareerPath(commands.Cog):
 
             # --- MINI-GAME SELECTION ---
             minigames_by_id = {
-                1: [snake_breakroom, whichdidthat],  # Professional Cuddler
+                1: [ run_quick_math_game,snake_breakroom, whichdidthat],  # Professional Cuddler
                 2: [snake_breakroom, whichdidthat],  # Senior Bubble Wrap Popper
                 3: [snake_breakroom, whichdidthat],  # Street Performer
-                4: [snake_breakroom, whichdidthat],  # Dog Walker
-                5: [snake_breakroom, whichdidthat],  # Human Statue
+                4: [run_quick_math_game,snake_breakroom, whichdidthat],  # Dog Walker
+                5: [snake_breakroom, whichdidthat], # Human Statue
+                11:[run_quick_math_game, snake_breakroom, whichdidthat],
+                16:[run_quick_math_game, snake_breakroom, whichdidthat],
+                19:[run_quick_math_game, snake_breakroom, whichdidthat],  
                 61: [snake_breakroom],               # Animal Control only
             }
 
