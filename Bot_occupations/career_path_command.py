@@ -202,15 +202,15 @@ class CareerPath(commands.Cog):
 
             # --- MINI-GAME SELECTION ---
             minigames_by_id = {
-                1: [ run_quick_math_game,snake_breakroom, whichdidthat],  # Professional Cuddler
-                2: [snake_breakroom, whichdidthat],  # Senior Bubble Wrap Popper
-                3: [snake_breakroom, whichdidthat],  # Street Performer
-                4: [run_quick_math_game,snake_breakroom, whichdidthat],  # Dog Walker
-                5: [snake_breakroom, whichdidthat], # Human Statue
-                11:[run_quick_math_game, snake_breakroom, whichdidthat],
-                16:[run_quick_math_game, snake_breakroom, whichdidthat],
-                19:[run_quick_math_game, snake_breakroom, whichdidthat],  
-                61: [snake_breakroom],               # Animal Control only
+                1: [run_quick_math_game, snake_breakroom, whichdidthat],  # Professional Cuddler
+                2: [snake_breakroom, whichdidthat],                      # Senior Bubble Wrap Popper
+                3: [snake_breakroom, whichdidthat],                      # Street Performer
+                4: [run_quick_math_game, snake_breakroom, whichdidthat], # Dog Walker
+                5: [snake_breakroom, whichdidthat],                      # Human Statue
+                11: [run_quick_math_game, snake_breakroom, whichdidthat],
+                16: [run_quick_math_game, snake_breakroom, whichdidthat],
+                19: [run_quick_math_game, snake_breakroom, whichdidthat],
+                61: [snake_breakroom],                                   # Animal Control only
             }
 
             mini_game_modules = minigames_by_id.get(occupation_id)
@@ -229,6 +229,9 @@ class CareerPath(commands.Cog):
 
             if minigame_module == run_quick_math_game:
                 mini_game_result = await run_quick_math_game(ctx.interaction)
+                # run_quick_math_game probably returns a dict like below
+                # You may not have a message or 'dock' or 'penalty' keys
+                message = None
             else:
                 embed, view = await minigame_module.play(
                     self.db_pool,
@@ -244,15 +247,24 @@ class CareerPath(commands.Cog):
                     "result": getattr(view, "outcome_type", "neutral"),
                     "bonus": getattr(view, "bonus_amount", 0),
                     "message": getattr(view, "outcome_summary", None),
+                    "dock": getattr(view, "dock_amount", 0),
+                    "penalty": getattr(view, "penalty_amount", 0),
                 }
-              
-            # 👍 Continue with paystub...
-            paystub_data = {
-                "occupation_name": occupation_name,
-                "pay_rate": pay_rate,
-                "company_name": company_name,
-                # more if needed
-            }
+
+            # Calculate bonus and total pay
+            result_type = mini_game_result.get('result', 'neutral')
+
+            if result_type == 'correct':
+                bonus = mini_game_result.get('bonus', 0)
+            elif result_type == 'wrong':
+                bonus = -abs(mini_game_result.get('dock', 0))
+            elif result_type == 'timeout':
+                bonus = -abs(mini_game_result.get('penalty', 0))
+            else:
+                bonus = 0
+
+            outcome_summary = mini_game_result.get('message', "No mini-game outcome.")
+            total_pay = pay_rate + bonus
 
             # Update user balance once here
             async with self.db_pool.acquire() as conn:
@@ -285,9 +297,15 @@ class CareerPath(commands.Cog):
             )
 
             # Edit the original mini-game message to remove buttons and show paystub
-            await message.edit(embed=combined_embed, view=None)
+            # Only if message is defined (i.e., not None)
+            if message:
+                await message.edit(embed=combined_embed, view=None)
+            else:
+                # If no original message (e.g., quick math game), just send the embed
+                await ctx.send(embed=combined_embed)
 
             print("[workshift] Response sent.")
+
 
         except Exception as e:
             print(f"[workshift] Exception caught: {e}")
