@@ -203,27 +203,32 @@ class CareerPath(commands.Cog):
 
             minigame_module = random.choice(mini_game_modules)
 
-            # Call the play function of the chosen mini-game module with correct args
-            if minigame_module == snake_breakroom:
-                embed, view = await minigame_module.play(
-                    self.db_pool, ctx.guild.id, user_id, occupation_id, pay_rate, None
-                )
-            else:
-                embed, view = await minigame_module.play(
-                    self.db_pool, ctx.guild.id, user_id, occupation_id, None, None
-                )
+            embed, view = await minigame_module.play(
+                self.db_pool,
+                ctx.guild.id,
+                user_id,
+                occupation_id,
+                pay_rate if minigame_module == snake_breakroom else None,
+                None
+            )
 
+            message = await ctx.send(embed=embed, view=view)
+            await view.wait()
 
-                message = await ctx.send(embed=embed, view=view)
-                await view.wait()
+            paystub_data = {
+                "occupation_name": occupation_name,
+                "pay_rate": pay_rate,
+                "company_name": company_name,
+                # add other fields if needed
+            }
 
-                combined_embed = build_paystub_embed(
-                    paystub_data,
-                    mini_game_outcome=getattr(view, "outcome_summary", None),
-                    mini_game_outcome_type=getattr(view, "outcome_type", None)
-                )
+            combined_embed = build_paystub_embed(
+                paystub_data,
+                mini_game_outcome=getattr(view, "outcome_summary", None),
+                mini_game_outcome_type=getattr(view, "outcome_type", None)
+            )
 
-                await message.edit(embed=combined_embed, view=None)
+            await message.edit(embed=combined_embed, view=None)
 
 
             # Default bonus = 0
@@ -282,6 +287,7 @@ class CareerPath(commands.Cog):
                 await ctx.followup.send(error_msg)
             else:
                 await ctx.send(error_msg)
+
     @careerpath.command(name="resign", description="Resign from your job with confirmation")
     async def resign(self, ctx):
         import time
