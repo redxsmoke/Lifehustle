@@ -163,6 +163,7 @@ class AnimalControlSnakeView(View):
         self.user_occupation_id = user_occupation_id
         self.pay_rate = pay_rate
         self.outcome_summary = None
+        self.bonus_amount = 0
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
