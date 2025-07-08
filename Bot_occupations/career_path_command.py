@@ -215,8 +215,10 @@ class CareerPath(commands.Cog):
                 if mini_game_result is None:
                     await ctx.send("❌ Mini-game did not complete correctly. Please try again.")
                     return
+                print(f"[DEBUG] mini_game_result raw: {mini_game_result}")
 
                 result_type = mini_game_result.get('result', 'neutral')
+                print(f"[DEBUG] mini-game result type: {result_type}")
 
                 if result_type == 'correct':
                     bonus = mini_game_result.get('bonus', 0)
@@ -226,9 +228,11 @@ class CareerPath(commands.Cog):
                     bonus = -abs(mini_game_result.get('penalty', 0))
                 else:
                     bonus = 0
+                print(f"[DEBUG] Calculated bonus: {bonus}")
 
                 outcome_summary = mini_game_result.get('message', "No mini-game outcome.")
                 total_pay = pay_rate + bonus
+                print(f"[DEBUG] pay_rate: {pay_rate}, total_pay (base + bonus): {total_pay}")
 
                 # Count shifts today
                 shifts_today = await conn.fetchval(
