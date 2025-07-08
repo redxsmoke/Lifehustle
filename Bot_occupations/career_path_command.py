@@ -224,18 +224,8 @@ class CareerPath(commands.Cog):
 
             total_pay = pay_rate + bonus
 
-            # 💸 Calculate the bonus
-            bonus = 0
-            if outcome_type == "positive":
-                multiplier = random.randint(2, 8)
-                bonus = 105 * multiplier
-            elif outcome_type == "negative":
-                multiplier = random.randint(2, 8)
-                bonus = -15 * multiplier
-            elif outcome_type == "neutral":
-                multiplier = random.randint(1, 10)
-                bonus = 10 * multiplier
-
+            bonus = getattr(view, "bonus_amount", 0)
+            total_pay = pay_rate + bonus
             
             view.bonus_amount = bonus
             
