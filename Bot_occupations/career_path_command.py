@@ -161,8 +161,7 @@ class CareerPath(commands.Cog):
                 )
                 print("[workshift] Shift log inserted.")
 
-                                # Run the quick math mini-game
-                mini_game_result = await run_quick_math_game(ctx.interaction)
+
 
                 # Adjust pay based on mini-game result
                 if mini_game_result['result'] == 'correct':
