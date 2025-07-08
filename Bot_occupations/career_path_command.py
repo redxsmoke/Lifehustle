@@ -208,10 +208,11 @@ class CareerPath(commands.Cog):
                 embed, view = await minigame_module.play(
                     self.db_pool, ctx.guild.id, user_id, occupation_id, pay_rate, None
                 )
-            else:  # whichdidthat or other mini-games
+            else:
                 embed, view = await minigame_module.play(
-                    self.db_pool, ctx.guild.id, user_id, occupation_id, guess=None
+                    self.db_pool, ctx.guild.id, user_id, occupation_id, None, None
                 )
+
 
             await ctx.send(embed=embed, view=view)
             await view.wait()
