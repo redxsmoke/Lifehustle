@@ -237,13 +237,6 @@ class CareerPath(commands.Cog):
                 )
                 print(f"[workshift] Shifts today: {shifts_today}")
 
-                # Update user balance
-                await conn.execute(
-                    "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
-                    pay_rate,
-                    user_id
-                )
-                print("[workshift] Balance updated.")
 
                 # Get new balance to show in embed
                 new_balance = await conn.fetchval(
