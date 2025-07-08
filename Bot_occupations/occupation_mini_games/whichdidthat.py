@@ -51,6 +51,24 @@ JOB_ROASTS = {
         "You’re the human equivalent of buffering… forever.",
         "Congrats, you mastered the art of doing absolutely nothing.",
     ],
+    "grocery store clerk": [
+        "You scan items so slow the line grew a mile long.",
+        "Did you forget how to use the register again?",
+        "Your customer service is less friendly, more ‘please go away.’",
+        "You mix up coupons like a blender on high speed.",
+    ],
+    "ice cream truck driver": [
+        "Your ice cream melts faster than your patience.",
+        "Customers leave with sticky hands and bitter feelings.",
+        "You drive slow enough to make snails impatient.",
+        "Your jingle sounds like a cat in distress.",
+    ],
+    "waiter/waitress": [
+        "You forgot the order — again. The kitchen is on fire.",
+        "Your ‘I'll be right with you’ lasts longer than a whole shift.",
+        "You carry trays like they’re made of glass — and break everything.",
+        "Your smile is as fake as the food you forgot to bring.",
+    ],
 }
 
 MINIGAME_CONFIGS = {
@@ -134,7 +152,56 @@ MINIGAME_CONFIGS = {
             "You accidentally scared {choice} away. Oof."
         ],
     },
+    "grocery store clerk": {
+        "prompt": "The register is acting up! Which item won't scan?",
+        "choices": ["Cereal Box 🥣", "Milk Carton 🥛", "Bananas 🍌", "Frozen Pizza 🍕"],
+        "positive_outcomes": [
+            "You fixed the scanner quickly and kept the line moving!",
+            "Great catch! {choice} scanned perfectly after your magic touch."
+        ],
+        "neutral_outcomes": [
+            "You waited for help and kept the customers calm.",
+            "The scanner worked eventually. Could’ve been worse."
+        ],
+        "negative_outcomes": [
+            "You blamed the customer — they weren’t amused.",
+            "The register crashed again. Customers are not happy."
+        ],
+    },
+    "ice cream truck driver": {
+        "prompt": "The ice cream machine broke down! Who’s the unlucky customer?",
+        "choices": ["Little Timmy 🍦", "Sally Sweet Tooth 🍭", "Billy Blizzard ❄️", "Jenny Scoop 🍨"],
+        "positive_outcomes": [
+            "You gave {choice} a free treat to make up for it!",
+            "You fixed the machine just in time for {choice}’s order."
+        ],
+        "neutral_outcomes": [
+            "You apologized and gave everyone extra napkins.",
+            "You promised to come back tomorrow with better ice cream."
+        ],
+        "negative_outcomes": [
+            "You ran out of cones. {choice} was not impressed.",
+            "The machine exploded. Sticky disaster everywhere."
+        ],
+    },
+    "waiter/waitress": {
+        "prompt": "A customer is complaining. What’s their issue?",
+        "choices": ["Cold Soup 🍲", "Wrong Order 🍔", "Slow Service ⏳", "Empty Glass 🥤"],
+        "positive_outcomes": [
+            "You fixed the problem quickly and earned a big tip!",
+            "You apologized sincerely, and {choice} smiled."
+        ],
+        "neutral_outcomes": [
+            "You listened patiently but couldn’t do much.",
+            "You offered a discount but the customer stayed grumpy."
+        ],
+        "negative_outcomes": [
+            "You snapped back. The customer left a bad review.",
+            "You forgot the complaint entirely. Oops."
+        ],
+    },
 }
+
 
 def get_roast_line(job_name: str) -> str:
     job_lines = JOB_ROASTS.get(job_name.lower())
