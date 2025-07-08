@@ -209,6 +209,7 @@ def get_roast_line(job_name: str) -> str:
         return random.choice(job_lines)
     return random.choice(generic_roast_lines)
 
+
 class WhichDidThatView(discord.ui.View):
     def __init__(self, pool, guild_id, user_id, job_key, config):
         super().__init__(timeout=60)
@@ -220,9 +221,10 @@ class WhichDidThatView(discord.ui.View):
         self.choice = None
         self.outcome_summary = None
         self.outcome_type = "neutral"  # default
+        self.bonus_amount = 0  # <-- store payout amount here
 
         # Add buttons for each choice
-        for choice_text in config["choices"]:
+        for choice_text in config.get("choices", []):
             self.add_item(WhichDidThatButton(choice_text, self))
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -237,6 +239,8 @@ class WhichDidThatView(discord.ui.View):
             # User didn't respond in time
             self.outcome_summary = "You didn't choose in time. The situation resolved itself..."
             self.outcome_type = "neutral"
+            self.bonus_amount = 0
+
 
 class WhichDidThatButton(discord.ui.Button):
     def __init__(self, label, parent_view):
@@ -252,25 +256,33 @@ class WhichDidThatButton(discord.ui.Button):
         config = self.parent_view.config
         culprit = random.choice(config["choices"])
 
+        # Helper for multiplier random
+        def random_multiplier(low, high):
+            return round(random.uniform(low, high), 2)
+
         # Decide outcome
         if self.parent_view.choice == culprit:
             outcome_text = random.choice(config["positive_outcomes"]).replace("{choice}", culprit)
-            bonus = 10
+            multiplier = random_multiplier(1.5, 9.3)
+            bonus = round(55 * multiplier, 2)  # positive payout
             outcome_type = "positive"
         else:
             if random.random() < 0.33:
                 outcome_text = random.choice(config["neutral_outcomes"]).replace("{choice}", culprit)
-                bonus = 0
+                multiplier = random_multiplier(1.3, 1.9)
+                bonus = round(20 * multiplier, 2)  # neutral payout
                 outcome_type = "neutral"
             else:
                 outcome_text = random.choice(config["negative_outcomes"]).replace("{choice}", culprit)
                 roast = get_roast_line(self.parent_view.job_key)
                 outcome_text += f" {roast}"
-                bonus = -5
+                multiplier = random_multiplier(1.5, 9.3)
+                bonus = -round(25 * multiplier, 2)  # negative payout (penalty)
                 outcome_type = "negative"
 
         self.parent_view.outcome_summary = outcome_text
         self.parent_view.outcome_type = outcome_type
+        self.parent_view.bonus_amount = bonus  # save payout amount
 
         # Disable buttons after choice
         for child in self.parent_view.children:
@@ -280,6 +292,7 @@ class WhichDidThatButton(discord.ui.Button):
 
         await interaction.response.edit_message(content=outcome_text, view=self.parent_view)
         self.parent_view.stop()
+
 
 async def play(pool, guild_id, user_id, user_occupation_id, pay_rate, extra=None):
     # Fetch the user's job name from DB
