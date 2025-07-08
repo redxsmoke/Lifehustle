@@ -218,15 +218,19 @@ class CareerPath(commands.Cog):
                 print(f"[DEBUG] mini_game_result raw: {mini_game_result}")
 
                 result_type = mini_game_result.get('result', 'neutral')
-                bonus = mini_game_result.get('bonus', 0)  # Always use this — it has the correct signed value
 
-                # If the result is in a known category, trust the bonus value
-                if result_type in ('correct', 'positive', 'neutral', 'wrong', 'negative', 'timeout'):
-                    pass  # bonus is already accurate
+                # Pull bonus or fallback to penalty/dock if bonus is missing
+                if 'bonus' in mini_game_result:
+                    bonus = mini_game_result['bonus']
+                elif result_type == 'timeout' and 'penalty' in mini_game_result:
+                    bonus = -abs(mini_game_result['penalty'])
+                elif result_type in ('wrong', 'negative') and 'dock' in mini_game_result:
+                    bonus = -abs(mini_game_result['dock'])
                 else:
-                    bonus = 0  # Default to zero if result type is unknown
+                    bonus = 0
 
                 print(f"[DEBUG] Calculated bonus: {bonus}")
+
 
                 outcome_summary = mini_game_result.get('message', "No mini-game outcome.")
                 total_pay = pay_rate + bonus
