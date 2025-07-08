@@ -34,11 +34,15 @@ class SnakeBreakroomView(View):
 
         if helper:
             member = interaction.guild.get_member(helper['user_id'])
-            if member:
-                return member.mention
-            user = await interaction.client.fetch_user(helper['user_id'])
-            return f"<@{user.id}>"
+            if not member:
+                try:
+                    member = await interaction.guild.fetch_member(helper['user_id'])
+                except discord.NotFound:
+                    return "Animal Control"
+            return member.display_name   
+
         return "Animal Control"
+
 
     async def apply_penalty(self, conn):
         penalty = random.randint(20, 100) * random.randint(1, 3)
