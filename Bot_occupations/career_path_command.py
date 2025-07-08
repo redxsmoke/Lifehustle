@@ -30,6 +30,66 @@ class CareerPath(commands.Cog):
             # No defer here, so just regular send
             await ctx.send("Please use a subcommand: workshift or resign")
 
+import discord
+from whichdidthat import play, MINIGAME_CONFIGS  # import your mini-game logic and config
+
+class MiniGameButton(discord.ui.Button):
+    def __init__(self, label, view):
+        super().__init__(label=label, style=discord.ButtonStyle.primary)
+        self.mini_game_view = view
+
+    async def callback(self, interaction: discord.Interaction):
+        # Disable all buttons once clicked
+        for child in self.mini_game_view.children:
+            child.disabled = True
+        await interaction.response.edit_message(view=self.mini_game_view)
+
+        # Run the mini-game logic with the player's guess
+        result = await play(
+            self.mini_game_view.pool,
+            interaction.guild_id,
+            interaction.user.id,
+            self.mini_game_view.user_occupation_id,
+            guess=self.label,
+        )
+
+        embed = discord.Embed(title=result["title"], description=result["description"])
+        if result["bonus"] > 0:
+            embed.color = discord.Color.green()
+            embed.add_field(name="Bonus", value=f"+${result['bonus']}")
+        elif result["bonus"] < 0:
+            embed.color = discord.Color.red()
+            embed.add_field(name="Penalty", value=f"${result['bonus']}")
+        else:
+            embed.color = discord.Color.gold()
+
+        await interaction.followup.send(embed=embed)
+
+class MiniGameView(discord.ui.View):
+    def __init__(self, pool, user_occupation_id):
+        super().__init__(timeout=60)
+        self.pool = pool
+        self.user_occupation_id = user_occupation_id
+        self.config = None
+
+    async def setup(self):
+        # Fetch user job name from DB to get config
+        async with self.pool.acquire() as conn:
+            user_job = await conn.fetchval("SELECT name FROM cd_occupation WHERE id = $1", self.user_occupation_id)
+        if not user_job:
+            return False
+        self.job_key = user_job.lower()
+        self.config = MINIGAME_CONFIGS.get(self.job_key)
+        if not self.config:
+            return False
+
+        # Add buttons for each choice
+        for choice in self.config["choices"]:
+            self.add_item(MiniGameButton(choice, self))
+
+        return True
+
+
     @careerpath.command(name="workshift", description="Log a work shift and add your pay")
     async def workshift(self, ctx):
         print("✅ DEBUG: workshift command invoked")
@@ -116,20 +176,18 @@ class CareerPath(commands.Cog):
                     user_id
                 )
 
-            # --- MINIGAME HANDLING ---
-            from Bot_occupations.occupation_mini_games import snake_breakroom
-
+            # --- MINI-GAME SELECTION ---
             minigames_by_id = {
-                1: snake_breakroom,  # Professional Cuddler
-                2: snake_breakroom,  # Senior Bubble Wrap Popper
-                3: snake_breakroom,  # Street Performer
-                4: snake_breakroom,  # Dog Walker
-                5: snake_breakroom,  # Human Statue
-                61: snake_breakroom #Animal Control
+                1: [snake_breakroom, whichdidthat],  # Professional Cuddler
+                2: [snake_breakroom, whichdidthat],  # Senior Bubble Wrap Popper
+                3: [snake_breakroom, whichdidthat],  # Street Performer
+                4: [snake_breakroom, whichdidthat],  # Dog Walker
+                5: [snake_breakroom, whichdidthat],  # Human Statue
+                61: [snake_breakroom],               # Animal Control only
             }
 
-            minigame_module = minigames_by_id.get(occupation_id)
-            if minigame_module is None:
+            mini_game_modules = minigames_by_id.get(occupation_id)
+            if not mini_game_modules:
                 no_minigame_msg = (
                     f"🧹 You worked a shift as a **{occupation_name}**, "
                     "but this job doesn't have a mini-game yet. No payout this time!"
@@ -140,26 +198,81 @@ class CareerPath(commands.Cog):
                     await ctx.send(no_minigame_msg)
                 return
 
-            # Call the play function of the minigame module
+            minigame_module = random.choice(mini_game_modules)
+
+            # Call the play function of the chosen mini-game module
+            # Expecting (embed, view) as return
             embed, view = await minigame_module.play(self.db_pool, ctx.guild.id, user_id, occupation_id, pay_rate, None)
+            await ctx.send(embed=embed, view=view)   
+            await view.wait()  
+
+            # Default bonus = 0
+            bonus = 0
+
+            outcome_type = getattr(view, "outcome_type", "neutral")
+
+            if outcome_type == "positive":
+                multiplier = random.randint(2, 8)
+                bonus = 105 * multiplier
+            elif outcome_type == "negative":
+                multiplier = random.randint(2, 8)
+                bonus = -15 * multiplier
+            elif outcome_type == "neutral":
+                multiplier = random.randint(1, 10)
+                bonus = 10 * multiplier
+
+            total_pay = pay_rate + bonus
+
+            async with self.db_pool.acquire() as conn:
+                await conn.execute(
+                    "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
+                    total_pay,
+                    user_id
+                )
+                new_balance = await conn.fetchval(
+                    "SELECT checking_account_balance FROM user_finances WHERE user_id = $1",
+                    user_id
+                )
+
+            paystub_description = (
+                f"> You completed your shift as a **{occupation_name}**.\n"
+                f"> Base pay: **${pay_rate:.2f}**\n"
+                f"> Mini-game bonus: **${bonus:+.2f}**\n"
+                f"> Total earned: **${total_pay:.2f}**\n"
+                f"> New balance: **${new_balance:,.2f}**\n"
+            )
+
+            if hasattr(view, "outcome_summary") and view.outcome_summary:
+                paystub_description += f"\n**Mini-game outcome:**\n{view.outcome_summary}\n"
+
+            paystub_embed = discord.Embed(
+                title=f"🕒 Shift Logged - Pay Stub from ***{company_name}***",
+                description=paystub_description,
+                color=discord.Color.green() if bonus > 0 else discord.Color.red() if bonus < 0 else discord.Color.gold()
+            )
+
+            await ctx.send(embed=paystub_embed)
+
+
 
             if hasattr(ctx, "followup"):
                 await ctx.followup.send(embed=embed, view=view)
             else:
                 await ctx.send(embed=embed, view=view)
+
             await view.wait()
-            outcome_type = getattr(view, "outcome_type", "neutral")  # default to neutral if missing
 
-            if outcome_type == "positive":
-                embed_color = COLOR_GREEN
-            elif outcome_type == "negative":
-                embed_color = COLOR_RED
-            else:
-                embed_color = COLOR_GREEN 
-
+            outcome_type = getattr(view, "outcome_type", "neutral")
             game_summary = getattr(view, "outcome_summary", None)
 
-            # Send the paystub embed separately
+            # Decide embed color based on outcome
+            if outcome_type == "positive":
+                embed_color = discord.Color.green()
+            elif outcome_type == "negative":
+                embed_color = discord.Color.red()
+            else:
+                embed_color = discord.Color.gold()
+
             paystub_description = (
                 f"> You completed your shift as a **{occupation_name}** and earned **${pay_rate:.2f}**.\n"
                 f"> Your total completed shifts today: **{shifts_today}/{required_shifts_per_day}**\n\n"
@@ -167,25 +280,18 @@ class CareerPath(commands.Cog):
                 f"> **New Balance:** ${new_balance:,.2f}\n"
             )
 
-            # Append mini-game outcome if present
             if game_summary:
-                paystub_description += f"\n**Outcome from snake in the break room:**\n{game_summary.strip()}\n"
+                paystub_description += f"\n**Mini-game outcome:**\n{game_summary.strip()}\n"
 
-            # Add final flavor line
             paystub_description += "\n*Paid. Hopefully this cash sticks around longer than your last situationship.*"
 
-            # Build embed
             paystub_embed = discord.Embed(
                 title=f"🕒 Shift Logged - here is your pay stub from ***{company_name}***",
                 description=paystub_description,
                 color=embed_color
             )
 
-
-            if hasattr(ctx, "followup"):
-                await ctx.followup.send(embed=paystub_embed)
-            else:
-                await ctx.send(embed=paystub_embed)
+            await ctx.send(embed=paystub_embed)
 
             print("[workshift] Response sent.")
 
@@ -196,6 +302,7 @@ class CareerPath(commands.Cog):
                 await ctx.followup.send(error_msg)
             else:
                 await ctx.send(error_msg)
+
     @careerpath.command(name="resign", description="Resign from your job with confirmation")
     async def resign(self, ctx):
         import time

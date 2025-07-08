@@ -267,6 +267,7 @@ async def play_snake_breakroom(pool, guild_id, user_id, user_occupation_id, pay_
     view = SnakeBreakroomView(pool, guild_id, user_id, user_occupation_id, pay_rate)
     return embed, view
 
+
 async def play_animal_control_snake(pool, guild_id, user_id, user_occupation_id, pay_rate):
     embed = discord.Embed(
         title="🐍 Snake in the Break Room - Animal Control Edition",
@@ -282,8 +283,10 @@ async def play_animal_control_snake(pool, guild_id, user_id, user_occupation_id,
     view = AnimalControlSnakeView(pool, guild_id, user_id, user_occupation_id, pay_rate)
     return embed, view
 
-async def play(pool, guild_id, user_id, user_occupation_id, pay_rate, _):
+
+async def play(pool, guild_id, user_id, user_occupation_id, pay_rate, extra):
     if user_occupation_id == 61:  # Animal Control occupation ID
         return await play_animal_control_snake(pool, guild_id, user_id, user_occupation_id, pay_rate)
     else:
         return await play_snake_breakroom(pool, guild_id, user_id, user_occupation_id, pay_rate)
+
