@@ -13,6 +13,8 @@ from embeds import COLOR_GREEN, COLOR_RED
 # Added imports for mini-games from occupation_mini_games folder
 from Bot_occupations.occupation_mini_games import whichdidthat
 from Bot_occupations.occupation_mini_games import snake_breakroom
+from Bot_occupations.occupation_mini_games.shared import build_paystub_embed
+
 
 
 class CareerPath(commands.Cog):
