@@ -220,9 +220,9 @@ class CareerPath(commands.Cog):
                 result_type = mini_game_result.get('result', 'neutral')
                 print(f"[DEBUG] mini-game result type: {result_type}")
 
-                if result_type == 'correct':
+                if result_type == 'correct','neutral':
                     bonus = mini_game_result.get('bonus', 0)
-                elif result_type == 'wrong':
+                elif result_type == 'wrong','negative':
                     bonus = -abs(mini_game_result.get('dock', 0))
                 elif result_type == 'timeout':
                     bonus = -abs(mini_game_result.get('penalty', 0))
