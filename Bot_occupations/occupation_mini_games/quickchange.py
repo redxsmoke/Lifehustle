@@ -138,11 +138,12 @@ class QuickChangeButton(discord.ui.Button):
         self.parent_view.stop()
 
 class QuickChangeView(discord.ui.View):
-    def __init__(self, bill: float, payment: float, correct_change: float, options: list, timeout=5):
+    def __init__(self, bill: float, payment: float, correct_change: float, options: list, job_key: str, timeout=5):
         super().__init__(timeout=timeout)
         self.bill = bill
         self.payment = payment
         self.correct_change = correct_change
+        self.job_key = job_key
         self.result = None
 
         for amount in options:
@@ -166,7 +167,8 @@ class QuickChangeView(discord.ui.View):
                 await self.message.edit(view=self)
             self.stop()
 
-async def run_quick_math_game(interaction: discord.Interaction):
+# THE ONLY CHANGE IS: add `job_key` parameter here
+async def run_quick_math_game(interaction: discord.Interaction, job_key: str):
     bill = round(random.uniform(10.00, 49.99), 2)
     possible_payments = [20, 30, 40, 50, 100]
     payments = [p for p in possible_payments if p > bill]
@@ -192,7 +194,7 @@ async def run_quick_math_game(interaction: discord.Interaction):
         color=discord.Color.blue(),
     )
 
-    view = QuickChangeView(bill, payment, correct_change, options, timeout=10)
+    view = QuickChangeView(bill, payment, correct_change, options, job_key=job_key, timeout=10)
 
     await interaction.followup.send(embed=embed, view=view)
 

@@ -191,7 +191,7 @@ class CareerPath(commands.Cog):
                 mini_game_result = None  
 
                 if minigame_module == run_quick_math_game:
-                    mini_game_result = await run_quick_math_game(ctx.interaction)
+                    mini_game_result = await run_quick_math_game(ctx.interaction, job_key=occupation_name.lower())
                     message = None
                 else:
                     embed, view = await minigame_module.play(
