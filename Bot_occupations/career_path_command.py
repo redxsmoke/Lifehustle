@@ -241,6 +241,7 @@ class CareerPath(commands.Cog):
                 bonus = 10 * multiplier
 
             total_pay = pay_rate + bonus
+            view.bonus_amount = bonus
 
             # Update user balance once here
             async with self.db_pool.acquire() as conn:

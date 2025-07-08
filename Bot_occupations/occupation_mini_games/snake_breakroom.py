@@ -71,11 +71,11 @@ class SnakeBreakroomView(View):
                 helper_name = await self.get_helper_name(interaction)
 
                 if choice['type'] == 'positive':
-                    amount = 0
-                    desc = choice['text'].format(helper=helper_name, amount=amount)
+                    
+                    desc = choice['text'].format(helper=helper_name, amount=self.bonus_amount)
                 elif choice['type'] == 'negative':
-                    amount = 0
-                    desc = choice['text'].format(helper=helper_name, amount=amount)
+                    
+                    desc = choice['text'].format(helper=helper_name, amount=self.bonus_amount)
                 else:
                     desc = choice['text'].format(helper=helper_name)
 
