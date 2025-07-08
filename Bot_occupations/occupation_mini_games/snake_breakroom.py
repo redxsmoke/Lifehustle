@@ -67,22 +67,32 @@ class SnakeBreakroomView(View):
     async def handle_outcome(self, interaction: discord.Interaction, outcomes):
         try:
             choice = random.choices(outcomes, k=1)[0]
+
+            await interaction.response.defer()  # Always defer early to avoid interaction timeout
+
             async with self.pool.acquire() as conn:
                 helper_name = await self.get_helper_name(interaction)
 
                 if choice['type'] == 'positive':
-                    
+                    multiplier = random.randint(2, 8)
+                    self.bonus_amount = 105 * multiplier
                     desc = choice['text'].format(helper=helper_name, amount=self.bonus_amount)
+
                 elif choice['type'] == 'negative':
-                    
+                    multiplier = random.randint(2, 8)
+                    self.bonus_amount = -15 * multiplier
                     desc = choice['text'].format(helper=helper_name, amount=self.bonus_amount)
+
                 else:
+                    multiplier = random.randint(1, 10)
+                    self.bonus_amount = 10 * multiplier
                     desc = choice['text'].format(helper=helper_name)
 
-            self.outcome_summary = desc
-            self.outcome_type = choice['type'] 
-            await interaction.response.defer()
+                self.outcome_type = choice['type']
+                self.outcome_summary = desc
+
             self.stop()
+
         except Exception as e:
             print(f"Error in handle_outcome: {e}")
             if not interaction.response.is_done():

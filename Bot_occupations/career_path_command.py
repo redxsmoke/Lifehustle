@@ -216,10 +216,13 @@ class CareerPath(commands.Cog):
 
             message = await ctx.send(embed=embed, view=view)
             
+            await view.wait()
 
             # 🧠 Get outcome from view
             outcome_type = getattr(view, "outcome_type", "neutral")
             outcome_summary = getattr(view, "outcome_summary", None)
+
+            total_pay = pay_rate + bonus
 
             # 💸 Calculate the bonus
             bonus = 0
@@ -233,10 +236,9 @@ class CareerPath(commands.Cog):
                 multiplier = random.randint(1, 10)
                 bonus = 10 * multiplier
 
-            total_pay = pay_rate + bonus
+            
             view.bonus_amount = bonus
-            await view.wait()
-
+            
             # 👍 Continue with paystub...
             paystub_data = {
                 "occupation_name": occupation_name,
