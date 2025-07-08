@@ -10,6 +10,10 @@ from Bot_occupations.career_path_views import ConfirmResignView
 
 from embeds import COLOR_GREEN, COLOR_RED
 
+# Added imports for mini-games from occupation_mini_games folder
+from Bot_occupations.occupation_mini_games import whichdidthat
+from Bot_occupations.occupation_mini_games import snake_breakroom
+
 
 class CareerPath(commands.Cog):
     def __init__(self, bot, db_pool):
@@ -31,7 +35,6 @@ class CareerPath(commands.Cog):
             await ctx.send("Please use a subcommand: workshift or resign")
 
 import discord
-from whichdidthat import play, MINIGAME_CONFIGS  # import your mini-game logic and config
 
 class MiniGameButton(discord.ui.Button):
     def __init__(self, label, view):
@@ -200,9 +203,16 @@ class MiniGameView(discord.ui.View):
 
             minigame_module = random.choice(mini_game_modules)
 
-            # Call the play function of the chosen mini-game module
-            # Expecting (embed, view) as return
-            embed, view = await minigame_module.play(self.db_pool, ctx.guild.id, user_id, occupation_id, pay_rate, None)
+            # Call the play function of the chosen mini-game module with correct args
+            if minigame_module == snake_breakroom:
+                embed, view = await minigame_module.play(
+                    self.db_pool, ctx.guild.id, user_id, occupation_id, pay_rate, None
+                )
+            else:  # whichdidthat or other mini-games
+                embed, view = await minigame_module.play(
+                    self.db_pool, ctx.guild.id, user_id, occupation_id, guess=None
+                )
+
             await ctx.send(embed=embed, view=view)   
             await view.wait()  
 
@@ -252,8 +262,6 @@ class MiniGameView(discord.ui.View):
             )
 
             await ctx.send(embed=paystub_embed)
-
-
 
             if hasattr(ctx, "followup"):
                 await ctx.followup.send(embed=embed, view=view)
