@@ -123,5 +123,11 @@ async def run_quick_math_game(interaction: discord.Interaction):
 
     await view.wait()
 
-    # Return results or timeout result
+    if view.result is None:
+        view.result = {
+            "result": "timeout",
+            "penalty": 20,
+            "message": "No response received - mini-game timed out.",
+        }
     return view.result
+ 
