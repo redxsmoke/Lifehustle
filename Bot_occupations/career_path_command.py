@@ -227,27 +227,25 @@ class CareerPath(commands.Cog):
 
             minigame_module = random.choice(mini_game_modules)
 
-            embed, view = await minigame_module.play(
-                self.db_pool,
-                ctx.guild.id,
-                user_id,
-                occupation_id,
-                pay_rate if minigame_module == snake_breakroom else None,
-                None
-            )
-
-            message = await ctx.send(embed=embed, view=view)
-            
-            await view.wait()
-
-            # 🧠 Get outcome from view
-            outcome_type = getattr(view, "outcome_type", "neutral")
-            outcome_summary = getattr(view, "outcome_summary", None)
-            bonus = getattr(view, "bonus_amount", 0)
-
-            total_pay = pay_rate + bonus
- 
-            
+            if minigame_module == run_quick_math_game:
+                mini_game_result = await run_quick_math_game(ctx.interaction)
+            else:
+                embed, view = await minigame_module.play(
+                    self.db_pool,
+                    ctx.guild.id,
+                    user_id,
+                    occupation_id,
+                    pay_rate if minigame_module == snake_breakroom else None,
+                    None
+                )
+                message = await ctx.send(embed=embed, view=view)
+                await view.wait()
+                mini_game_result = {
+                    "result": getattr(view, "outcome_type", "neutral"),
+                    "bonus": getattr(view, "bonus_amount", 0),
+                    "message": getattr(view, "outcome_summary", None),
+                }
+              
             # 👍 Continue with paystub...
             paystub_data = {
                 "occupation_name": occupation_name,

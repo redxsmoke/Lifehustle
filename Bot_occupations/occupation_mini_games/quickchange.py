@@ -114,7 +114,7 @@ async def run_quick_math_game(interaction: discord.Interaction):
         color=discord.Color.blue(),
     )
 
-    view = QuickChangeView(bill, payment, correct_change, options, timeout=5)
+    view = QuickChangeView(bill, payment, correct_change, options, timeout=10)
 
     await interaction.followup.send(embed=embed, view=view)
 
