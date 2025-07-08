@@ -224,20 +224,12 @@ class CareerPath(commands.Cog):
                 # add other fields if needed
             }
 
-            combined_embed = build_paystub_embed(
-                paystub_data,
-                mini_game_outcome=getattr(view, "outcome_summary", None),
-                mini_game_outcome_type=getattr(view, "outcome_type", None)
-            )
-
-            await message.edit(embed=combined_embed, view=None)
-
-
-            # Default bonus = 0
-            bonus = 0
-
+            # Get outcome info from the view
             outcome_type = getattr(view, "outcome_type", "neutral")
+            outcome_summary = getattr(view, "outcome_summary", None)
 
+            # Calculate bonus based on outcome_type
+            bonus = 0
             if outcome_type == "positive":
                 multiplier = random.randint(2, 8)
                 bonus = 105 * multiplier
@@ -250,6 +242,7 @@ class CareerPath(commands.Cog):
 
             total_pay = pay_rate + bonus
 
+            # Update user balance once here
             async with self.db_pool.acquire() as conn:
                 await conn.execute(
                     "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
@@ -261,6 +254,7 @@ class CareerPath(commands.Cog):
                     user_id
                 )
 
+            # Build the combined paystub description
             paystub_description = (
                 f"> You completed your shift as a **{occupation_name}**.\n"
                 f"> Base pay: **${pay_rate:.2f}**\n"
@@ -269,16 +263,17 @@ class CareerPath(commands.Cog):
                 f"> New balance: **${new_balance:,.2f}**\n"
             )
 
-            if hasattr(view, "outcome_summary") and view.outcome_summary:
-                paystub_description += f"\n**Mini-game outcome:**\n{view.outcome_summary}\n"
+            if outcome_summary:
+                paystub_description += f"\n**Mini-game outcome:**\n{outcome_summary}\n"
 
-            paystub_embed = discord.Embed(
+            combined_embed = discord.Embed(
                 title=f"🕒 Shift Logged - Pay Stub from ***{company_name}***",
                 description=paystub_description,
                 color=discord.Color.green() if bonus > 0 else discord.Color.red() if bonus < 0 else discord.Color.gold()
             )
 
-            await ctx.send(embed=paystub_embed)
+            # Edit the original mini-game message to remove buttons and show paystub
+            await message.edit(embed=combined_embed, view=None)
 
             print("[workshift] Response sent.")
 

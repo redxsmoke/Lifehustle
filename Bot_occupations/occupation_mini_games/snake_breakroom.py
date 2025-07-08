@@ -39,9 +39,11 @@ class SnakeBreakroomView(View):
                     member = await interaction.guild.fetch_member(helper['user_id'])
                 except discord.NotFound:
                     return "Animal Control"
-            return member.display_name   
+            # Return display name AND mention
+            return f"{member.display_name} ({member.mention})"
 
         return "Animal Control"
+
 
 
     async def apply_penalty(self, conn):
@@ -165,22 +167,6 @@ class AnimalControlSnakeView(View):
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
 
-    async def apply_penalty(self, amount):
-        async with self.pool.acquire() as conn:
-            await conn.execute(
-                "UPDATE user_finances SET checking_account_balance = checking_account_balance - $1 WHERE user_id = $2",
-                amount,
-                self.user_id,
-            )
-
-    async def apply_bonus(self, amount):
-        async with self.pool.acquire() as conn:
-            await conn.execute(
-                "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
-                amount,
-                self.user_id,
-            )
-
     def calculate_bonus(self):
         return random.randint(20, 500) * random.randint(1, 4)
 
@@ -241,11 +227,9 @@ class AnimalControlSnakeView(View):
 
         if category == "positive":
             bonus = self.calculate_bonus()
-            await self.apply_bonus(bonus)
             message += f" Bonus awarded: ${bonus}."
         elif category == "negative":
             penalty = self.calculate_penalty()
-            await self.apply_penalty(penalty)
             message += f" You were fined ${penalty}."
 
         self.outcome_summary = message
