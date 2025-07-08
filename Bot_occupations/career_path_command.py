@@ -217,18 +217,11 @@ class CareerPath(commands.Cog):
             message = await ctx.send(embed=embed, view=view)
             await view.wait()
 
-            paystub_data = {
-                "occupation_name": occupation_name,
-                "pay_rate": pay_rate,
-                "company_name": company_name,
-                # add other fields if needed
-            }
-
-            # Get outcome info from the view
+            # 🧠 Get outcome from view
             outcome_type = getattr(view, "outcome_type", "neutral")
             outcome_summary = getattr(view, "outcome_summary", None)
 
-            # Calculate bonus based on outcome_type
+            # 💸 Calculate the bonus
             bonus = 0
             if outcome_type == "positive":
                 multiplier = random.randint(2, 8)
@@ -240,8 +233,16 @@ class CareerPath(commands.Cog):
                 multiplier = random.randint(1, 10)
                 bonus = 10 * multiplier
 
-            total_pay = pay_rate + bonus
+            # ✅ Assign it to view for later use in the outcome message
             view.bonus_amount = bonus
+
+            # 👍 Continue with paystub...
+            paystub_data = {
+                "occupation_name": occupation_name,
+                "pay_rate": pay_rate,
+                "company_name": company_name,
+                # more if needed
+            }
 
             # Update user balance once here
             async with self.db_pool.acquire() as conn:
