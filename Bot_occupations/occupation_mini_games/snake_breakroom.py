@@ -40,7 +40,7 @@ class SnakeBreakroomView(View):
                 except discord.NotFound:
                     return "Animal Control"
             # Return display name AND mention
-            return f"{member.display_name} ({member.mention})"
+            return f"{member.mention}" 
 
         return "Animal Control"
 
