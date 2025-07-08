@@ -221,13 +221,10 @@ class CareerPath(commands.Cog):
             # 🧠 Get outcome from view
             outcome_type = getattr(view, "outcome_type", "neutral")
             outcome_summary = getattr(view, "outcome_summary", None)
-
-            total_pay = pay_rate + bonus
-
             bonus = getattr(view, "bonus_amount", 0)
+
             total_pay = pay_rate + bonus
-            
-            view.bonus_amount = bonus
+ 
             
             # 👍 Continue with paystub...
             paystub_data = {
