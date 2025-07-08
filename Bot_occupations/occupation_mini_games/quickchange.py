@@ -116,7 +116,7 @@ async def run_quick_math_game(interaction: discord.Interaction):
 
     view = QuickChangeView(bill, payment, correct_change, options, timeout=5)
 
-    await interaction.response.send_message(embed=embed, view=view)
+    await interaction.followup.send(embed=embed, view=view)
 
     # Save the sent message reference for view to edit later on timeout
     view.message = await interaction.original_response()
