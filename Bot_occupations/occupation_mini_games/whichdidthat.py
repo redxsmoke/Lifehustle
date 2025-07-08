@@ -212,6 +212,7 @@ class WhichDidThatButton(discord.ui.Button):
                 child.style = discord.ButtonStyle.success if outcome_type == "positive" else discord.ButtonStyle.danger
 
         await interaction.response.edit_message(content=outcome_text, view=self.parent_view)
+        self.parent_view.stop()
 
 async def play(pool, guild_id, user_id, user_occupation_id, pay_rate, extra=None):
     # Fetch the user's job name from DB

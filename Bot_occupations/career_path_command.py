@@ -214,8 +214,17 @@ class CareerPath(commands.Cog):
                 )
 
 
-            await ctx.send(embed=embed, view=view)
-            await view.wait()
+                message = await ctx.send(embed=embed, view=view)
+                await view.wait()
+
+                combined_embed = build_paystub_embed(
+                    paystub_data,
+                    mini_game_outcome=getattr(view, "outcome_summary", None),
+                    mini_game_outcome_type=getattr(view, "outcome_type", None)
+                )
+
+                await message.edit(embed=combined_embed, view=None)
+
 
             # Default bonus = 0
             bonus = 0
