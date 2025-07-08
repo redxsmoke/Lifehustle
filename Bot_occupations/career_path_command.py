@@ -215,7 +215,7 @@ class CareerPath(commands.Cog):
             )
 
             message = await ctx.send(embed=embed, view=view)
-            await view.wait()
+            
 
             # 🧠 Get outcome from view
             outcome_type = getattr(view, "outcome_type", "neutral")
@@ -235,6 +235,7 @@ class CareerPath(commands.Cog):
 
             total_pay = pay_rate + bonus
             view.bonus_amount = bonus
+            await view.wait()
 
             # 👍 Continue with paystub...
             paystub_data = {
