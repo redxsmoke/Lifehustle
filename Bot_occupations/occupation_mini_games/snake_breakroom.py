@@ -71,10 +71,10 @@ class SnakeBreakroomView(View):
                 helper_name = await self.get_helper_name(interaction)
 
                 if choice['type'] == 'positive':
-                    amount = await self.apply_bonus(conn)
+                    amount = 0
                     desc = choice['text'].format(helper=helper_name, amount=amount)
                 elif choice['type'] == 'negative':
-                    amount = await self.apply_penalty(conn)
+                    amount = 0
                     desc = choice['text'].format(helper=helper_name, amount=amount)
                 else:
                     desc = choice['text'].format(helper=helper_name)
@@ -226,11 +226,11 @@ class AnimalControlSnakeView(View):
         bonus = penalty = 0
 
         if category == "positive":
-            bonus = self.calculate_bonus()
-            message += f" Bonus awarded: ${bonus}."
+            bonus = 0
+           
         elif category == "negative":
-            penalty = self.calculate_penalty()
-            message += f" You were fined ${penalty}."
+            penalty = 0
+        
 
         self.outcome_summary = message
         self.outcome_type = category 
