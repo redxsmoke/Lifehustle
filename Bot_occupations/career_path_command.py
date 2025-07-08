@@ -161,23 +161,74 @@ class CareerPath(commands.Cog):
                 )
                 print("[workshift] Shift log inserted.")
 
+                            # --- MINI-GAME SELECTION ---
+                minigames_by_id = {
+                    1: [run_quick_math_game, snake_breakroom, whichdidthat],  # Professional Cuddler
+                    2: [snake_breakroom, whichdidthat],                      # Senior Bubble Wrap Popper
+                    3: [snake_breakroom, whichdidthat],                      # Street Performer
+                    4: [run_quick_math_game, snake_breakroom, whichdidthat], # Dog Walker
+                    5: [snake_breakroom, whichdidthat],                      # Human Statue
+                    11: [run_quick_math_game, snake_breakroom, whichdidthat],
+                    16: [run_quick_math_game, snake_breakroom, whichdidthat],
+                    19: [run_quick_math_game, snake_breakroom, whichdidthat],
+                    61: [snake_breakroom],                                   # Animal Control only
+                }
 
+                mini_game_modules = minigames_by_id.get(occupation_id)
+                if not mini_game_modules:
+                    no_minigame_msg = (
+                        f"🧹 You worked a shift as a **{occupation_name}**, "
+                        "but this job doesn't have a mini-game yet. No payout this time!"
+                    )
+                    if hasattr(ctx, "followup"):
+                        await ctx.followup.send(no_minigame_msg)
+                    else:
+                        await ctx.send(no_minigame_msg)
+                    return
 
-                # Adjust pay based on mini-game result
-                if mini_game_result['result'] == 'correct':
-                    bonus = mini_game_result['bonus']
-                elif mini_game_result['result'] == 'wrong':
-                    bonus = -mini_game_result['dock']  # dock is negative bonus
-                elif mini_game_result['result'] == 'timeout':
-                    bonus = -mini_game_result['penalty']  # penalty is negative bonus
+                minigame_module = random.choice(mini_game_modules)
+
+                mini_game_result = None  
+
+                if minigame_module == run_quick_math_game:
+                    mini_game_result = await run_quick_math_game(ctx.interaction)
+                    message = None
+                else:
+                    embed, view = await minigame_module.play(
+                        self.db_pool,
+                        ctx.guild.id,
+                        user_id,
+                        occupation_id,
+                        pay_rate if minigame_module == snake_breakroom else None,
+                        None
+                    )
+                    message = await ctx.send(embed=embed, view=view)
+                    await view.wait()
+                    mini_game_result = {
+                        "result": getattr(view, "outcome_type", "neutral"),
+                        "bonus": getattr(view, "bonus_amount", 0),
+                        "message": getattr(view, "outcome_summary", None),
+                        "dock": getattr(view, "dock_amount", 0),
+                        "penalty": getattr(view, "penalty_amount", 0),
+                    }
+
+                if mini_game_result is None:
+                    await ctx.send("❌ Mini-game did not complete correctly. Please try again.")
+                    return
+
+                result_type = mini_game_result.get('result', 'neutral')
+
+                if result_type == 'correct':
+                    bonus = mini_game_result.get('bonus', 0)
+                elif result_type == 'wrong':
+                    bonus = -abs(mini_game_result.get('dock', 0))
+                elif result_type == 'timeout':
+                    bonus = -abs(mini_game_result.get('penalty', 0))
                 else:
                     bonus = 0
 
                 outcome_summary = mini_game_result.get('message', "No mini-game outcome.")
                 total_pay = pay_rate + bonus
-
-                
-
 
                 # Count shifts today
                 shifts_today = await conn.fetchval(
@@ -199,75 +250,6 @@ class CareerPath(commands.Cog):
                     "SELECT checking_account_balance FROM user_finances WHERE user_id = $1",
                     user_id
                 )
-
-            # --- MINI-GAME SELECTION ---
-            minigames_by_id = {
-                1: [run_quick_math_game, snake_breakroom, whichdidthat],  # Professional Cuddler
-                2: [snake_breakroom, whichdidthat],                      # Senior Bubble Wrap Popper
-                3: [snake_breakroom, whichdidthat],                      # Street Performer
-                4: [run_quick_math_game, snake_breakroom, whichdidthat], # Dog Walker
-                5: [snake_breakroom, whichdidthat],                      # Human Statue
-                11: [run_quick_math_game, snake_breakroom, whichdidthat],
-                16: [run_quick_math_game, snake_breakroom, whichdidthat],
-                19: [run_quick_math_game, snake_breakroom, whichdidthat],
-                61: [snake_breakroom],                                   # Animal Control only
-            }
-
-            mini_game_modules = minigames_by_id.get(occupation_id)
-            if not mini_game_modules:
-                no_minigame_msg = (
-                    f"🧹 You worked a shift as a **{occupation_name}**, "
-                    "but this job doesn't have a mini-game yet. No payout this time!"
-                )
-                if hasattr(ctx, "followup"):
-                    await ctx.followup.send(no_minigame_msg)
-                else:
-                    await ctx.send(no_minigame_msg)
-                return
-
-            minigame_module = random.choice(mini_game_modules)
-
-            mini_game_result = None  
-
-            if minigame_module == run_quick_math_game:
-                mini_game_result = await run_quick_math_game(ctx.interaction)
-                message = None
-            else:
-                embed, view = await minigame_module.play(
-                    self.db_pool,
-                    ctx.guild.id,
-                    user_id,
-                    occupation_id,
-                    pay_rate if minigame_module == snake_breakroom else None,
-                    None
-                )
-                message = await ctx.send(embed=embed, view=view)
-                await view.wait()
-                mini_game_result = {
-                    "result": getattr(view, "outcome_type", "neutral"),
-                    "bonus": getattr(view, "bonus_amount", 0),
-                    "message": getattr(view, "outcome_summary", None),
-                    "dock": getattr(view, "dock_amount", 0),
-                    "penalty": getattr(view, "penalty_amount", 0),
-                }
-
-            if mini_game_result is None:
-                await ctx.send("❌ Mini-game did not complete correctly. Please try again.")
-                return
-
-            result_type = mini_game_result.get('result', 'neutral')
-
-            if result_type == 'correct':
-                bonus = mini_game_result.get('bonus', 0)
-            elif result_type == 'wrong':
-                bonus = -abs(mini_game_result.get('dock', 0))
-            elif result_type == 'timeout':
-                bonus = -abs(mini_game_result.get('penalty', 0))
-            else:
-                bonus = 0
-
-            outcome_summary = mini_game_result.get('message', "No mini-game outcome.")
-            total_pay = pay_rate + bonus
 
             # Update user balance once here
             async with self.db_pool.acquire() as conn:
