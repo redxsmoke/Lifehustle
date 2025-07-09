@@ -48,13 +48,17 @@ tree = bot.tree
 ##### DATABASE UPDATES
 async def reset_user_secret_button_table(pool):
     async with pool.acquire() as conn:
-        await conn.execute("DROP TABLE IF EXISTS user_secret_button;")
+        await conn.execute("DROP TABLE IF EXISTS user_achievements;")
         await conn.execute("""
-            CREATE TABLE user_secret_button (
-                user_id BIGINT PRIMARY KEY,
-                times_pressed INT NOT NULL DEFAULT 0,
-                last_used TIMESTAMP
-            );
+            CREATE TABLE user_achievements (
+                            user_id BIGINT PRIMARY KEY,
+                            achievement_id BIG INT NULL,
+                            achievement_name TEXT NULL,
+                            achievement_description TEXT NULL,
+                            achievement_emoji TEXT NULL,
+                            date_unlocked DATE NULL,
+                            guild_id BIGINT NOT NULL                
+                        );
         """)
     print("✅ user_secret_button table reset successfully.")
 #### DATABASE UPDATES

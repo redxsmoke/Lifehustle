@@ -11,7 +11,7 @@ async def reset_user_secret_button_table():
     try:
         await conn.execute("DROP TABLE IF EXISTS user_achievements;")
         await conn.execute("""
-            CREATE TABLE user_secret_button (
+            CREATE TABLE user_achievements (
                 user_id BIGINT PRIMARY KEY,
                 achievement_id BIG INT NULL,
                 achievement_name TEXT NULL,
@@ -21,7 +21,7 @@ async def reset_user_secret_button_table():
                 guild_id BIGINT NOT NULL                
             );
         """)
-        print("✅ user_secret_button table reset successfully.")
+        print("✅ user_achievements table reset successfully.")
     finally:
         await conn.close()
 
