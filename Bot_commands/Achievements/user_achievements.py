@@ -17,7 +17,7 @@ NOTHING_MESSAGES = [
     "Reality stays the same."
 ]
 
-COOLDOWN_SECONDS = 3600
+COOLDOWN_SECONDS = 3  # 1 hour = 3600 seconds (adjust as needed)
 REWARD_AMOUNT = 500_000
 PRESS_GOAL = 1000
 
@@ -45,6 +45,15 @@ class ButtonGameView(discord.ui.View):
                 if record:
                     last_used = record['last_used']
                     times_pressed = record['times_pressed']
+
+                    # If user already reached or passed the goal, stop updates and inform
+                    if times_pressed >= PRESS_GOAL:
+                        await interaction.response.send_message(
+                            f"🏅 You already unlocked the **Master of Perseverance** achievement! No need to press more.",
+                            ephemeral=True
+                        )
+                        return
+
                     if last_used and (now - last_used).total_seconds() < COOLDOWN_SECONDS:
                         remaining = COOLDOWN_SECONDS - (now - last_used).total_seconds()
                         minutes = int(remaining // 60)
@@ -69,10 +78,29 @@ class ButtonGameView(discord.ui.View):
                 )
 
                 if times_pressed >= PRESS_GOAL:
+                    # Reward user
                     await conn.execute(
                         "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
                         REWARD_AMOUNT, self.user_id
                     )
+
+                    # Insert achievement if not already unlocked
+                    # Use ON CONFLICT DO NOTHING to avoid duplicates
+                    await conn.execute("""
+                        INSERT INTO cd_user_achievements 
+                        (user_id, achievement_id, achievement_name, achievement_description, achievement_emoji, date_unlocked, guild_id)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7)
+                        ON CONFLICT (user_id, achievement_id) DO NOTHING;
+                    """,
+                    self.user_id,
+                    1,
+                    'Master of Perseverance',
+                    'Clicked the button 1000 times',
+                    '🏅⏳💪',
+                    now,
+                    interaction.guild.id if interaction.guild else None
+                    )
+
                     await interaction.response.edit_message(
                         embed=discord.Embed(
                             title="🌟 Something *Finally* Happened!",
@@ -101,7 +129,7 @@ class ButtonGameView(discord.ui.View):
             try:
                 await interaction.response.send_message(f"An error occurred: {e}", ephemeral=True)
             except Exception:
-                pass  # If already responded or can't send, just fail silently here
+                pass  # fail silently if can't respond
 
 
 class ButtonGame(commands.Cog):

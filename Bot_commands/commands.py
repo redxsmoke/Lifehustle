@@ -218,8 +218,8 @@ def register_commands(tree: app_commands.CommandTree):
             await interaction.followup.send(embed=embed, ephemeral=True)
 
 
-    @tree.command(name="paycheck", description=f"Claim your paycheck (${PAYCHECK_AMOUNT:,}) every 12h")
-    async def paycheck(interaction: Interaction):
+    @tree.command(name="needfunds", description=f"Claim your guberment cheese (${PAYCHECK_AMOUNT:,}) every 24h")
+    async def needfunds(interaction: Interaction):
         from globals import pool
         if pool is None:
             await interaction.response.send_message(
@@ -259,15 +259,26 @@ def register_commands(tree: app_commands.CommandTree):
             ), ephemeral=True)
             return
 
-        finances['checking_account_balance'] += PAYCHECK_AMOUNT
+        # Check achievement
+        achievement = await pool.fetchrow(
+            "SELECT 1 FROM cd_user_achievements WHERE user_id = $1 AND achievement_id = 1",
+            user_id
+        )
+        if achievement:
+            payout = PAYCHECK_AMOUNT * 2
+        else:
+            payout = PAYCHECK_AMOUNT
+
+        finances['checking_account_balance'] += payout
         finances['last_paycheck_claimed'] = now
         await upsert_user_finances(pool, user_id, finances)
 
         await interaction.response.send_message(embed=embed_message(
             "💵 Paycheck Claimed",
-            f"> You got ${PAYCHECK_AMOUNT:,}!\n💰 New Balance: ${finances['checking_account_balance']:,}",
+            f"> You got ${payout:,}!\n💰 New Balance: ${finances['checking_account_balance']:,}",
             COLOR_GREEN
         ), ephemeral=True)
+
 
    
 
