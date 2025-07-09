@@ -52,7 +52,7 @@ async def reset_user_secret_button_table(pool):
         await conn.execute("""
             CREATE TABLE user_achievements (
                             user_id BIGINT PRIMARY KEY,
-                            achievement_id BIG INT NULL,
+                            achievement_id BIGINT NULL,
                             achievement_name TEXT NULL,
                             achievement_description TEXT NULL,
                             achievement_emoji TEXT NULL,
