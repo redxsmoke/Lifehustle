@@ -48,7 +48,8 @@ tree = bot.tree
 ##### DATABASE UPDATES
 async def reset_user_secret_button_table(pool):
     async with pool.acquire() as conn:
-        await conn.execute("DROP TABLE IF EXISTS user_achievements;")
+        await conn.execute("ALTER TABLE user_achievements ADD CONSTRAINT user_achievements_user_achievement_unique UNIQUE (user_id, achievement_id);")
+
         await conn.execute("""
             CREATE TABLE user_achievements (
                             user_id BIGINT PRIMARY KEY,
