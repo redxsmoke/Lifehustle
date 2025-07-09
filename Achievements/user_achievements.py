@@ -46,7 +46,7 @@ class UserAchievements(commands.Cog):
                 await interaction.followup.send(
                     embed=embed_message(
                         "No Achievements Yet",
-                        "You haven't unlocked any achievements yet. Keep playing!",
+                        "You haven't unlocked any achievements ya bum 💩. Try doing something interesting!",
                         discord.Color.dark_grey()
                     )
                 )
