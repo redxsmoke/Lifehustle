@@ -45,6 +45,47 @@ intents.members = True  # <<< Needed to receive member info and join events!
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
+##### DATABASE UPDATES
+async def reset_user_secret_button_table(pool):
+    async with pool.acquire() as conn:
+        await conn.execute("DROP TABLE IF EXISTS user_secret_button;")
+        await conn.execute("""
+            CREATE TABLE user_secret_button (
+                user_id BIGINT PRIMARY KEY,
+                times_pressed INT NOT NULL DEFAULT 0,
+                last_used TIMESTAMP
+            );
+        """)
+    print("✅ user_secret_button table reset successfully.")
+#### DATABASE UPDATES
+
+async def setup_database():
+    await init_db(globals.pool)
+    await seed_grocery_categories(globals.pool)
+    await seed_grocery_types(globals.pool)
+    await drop_vehicle_appearence_table(globals.pool)
+    await create_vehicle_appearance_table(globals.pool)
+    await seed_vehicle_appearance(globals.pool)
+    await reset_user_secret_button_table(globals.pool)
+
+
+async def create_pool():
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    globals.pool = await asyncpg.create_pool(DATABASE_URL, ssl=ssl_context)
+    bot.pool = globals.pool  # Make pool accessible to cogs via bot.pool
+    print("✅ Database connection pool created.")
+
+
+# Entrypoint
+async def main():
+    await create_pool()
+    await add_unique_constraint()
+    await setup_database()
+    print("✅ Starting bot...")
+    await bot.start(DISCORD_BOT_TOKEN)
+
 
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error):
@@ -62,16 +103,6 @@ async def on_app_command_error(interaction: discord.Interaction, error):
 async def on_ready():
     print(f"✅ Logged in as {bot.user} (ID: {bot.user.id})")
 
-    # Bulk backfill users on startup (optional, can remove if you want lazy insert only)
-    # guild = bot.get_guild(YOUR_GUILD_ID)  # Replace YOUR_GUILD_ID with your actual guild ID as int
-    # if guild:
-    #     print(f"Starting bulk backfill for guild: {guild.name} ({guild.id})")
-    #     await bulk_backfill_users(bot.pool, guild)
-    # else:
-    #     print(f"Guild with ID {YOUR_GUILD_ID} not found on startup.")
-
-
- 
 
 @bot.event
 async def setup_hook():
@@ -99,45 +130,12 @@ async def setup_hook():
     print("🛠️ setup_hook finished.")
 
 
-# ** Add these global hooks to ensure user exists before any command **
-
-
-# For slash commands (like /lifecheck, /workshift)
 @bot.event
 async def on_interaction(interaction: discord.Interaction):
     if interaction.type == discord.InteractionType.application_command:
         guild_id = interaction.guild.id if interaction.guild else None
         await ensure_user_exists(bot.pool, interaction.user.id, str(interaction.user), guild_id)
     await bot.process_application_commands(interaction)
-
-
-
-# DB Setup
-async def create_pool():
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-    globals.pool = await asyncpg.create_pool(DATABASE_URL, ssl=ssl_context)
-    bot.pool = globals.pool  # Make pool accessible to cogs via bot.pool
-    print("✅ Database connection pool created.")
-
-
-async def setup_database():
-    await init_db(globals.pool)
-    await seed_grocery_categories(globals.pool)
-    await seed_grocery_types(globals.pool)
-    await drop_vehicle_appearence_table(globals.pool)
-    await create_vehicle_appearance_table(globals.pool)
-    await seed_vehicle_appearance(globals.pool)
-    
-
-
-# Entrypoint
-async def main():
-    await create_pool()
-    await add_unique_constraint()
-    print("✅ Starting bot...")
-    await bot.start(DISCORD_BOT_TOKEN)
 
 
 if __name__ == "__main__":
