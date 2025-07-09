@@ -1,19 +1,27 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import asyncio
 import traceback
 
 from db_user import get_user_achievements  # Your DB function to fetch achievements
 from utilities import embed_message  # Your embed helper
 
-class ButtonGame(commands.Cog):
+class UserAchievements(commands.Cog):
     def __init__(self, bot: commands.Bot, pool):
         self.bot = bot
         self.pool = pool
 
+    async def cog_load(self):
+        print("Syncing slash commands for UserAchievements Cog...")
+        try:
+            await self.bot.tree.sync()
+            print("Slash commands synced successfully.")
+        except Exception as e:
+            print(f"Error syncing slash commands: {e}")
+
     @app_commands.command(name="achievements", description="Show your achievements")
     async def achievements(self, interaction: discord.Interaction):
+        print(f"Achievements command invoked by {interaction.user}")
         try:
             user_id = interaction.user.id
             achievements = await get_user_achievements(self.pool, user_id)
@@ -42,14 +50,16 @@ class ButtonGame(commands.Cog):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-        except Exception as e:
+        except Exception:
             traceback.print_exc()
             await interaction.response.send_message(
                 "❌ An error occurred while fetching achievements.",
                 ephemeral=True
             )
 
+
 async def setup(bot: commands.Bot):
-    # Prevent duplicate Cog loading:
-    if bot.get_cog("ButtonGame") is None:
-        await bot.add_cog(ButtonGame(bot, bot.pool))
+    print("Loading UserAchievements Cog...")
+    if bot.get_cog("UserAchievements") is None:
+        await bot.add_cog(UserAchievements(bot, bot.pool))
+    print("UserAchievements Cog loaded.")
