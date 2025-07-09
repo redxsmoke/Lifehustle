@@ -86,7 +86,7 @@ async def setup_hook():
     await bot.load_extension("Bot_commands.bank_commands")
     await bot.load_extension("Bot_occupations.occupations_commands")
     await bot.load_extension("Bot_occupations.career_path_command")
-    await bot.load_extension(".Easter_eggs.secretbutton")
+    await bot.load_extension("Easter_eggs.secretbutton")
 
     bot.add_view(TravelButtons())  # renamed to match change
 
