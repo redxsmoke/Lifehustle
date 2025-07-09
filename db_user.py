@@ -2,7 +2,7 @@ import json
 import asyncpg
 import datetime
 
-from db_user import get_user_achievements
+ 
 
 #------------ADD USER TO DB IF MISSING AND RUN COMMAND = TRUE--------------
 async def ensure_user_exists(pool, user_id: int, user_name: str, guild_id: int | None):
