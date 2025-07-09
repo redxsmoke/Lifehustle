@@ -17,7 +17,7 @@ NOTHING_MESSAGES = [
     "Reality stays the same."
 ]
 
-COOLDOWN_SECONDS = 3  # 1 hour
+COOLDOWN_SECONDS = 3  # 1 hour = 3600 seconds (change if you want real 1 hour cooldown)
 REWARD_AMOUNT = 500_000
 PRESS_GOAL = 1000
 
@@ -29,70 +29,74 @@ class ButtonGameView(discord.ui.View):
 
     @discord.ui.button(label="Press", style=discord.ButtonStyle.primary, emoji="🔴")
     async def press_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("This isn’t your button to press.", ephemeral=True)
-            return
+        try:
+            if interaction.user.id != self.user_id:
+                await interaction.response.send_message("This isn’t your button to press.", ephemeral=True)
+                return
 
-        async with self.db.acquire() as conn:
-            # Fetch user button state
-            record = await conn.fetchrow(
-                "SELECT times_pressed, last_used FROM user_secret_button WHERE user_id = $1",
-                self.user_id
-            )
+            async with self.db.acquire() as conn:
+                record = await conn.fetchrow(
+                    "SELECT times_pressed, last_used FROM user_secret_button WHERE user_id = $1",
+                    self.user_id
+                )
 
-            now = datetime.datetime.utcnow()
+                now = datetime.datetime.utcnow()
 
-            if record:
-                last_used = record['last_used']
-                times_pressed = record['times_pressed']
-                if last_used and (now - last_used).total_seconds() < COOLDOWN_SECONDS:
-                    remaining = COOLDOWN_SECONDS - (now - last_used).total_seconds()
-                    minutes = int(remaining // 60)
-                    seconds = int(remaining % 60)
-                    return await interaction.response.send_message(
-                        f"🕒 You must wait {minutes}m {seconds}s before pressing again.",
-                        ephemeral=True
+                if record:
+                    last_used = record['last_used']
+                    times_pressed = record['times_pressed']
+                    if last_used and (now - last_used).total_seconds() < COOLDOWN_SECONDS:
+                        remaining = COOLDOWN_SECONDS - (now - last_used).total_seconds()
+                        minutes = int(remaining // 60)
+                        seconds = int(remaining % 60)
+                        await interaction.response.send_message(
+                            f"🕒 You must wait {minutes}m {seconds}s before pressing again.",
+                            ephemeral=True
+                        )
+                        return
+                else:
+                    await conn.execute(
+                        "INSERT INTO user_secret_button (user_id, times_pressed, last_used) VALUES ($1, 0, $2)",
+                        self.user_id, now
                     )
-            else:
-                # Insert new user row if they haven't played yet
+                    times_pressed = 0
+
+                times_pressed += 1
+
                 await conn.execute(
-                    "INSERT INTO user_secret_button (user_id, times_pressed, last_used) VALUES ($1, 0, $2)",
-                    self.user_id, now
+                    "UPDATE user_secret_button SET times_pressed = $1, last_used = $2 WHERE user_id = $3",
+                    times_pressed, now, self.user_id
                 )
-                times_pressed = 0
 
-            times_pressed += 1
-
-            # Update press count and timestamp
-            await conn.execute(
-                "UPDATE user_secret_button SET times_pressed = $1, last_used = $2 WHERE user_id = $3",
-                times_pressed, now, self.user_id
-            )
-
-            if times_pressed >= PRESS_GOAL:
-                # Reward user
-                await conn.execute(
-                    "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
-                    REWARD_AMOUNT, self.user_id
-                )
-                await interaction.response.edit_message(
-                    embed=discord.Embed(
-                        title="🌟 Something *Finally* Happened!",
-                        description=f"You've pressed the button **{PRESS_GOAL} times**.\n\n💰 **${REWARD_AMOUNT:,}** has been added to your account.",
-                        color=discord.Color.gold()
-                    ),
-                    view=None
-                )
-            else:
-                message = random.choice(NOTHING_MESSAGES)
-                await interaction.response.edit_message(
-                    embed=discord.Embed(
-                        title="You pressed the button.",
-                        description=message,
-                        color=discord.Color.red()
-                    ),
-                    view=self
-                )
+                if times_pressed >= PRESS_GOAL:
+                    await conn.execute(
+                        "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
+                        REWARD_AMOUNT, self.user_id
+                    )
+                    await interaction.response.edit_message(
+                        embed=discord.Embed(
+                            title="🌟 Something *Finally* Happened!",
+                            description=f"You've pressed the button **{PRESS_GOAL} times**.\n\n💰 **${REWARD_AMOUNT:,}** has been added to your account.",
+                            color=discord.Color.gold()
+                        ),
+                        view=None
+                    )
+                else:
+                    message = random.choice(NOTHING_MESSAGES)
+                    await interaction.response.edit_message(
+                        embed=discord.Embed(
+                            title="You pressed the button.",
+                            description=message,
+                            color=discord.Color.red()
+                        ),
+                        view=self
+                    )
+        except Exception as e:
+            print(f"Error in button press callback: {e}")
+            try:
+                await interaction.response.send_message(f"An error occurred: {e}", ephemeral=True)
+            except Exception:
+                pass  # If already responded or can't send, just fail silently here
 
 
 class ButtonGame(commands.Cog):
