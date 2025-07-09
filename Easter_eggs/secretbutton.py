@@ -115,4 +115,4 @@ class ButtonGame(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(ButtonGame(bot, bot.db))
+    await bot.add_cog(ButtonGame(bot, bot.pool))
