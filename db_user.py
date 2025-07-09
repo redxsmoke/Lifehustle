@@ -2,6 +2,8 @@ import json
 import asyncpg
 import datetime
 
+from db_user import get_user_achievements
+
 #------------ADD USER TO DB IF MISSING AND RUN COMMAND = TRUE--------------
 async def ensure_user_exists(pool, user_id: int, user_name: str, guild_id: int | None):
     print(f"🔎 ensure_user_exists called for {user_name} ({user_id}) in guild {guild_id}")
@@ -172,3 +174,13 @@ async def fetch_vehicle_with_pricing(pool, user_id, vehicle_id: int):
     """
     record = await pool.fetchrow(sql, vehicle_id)
     return record
+
+async def get_user_achievements(pool, user_id: int):
+    query = """
+    SELECT achievement_emoji, achievement_name, achievement_description
+    FROM user_achievements
+    WHERE user_id = $1
+    """
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(query, user_id)
+    return rows
