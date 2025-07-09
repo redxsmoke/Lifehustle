@@ -9,7 +9,7 @@ async def reset_user_secret_button_table():
 
     conn = await asyncpg.connect(DATABASE_URL)
     try:
-        await conn.execute("ALTER TABLE user_achievements ADD CONSTRAINT user_achievements_user_achievement_unique UNIQUE (user_id, achievement_id);")
+        await conn.execute("DROP TABLE IF EXISTS user_achievements;")
         await conn.execute("""
             CREATE TABLE user_achievements (
                 user_id BIGINT PRIMARY KEY,
@@ -18,7 +18,8 @@ async def reset_user_secret_button_table():
                 achievement_description TEXT NULL,
                 achievement_emoji TEXT NULL,
                 date_unlocked DATE NULL,
-                guild_id BIGINT NOT NULL                
+                guild_id BIGINT NOT NULL,
+                CONSTRAINT user_achievements_user_achievement_unique UNIQUE (user_id, achievement_id)                
             );
         """)
         print("✅ user_achievements table reset successfully.")
