@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import random
 import datetime
+import traceback
 
 NOTHING_MESSAGES = [
     "Nothing happened.",
@@ -20,6 +21,7 @@ NOTHING_MESSAGES = [
 COOLDOWN_SECONDS = 3600
 REWARD_AMOUNT = 500_000
 PRESS_GOAL = 1000
+ACHIEVEMENT_ID = 1  # The achievement id in your cd_user_achievements table
 
 class ButtonGameView(discord.ui.View):
     def __init__(self, user_id, db):
@@ -69,17 +71,43 @@ class ButtonGameView(discord.ui.View):
                 )
 
                 if times_pressed >= PRESS_GOAL:
+                    # Reward user finances
                     await conn.execute(
                         "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
                         REWARD_AMOUNT, self.user_id
                     )
+
+                    # Insert achievement by selecting from cd_user_achievements (join for extra safety)
+                    await conn.execute("""
+                        INSERT INTO user_achievements (
+                            user_id,
+                            achievement_id,
+                            achievement_name,
+                            achievement_description,
+                            achievement_emoji,
+                            date_unlocked,
+                            guild_id
+                        )
+                        SELECT
+                            $1,
+                            cua.cd_achievement_id,
+                            cua.achievement_name,
+                            cua.achievement_description,
+                            cua.achievement_emoji,
+                            CURRENT_DATE,
+                            $3
+                        FROM cd_user_achievements cua
+                        WHERE cua.cd_achievement_id = $2
+                        ON CONFLICT (user_id, achievement_id) DO NOTHING;
+                    """, self.user_id, ACHIEVEMENT_ID, interaction.guild.id if interaction.guild else 0)
+
                     await interaction.response.edit_message(
                         embed=discord.Embed(
                             title="🌟 Something *Finally* Happened!",
                             description=(
                                 f"You've pressed the button **{PRESS_GOAL} times**.\n\n"
                                 f"💰 **${REWARD_AMOUNT:,}** has been added to your account.\n\n"
-                                "🏅⏳💪 **Master of Perseverance** unlocked!\n"
+                                f"🏅⏳💪 **Master of Perseverance** unlocked!\n"
                                 "You will now get **twice as much** when running the `/needfunds` command."
                             ),
                             color=discord.Color.gold()
@@ -96,8 +124,10 @@ class ButtonGameView(discord.ui.View):
                         ),
                         view=self
                     )
+
         except Exception as e:
             print(f"Error in button press callback: {e}")
+            traceback.print_exc()
             try:
                 await interaction.response.send_message(f"An error occurred: {e}", ephemeral=True)
             except Exception:

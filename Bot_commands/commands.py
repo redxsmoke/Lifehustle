@@ -261,7 +261,7 @@ def register_commands(tree: app_commands.CommandTree):
 
         # Check achievement
         achievement = await pool.fetchrow(
-            "SELECT 1 FROM cd_user_achievements WHERE user_id = $1 AND achievement_id = 1",
+            "SELECT 1 FROM user_achievements WHERE user_id = $1 AND achievement_id = 1",
             user_id
         )
         if achievement:
