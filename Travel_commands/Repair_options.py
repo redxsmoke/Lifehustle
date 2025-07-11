@@ -296,4 +296,47 @@ class RepairOptionsView(View):
             await interaction.response.send_message(
                 "❌ Something went wrong selling the vehicle. Please try again later.", ephemeral=True
             )
-            #
+    @discord.ui.button(label="🩹 Duct Tape It", style=discord.ButtonStyle.secondary)
+    async def duct_tape_it(self, interaction: discord.Interaction, button: Button):
+        print(f"[DEBUG] duct_tape_it button clicked by {interaction.user} (id={interaction.user.id})")
+        try:
+            if random.random() < 0.9:
+                # Failure
+                embed = discord.Embed(
+                    description="🩹 YOU ACTUALLY THOUGHT THAT WOULD WORK - LOL",
+                    color=COLOR_RED
+                )
+                await interaction.response.edit_message(embed=embed, view=None)
+            else:
+                # Success!
+                new_travel_count = get_random_travel_count(self.vehicle["vehicle_type_id"])
+                if new_travel_count is None:
+                    await interaction.response.send_message(
+                        "❌ This vehicle type cannot be duct-taped into working.", ephemeral=True
+                    )
+                    return
+                new_breakdown_threshold = random.randint(200, 299)
+
+                await update_vehicle_condition_and_description(
+                    self.pool,
+                    self.user_id,
+                    self.vehicle["id"],
+                    self.vehicle["vehicle_type_id"],
+                    new_travel_count,
+                    new_breakdown_threshold
+                )
+
+                embed = discord.Embed(
+                    description=(
+                        "🔧 holy shit that actually worked...?\n"
+                        f"Your travel count is now **{new_travel_count}**. Let's hope it holds!"
+                    ),
+                    color=COLOR_GREEN
+                )
+                await interaction.response.edit_message(embed=embed, view=None)
+        except Exception as e:
+            print(f"[ERROR] Exception in duct_tape_it callback: {e}")
+            await interaction.response.send_message(
+                "⚠️ Something went wrong with the duct tape attempt. Please try again later.",
+                ephemeral=True
+            )
