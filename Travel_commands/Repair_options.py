@@ -73,7 +73,7 @@ class RepairOptionsView(View):
                     description=f"🚫 You need ${cost:,} to pay the mechanic but don't have enough funds.",
                     color=COLOR_RED
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
+                await interaction.response.send_message(embed=embed, ephemeral=False)
                 return
 
             # Check if the user is a mechanic
@@ -92,7 +92,7 @@ class RepairOptionsView(View):
             new_travel_count = get_random_travel_count(self.vehicle["vehicle_type_id"])
             if new_travel_count is None:
                 await interaction.response.send_message(
-                    "❌ This vehicle type cannot be repaired by mechanic.", ephemeral=True
+                    "❌ This vehicle type cannot be repaired by mechanic.", ephemeral=False
                 )
                 return
             new_breakdown_threshold = random.randint(200, 299)
@@ -155,7 +155,7 @@ class RepairOptionsView(View):
         except Exception as e:
             print(f"[ERROR] Exception in mechanic_repair callback: {e}")
             await interaction.response.send_message(
-                "⚠️ Something went wrong during mechanic repair. Please try again later.", ephemeral=True
+                "⚠️ Something went wrong during mechanic repair. Please try again later.", ephemeral=False
             )
 
 
@@ -175,7 +175,7 @@ class RepairOptionsView(View):
                         description=f"🚫 You need ${cost:,} to pay Uncle Bill but don't have enough funds.",
                         color=COLOR_RED
                     )
-                    await interaction.response.send_message(embed=embed, ephemeral=True)
+                    await interaction.response.send_message(embed=embed, ephemeral=False)
                     return
 
                 await charge_user(self.pool, self.user_id, cost)
@@ -183,7 +183,7 @@ class RepairOptionsView(View):
                 new_travel_count = get_random_travel_count(self.vehicle["vehicle_type_id"])
                 if new_travel_count is None:
                     await interaction.response.send_message(
-                        "❌ This vehicle type cannot be repaired by Uncle Bill.", ephemeral=True
+                        "❌ This vehicle type cannot be repaired by Uncle Bill.", ephemeral=False
                     )
                     return
                 new_breakdown_threshold = random.randint(200, 299)
@@ -235,7 +235,7 @@ class RepairOptionsView(View):
         except Exception as e:
             print(f"[ERROR] Exception in uncle_bill callback: {e}")
             await interaction.response.send_message(
-                "⚠️ Something went wrong with Uncle Bill's repair. Please try again later.", ephemeral=True
+                "⚠️ Something went wrong with Uncle Bill's repair. Please try again later.", ephemeral=False
             )
 
     async def sell_for_parts(self, interaction: discord.Interaction):
@@ -276,7 +276,7 @@ class RepairOptionsView(View):
                 view=self
             )
         else:
-            await interaction.response.send_message("⏳ Please confirm or cancel the sale first.", ephemeral=True)
+            await interaction.response.send_message("⏳ Please confirm or cancel the sale first.", ephemeral=False)
 
     async def finalize_sale(self, interaction: discord.Interaction):
         try:
@@ -294,7 +294,7 @@ class RepairOptionsView(View):
         except Exception as e:
             print(f"[ERROR] Exception in finalize_sale: {e}")
             await interaction.response.send_message(
-                "❌ Something went wrong selling the vehicle. Please try again later.", ephemeral=True
+                "❌ Something went wrong selling the vehicle. Please try again later.", ephemeral=False
             )
     @discord.ui.button(label="🩹 Duct Tape It", style=discord.ButtonStyle.secondary)
     async def duct_tape_it(self, interaction: discord.Interaction, button: Button):
@@ -321,7 +321,7 @@ class RepairOptionsView(View):
                 new_travel_count = get_random_travel_count(self.vehicle["vehicle_type_id"])
                 if new_travel_count is None:
                     await interaction.response.send_message(
-                        "❌ This vehicle type cannot be duct-taped into working.", ephemeral=True
+                        "❌ This vehicle type cannot be duct-taped into working.", ephemeral=False
                     )
                     return
                 new_breakdown_threshold = random.randint(200, 299)
@@ -347,6 +347,6 @@ class RepairOptionsView(View):
             print(f"[ERROR] Exception in duct_tape_it callback: {e}")
             await interaction.response.send_message(
                 "⚠️ Something went wrong with the duct tape attempt. Please try again later.",
-                ephemeral=True
+                ephemeral=False
             )
 
