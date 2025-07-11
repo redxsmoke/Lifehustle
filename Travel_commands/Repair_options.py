@@ -300,15 +300,24 @@ class RepairOptionsView(View):
     async def duct_tape_it(self, interaction: discord.Interaction, button: Button):
         print(f"[DEBUG] duct_tape_it button clicked by {interaction.user} (id={interaction.user.id})")
         try:
-            if random.random() < 0.9:
-                # Failure
+            failure_messages = [
+                "YOU ACTUALLY THOUGHT THAT WOULD WORK? LOL",
+                "You’re about as smart as a screen door on a submarine in a storm.",
+                "Your repair skills are about as effective as a blindfolded toddler with a hammer.",
+                "That repair has all the strength of a wet napkin in a hurricane.",
+                "I’ve met cardboard boxes holding together better than your ‘fix’ does.",
+                "Your fix is about as reliable as patching a leaky boat with chewing gum.",
+            ]
+            if random.random() < 0.98:
+                # Pick a random roast failure message
+                message = random.choice(failure_messages)
                 embed = discord.Embed(
-                    description="🩹 YOU ACTUALLY THOUGHT THAT WOULD WORK - LOL",
+                    description=message,
                     color=COLOR_RED
                 )
                 await interaction.response.edit_message(embed=embed, view=None)
             else:
-                # Success!
+                # Success: fix vehicle
                 new_travel_count = get_random_travel_count(self.vehicle["vehicle_type_id"])
                 if new_travel_count is None:
                     await interaction.response.send_message(
@@ -328,8 +337,8 @@ class RepairOptionsView(View):
 
                 embed = discord.Embed(
                     description=(
-                        "🔧 holy shit that actually worked...?\n"
-                        f"Your travel count is now **{new_travel_count}**. Let's hope it holds!"
+                        "🔧 holy shit that actually worked...\n"
+                        f"Your travel count is now **{new_travel_count}**. Let’s hope it holds!"
                     ),
                     color=COLOR_GREEN
                 )
@@ -340,3 +349,4 @@ class RepairOptionsView(View):
                 "⚠️ Something went wrong with the duct tape attempt. Please try again later.",
                 ephemeral=True
             )
+
