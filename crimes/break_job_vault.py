@@ -118,7 +118,7 @@ class VaultGameView(discord.ui.View):
         try:
             view = HideOnlyView(self)
             await interaction.followup.send(
-                content="Preparing hide options...",  # Or just "" if you want it empty
+                content="Choose your escape method...",  # Or just "" if you want it empty
                 view=view,
             )
         except Exception as e:
@@ -357,7 +357,19 @@ class SnitchConfirmView(discord.ui.View):
                 if not self.parent.hide_spot_chosen:
                     # Robber failed to hide, mark failure and notify
                     self.parent.outcome = "failure"
-                    await channel.send(f"🚨 The suspect failed to hide after snitch and got caught!")
+
+                    robber = self.parent.bot.get_user(self.parent.user_id)
+                    robber_mention = robber.mention if robber else "The suspect"
+
+                    embed = discord.Embed(
+                        title="🚨 Caught in the Act!",
+                        description=(
+                            f"{robber_mention} decided that rubbing one out in the bathroom was way more important than evading the police "
+                            "and got arrested. They've been fired and their checking account funds have been seized for \"investigation\" 😉😉"
+                        ),
+                        color=0xF04747
+                    )
+                    await channel.send(embed=embed)
                     print("[DEBUG][SnitchConfirmView] Robber failed to hide in time and got caught!")
 
                     # Update DB to reflect caught state
@@ -371,8 +383,9 @@ class SnitchConfirmView(discord.ui.View):
                             )
                     except Exception as e:
                         print(f"[ERROR][SnitchConfirmView] Failed to update DB for caught robber after no hide: {e}")
+                    
                     self.parent.robbery_complete.set()
-        asyncio.create_task(wait_for_hide_choice())
+
 
     @discord.ui.button(label="I ain't no snitch", style=discord.ButtonStyle.grey)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
