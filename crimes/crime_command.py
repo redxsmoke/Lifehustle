@@ -16,20 +16,40 @@ class CrimeCommands(commands.Cog):
         )
 
     async def handle_rob_job(self, interaction: discord.Interaction):
-        view = VaultGameView(user_id=interaction.user.id)
-        await interaction.response.send_message(
-            content="💼 You're breaking into your workplace safe... Try to crack the code!",
-            view=view
-        )
-        await view.wait()
+        try:
+            view = VaultGameView(user_id=interaction.user.id)
+            await interaction.response.send_message(
+                content="💼 You're breaking into your workplace safe... Try to crack the code!",
+                view=view,
+                ephemeral=True
+            )
+            await view.wait()
 
-        if view.outcome == "success":
-            # TODO: Issue payout logic here
-            await interaction.followup.send("✅ You successfully cracked the vault and got away with the loot! (Payout pending)")
+            # Handle game result after view finishes
+            if view.outcome == "success":
+                await interaction.followup.send(
+                    "✅ You successfully cracked the vault and got away with the loot! (Payout pending)",
+                    ephemeral=True
+                )
 
-        elif view.outcome == "failure":
-            # TODO: Trigger police response options here
-            await interaction.followup.send("🚨 You failed to crack the vault. Alarm triggered. Police are on their way!")
+            elif view.outcome == "failure":
+                await interaction.followup.send(
+                    "🚨 You failed to crack the vault. Alarm triggered. Police are on their way!",
+                    ephemeral=True
+                )
+
+            else:
+                await interaction.followup.send(
+                    "🤔 You gave up or the game timed out.",
+                    ephemeral=True
+                )
+
+        except Exception as e:
+            print(f"❌ Error in handle_rob_job: {e}")
+            if not interaction.response.is_done():
+                await interaction.response.send_message("Something went wrong.", ephemeral=True)
+            else:
+                await interaction.followup.send("Something went wrong.", ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(CrimeCommands(bot))

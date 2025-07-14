@@ -53,10 +53,18 @@ class TheftLocationDropdown(discord.ui.Select):
         if location == "Rob your job":
             cog = self.parent_view.bot.get_cog("CrimeCommands")
             if cog:
-                await cog.handle_rob_job(interaction)
+                try:
+                    await cog.handle_rob_job(interaction)
+                except Exception as e:
+                    print(f"❌ Error in handle_rob_job: {e}")
+                    await interaction.followup.send(
+                        "❌ Something went wrong during the robbery attempt.",
+                        ephemeral=True
+                    )
             else:
+                print("❌ CrimeCommands cog not found!")
                 await interaction.response.send_message(
-                    "⚠️ Crime system not available.", ephemeral=True
+                    "⚠️ Crime system not available. (Cog missing)", ephemeral=True
                 )
         else:
             await interaction.response.send_message("Location not implemented yet.", ephemeral=True)
