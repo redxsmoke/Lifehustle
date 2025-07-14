@@ -33,7 +33,7 @@ class CrimeCommands(commands.Cog):
             await interaction.response.send_message(
                 embed=discord.Embed(
                     title="💼 Breaking In...",
-                    description="You're breaking into your workplace safe...If you get caught you will certainly be fired and possible go to jail. Do you with to continue?",
+                    description="You're breaking into your workplace safe...If you get caught you will certainly be fired and possibly go to jail. Do you with to continue?",
                     color=0xFAA61A,
                 ),
                 view=confirm_view,
@@ -85,31 +85,28 @@ class CrimeCommands(commands.Cog):
             print(f"[DEBUG] VaultGameView ended with outcome: {vault_view.outcome}")
 
             if vault_view.outcome == "success":
-                # Step 1: Calculate the payout
                 base_amount = random.randint(1000, 5000)
                 multiplier = round(random.uniform(1.0, 5.0), 2)
                 payout = int(base_amount * multiplier)
 
-                # Step 2: Update the database
-                async with self.bot.db.execute("SELECT checking_account_balance FROM user_finances WHERE user_id = ?", (interaction.user.id,)) as cursor:
-                    row = await cursor.fetchone()
+                async with self.bot.pool.acquire() as conn:
+                    row = await conn.fetchrow(
+                        "SELECT checking_account_balance FROM user_finances WHERE user_id = $1",
+                        interaction.user.id
+                    )
                     if row:
-                        new_balance = row[0] + payout
-                        await self.bot.db.execute(
-                            "UPDATE user_finances SET checking_account_balance = ? WHERE user_id = ?",
-                            (new_balance, interaction.user.id)
+                        new_balance = row["checking_account_balance"] + payout
+                        await conn.execute(
+                            "UPDATE user_finances SET checking_account_balance = $1 WHERE user_id = $2",
+                            new_balance, interaction.user.id
                         )
                     else:
-                        # If the user doesn't exist yet in finances, insert a new row
                         new_balance = payout
-                        await self.bot.db.execute(
-                            "INSERT INTO user_finances (user_id, checking_account_balance) VALUES (?, ?)",
-                            (interaction.user.id, payout)
+                        await conn.execute(
+                            "INSERT INTO user_finances (user_id, checking_account_balance) VALUES ($1, $2)",
+                            interaction.user.id, payout
                         )
 
-                await self.bot.db.commit()
-
-                # Step 3: Send success message with amount
                 outcome_embed = discord.Embed(
                     title="✅ Vault Cracked!",
                     description=f"You successfully cracked the vault and escaped with **${payout:,}**! 💰",
