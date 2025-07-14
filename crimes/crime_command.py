@@ -47,31 +47,20 @@ class CrimeCommands(commands.Cog):
 
             @discord.ui.button(label="Continue", style=discord.ButtonStyle.green)
             async def continue_button(self, button, interaction: discord.Interaction):
-                print(f"[DEBUG] Continue button pressed by {interaction.user} ({interaction.user.id})")
+                print(f"[DEBUG][ConfirmRobberyView] Continue button clicked by {interaction.user} ({interaction.user.id})")
                 self.value = True
-                self.user_interaction = interaction
-                try:
-                    await interaction.response.send_message(
-                        "✅ Robbery confirmed! Cracking the vault now...", ephemeral=True
-                    )
-                    print("[DEBUG] Sent confirmation message for Continue button.")
-                except Exception as e:
-                    print(f"[ERROR] Failed to send Continue button response: {e}")
+                self.button_interaction = interaction
+                await interaction.response.send_message("✅ Robbery confirmed! Cracking the vault now...", ephemeral=True)
                 self.stop()
 
             @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
             async def cancel_button(self, button, interaction: discord.Interaction):
-                print(f"[DEBUG] Cancel button pressed by {interaction.user} ({interaction.user.id})")
+                print(f"[DEBUG][ConfirmRobberyView] Cancel button clicked by {interaction.user} ({interaction.user.id})")
                 self.value = False
-                self.user_interaction = interaction
-                try:
-                    await interaction.response.send_message(
-                        "❌ Robbery cancelled.", ephemeral=True
-                    )
-                    print("[DEBUG] Sent cancellation message for Cancel button.")
-                except Exception as e:
-                    print(f"[ERROR] Failed to send Cancel button response: {e}")
+                self.button_interaction = interaction
+                await interaction.response.send_message("❌ Robbery cancelled.", ephemeral=True)
                 self.stop()
+
 
         confirm_view = ConfirmRobberyView(user_id=interaction.user.id)
 
