@@ -45,6 +45,7 @@ class VaultGameView(discord.ui.View):
     def __init__(self, user_id):
         super().__init__(timeout=120)
         self.user_id = user_id
+        self.robbery_complete = asyncio.Event()
         self.game = VaultGame()
         self.outcome = None
         self.snitched = False
@@ -158,6 +159,7 @@ class VaultGameView(discord.ui.View):
             await interaction.channel.send("🎉 The police searched everywhere but couldn’t find anyone. The suspect evaded capture!")
             print(f"[DEBUG][VaultGameView] User {interaction.user.id} evaded police successfully")
 
+        self.robbery_complete.set()
         self.stop()
 
         print("[DEBUG][VaultGameView] View stopped.")

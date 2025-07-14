@@ -82,8 +82,9 @@ class CrimeCommands(commands.Cog):
             )
             print("[DEBUG] VaultGameView message sent.")
             await vault_view.disable_snitch_button_later(msg)
-            await vault_view.wait()
-            print(f"[DEBUG] VaultGameView ended with outcome: {vault_view.outcome}, snitched: {vault_view.snitched}")
+            await vault_view.robbery_complete.wait()
+            print(f"[DEBUG] VaultGameView robbery completed. Outcome: {vault_view.outcome}, snitched: {vault_view.snitched}")
+
 
             # Removed if vault_view.snitched block here
 
