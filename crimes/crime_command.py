@@ -1,7 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-from crimes.crime_views import CrimeSelectionView
+from crimes.crime_views import CrimeSelectionView, ConfirmRobberyView
 from crimes.break_job_vault import VaultGameView
 
 class CrimeCommands(commands.Cog):
@@ -25,42 +25,6 @@ class CrimeCommands(commands.Cog):
 
     async def handle_rob_job(self, interaction: discord.Interaction):
         print(f"[DEBUG] handle_rob_job started for {interaction.user} ({interaction.user.id})")
-
-        class ConfirmRobberyView(discord.ui.View):
-            def __init__(self, user_id):
-                super().__init__(timeout=60)
-                self.user_id = user_id
-                self.value = None
-                self.user_interaction = None  # Store the interaction object
-
-            async def interaction_check(self, interaction: discord.Interaction) -> bool:
-                if interaction.user.id != self.user_id:
-                    try:
-                        await interaction.response.send_message(
-                            "This isn't your robbery to confirm/cancel!", ephemeral=True
-                        )
-                        print(f"[DEBUG] Blocked interaction from user {interaction.user.id} not matching {self.user_id}")
-                    except Exception as e:
-                        print(f"[ERROR] interaction_check failed to send message: {e}")
-                    return False
-                return True
-
-            @discord.ui.button(label="Continue", style=discord.ButtonStyle.green)
-            async def continue_button(self, button, interaction: discord.Interaction):
-                print(f"[DEBUG][ConfirmRobberyView] Continue button clicked by {interaction.user} ({interaction.user.id})")
-                self.value = True
-                self.button_interaction = interaction
-                await interaction.response.send_message("✅ Robbery confirmed! Cracking the vault now...", ephemeral=True)
-                self.stop()
-
-            @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
-            async def cancel_button(self, button, interaction: discord.Interaction):
-                print(f"[DEBUG][ConfirmRobberyView] Cancel button clicked by {interaction.user} ({interaction.user.id})")
-                self.value = False
-                self.button_interaction = interaction
-                await interaction.response.send_message("❌ Robbery cancelled.", ephemeral=True)
-                self.stop()
-
 
         confirm_view = ConfirmRobberyView(user_id=interaction.user.id)
 

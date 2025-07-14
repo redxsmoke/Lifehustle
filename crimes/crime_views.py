@@ -92,3 +92,40 @@ class TheftLocationDropdown(discord.ui.Select):
                 )
         else:
             await interaction.response.send_message("Location not implemented yet.", ephemeral=True)
+
+import discord
+
+class ConfirmRobberyView(discord.ui.View):
+    def __init__(self, user_id):
+        super().__init__(timeout=60)
+        self.user_id = user_id
+        self.value = None
+        self.user_interaction = None  # Store the interaction object when button clicked
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id != self.user_id:
+            try:
+                await interaction.response.send_message(
+                    "This isn't your robbery to confirm/cancel!", ephemeral=True
+                )
+                print(f"[DEBUG] Blocked interaction from user {interaction.user.id} not matching {self.user_id}")
+            except Exception as e:
+                print(f"[ERROR] interaction_check failed to send message: {e}")
+            return False
+        return True
+
+    @discord.ui.button(label="Continue", style=discord.ButtonStyle.green)
+    async def continue_button(self, button, interaction: discord.Interaction):
+        print(f"[DEBUG][ConfirmRobberyView] Continue button clicked by {interaction.user} ({interaction.user.id})")
+        self.value = True
+        self.user_interaction = interaction
+        await interaction.response.send_message("✅ Robbery confirmed! Cracking the vault now...", ephemeral=True)
+        self.stop()
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
+    async def cancel_button(self, button, interaction: discord.Interaction):
+        print(f"[DEBUG][ConfirmRobberyView] Cancel button clicked by {interaction.user} ({interaction.user.id})")
+        self.value = False
+        self.user_interaction = interaction
+        await interaction.response.send_message("❌ Robbery cancelled.", ephemeral=True)
+        self.stop()
