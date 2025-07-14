@@ -113,11 +113,12 @@ class VaultGameView(discord.ui.View):
         try:
             view = HideOnlyView(self)
             await interaction.followup.send(
-                content="🚨 Alarm Triggered!\nYou failed to crack the vault. Police are on their way to this location! 🚓",
+                content="Preparing hide options...",  # Or just "" if you want it empty
                 view=view,
             )
         except Exception as e:
             print(f"[ERROR][VaultGameView] Failed to send hide button message: {e}")
+
 
     async def process_police_search(self, interaction: discord.Interaction, chosen_spot: str):
         searched_spots = random.sample(self.hide_spots, 3)
