@@ -27,7 +27,7 @@ class CrimeCommands(commands.Cog):
                 super().__init__(timeout=60)
                 self.user_id = user_id
                 self.value = None
-                self.button_interaction: discord.Interaction = None
+                self.button_interaction: discord.Interaction = None  # store interaction here
 
             async def interaction_check(self, interaction: discord.Interaction) -> bool:
                 if interaction.user.id != self.user_id:
@@ -40,7 +40,7 @@ class CrimeCommands(commands.Cog):
             @discord.ui.button(label="Continue", style=discord.ButtonStyle.green)
             async def continue_button(self, button, interaction: discord.Interaction):
                 self.value = True
-                self.button_interaction = interaction
+                self.button_interaction = interaction  # Store the interaction here, NOT the button
                 await interaction.response.send_message(
                     "✅ Robbery confirmed! Cracking the vault now...", ephemeral=True
                 )
@@ -49,7 +49,7 @@ class CrimeCommands(commands.Cog):
             @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
             async def cancel_button(self, button, interaction: discord.Interaction):
                 self.value = False
-                self.button_interaction = interaction
+                self.button_interaction = interaction  # Store the interaction here, NOT the button
                 await interaction.response.send_message(
                     "❌ Robbery cancelled.", ephemeral=True
                 )
@@ -57,23 +57,25 @@ class CrimeCommands(commands.Cog):
 
         confirm_view = ConfirmRobberyView(user_id=interaction.user.id)
 
-        # Defer original slash command response because we'll send the view in a followup
+        # Defer initial response to allow followup
         await interaction.response.defer(ephemeral=True)
 
+        # Send the initial embed with buttons as a followup
         await interaction.followup.send(
             embed=discord.Embed(
                 title="💼 Breaking In...",
                 description="You're breaking into your workplace safe... Try to crack the code!",
-                color=0xFAA61A
+                color=0xFAA61A,
             ),
             view=confirm_view,
             ephemeral=True,
         )
 
-        # Wait for Continue or Cancel button press
+        # Wait for user to click Continue or Cancel
         await confirm_view.wait()
 
         if confirm_view.value is None:
+            # Timeout case: user didn't click
             await interaction.followup.send(
                 embed=discord.Embed(
                     title="⌛ Timeout",
@@ -85,12 +87,13 @@ class CrimeCommands(commands.Cog):
             return
 
         if not confirm_view.value:
-            # User cancelled, message already sent in cancel_button
+            # Cancel message already sent in cancel_button callback
             return
 
-        # User confirmed robbery, start VaultGameView
+        # User confirmed, start VaultGameView
         try:
             vault_view = VaultGameView(user_id=interaction.user.id)
+
             await confirm_view.button_interaction.followup.send(
                 embed=discord.Embed(
                     title="🔐 Vault Crack In Progress",
