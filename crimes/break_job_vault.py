@@ -134,8 +134,6 @@ class VaultGameView(discord.ui.View):
         await interaction.channel.send("🚨 The police have arrived on scene...")
         print("[DEBUG][VaultGameView] Sent police arrival message.")
 
-        print("[DEBUG][VaultGameView] Police arrived.")
-
         for emoji, spot in searched_spots:
             await asyncio.sleep(5)
             await interaction.channel.send(f"🔍 The police search **{spot}**...")
@@ -147,24 +145,33 @@ class VaultGameView(discord.ui.View):
         await asyncio.sleep(5)
 
         if caught:
-            await interaction.channel.send(f"🚨 The police found someone hiding **{chosen_spot}**! They're arrested and fired!")
-            print(f"[DEBUG][VaultGameView] User {interaction.user.id} caught hiding in {chosen_spot}")
+            self.outcome = "Caught"
+            robber = interaction.guild.get_member(self.user_id)
+            robber_name = robber.mention if robber else "the suspect"
+            await interaction.channel.send(
+                f"🚨 The police found {robber_name} hiding **{chosen_spot}**! They're arrested and fired!"
+            )
+            print(f"[DEBUG][VaultGameView] User {self.user_id} caught hiding in {chosen_spot}")
 
-            async with interaction.client.pool.acquire() as conn:
-                await conn.execute("UPDATE user_finances SET checking_account_balance = 0 WHERE user_id = $1", interaction.user.id)
-                await conn.execute("UPDATE users SET occupation_id = NULL WHERE user_id = $1", interaction.user.id)
-                await conn.execute(
-                    "INSERT INTO user_criminal_record (user_id, date_of_offense, crime_id, crime_description, class) VALUES ($1, NOW(), 1, 'Theft', 'Misdemeanor')",
-                    interaction.user.id
-                )
+            try:
+                async with interaction.client.pool.acquire() as conn:
+                    await conn.execute("UPDATE user_finances SET checking_account_balance = 0 WHERE user_id = $1", self.user_id)
+                    await conn.execute("UPDATE users SET occupation_id = NULL WHERE user_id = $1", self.user_id)
+                    await conn.execute(
+                        "INSERT INTO user_criminal_record (user_id, date_of_offense, crime_id, crime_description, class) VALUES ($1, NOW(), 1, 'Theft', 'Misdemeanor')",
+                        self.user_id
+                    )
+            except Exception as e:
+                print(f"[ERROR][VaultGameView] Failed to update DB after police caught user: {e}")
         else:
+            self.outcome = 'Evaded Police'
             await interaction.channel.send("🎉 The police searched everywhere but couldn’t find anyone. The suspect evaded capture!")
-            print(f"[DEBUG][VaultGameView] User {interaction.user.id} evaded police successfully")
+            print(f"[DEBUG][VaultGameView] User {self.user_id} evaded police successfully")
 
         self.robbery_complete.set()
         self.stop()
-
         print("[DEBUG][VaultGameView] View stopped.")
+
 
 
 class HideOnlyView(discord.ui.View):
