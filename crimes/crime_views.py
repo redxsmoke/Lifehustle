@@ -1,9 +1,10 @@
 import discord
 
 class CrimeSelectionView(discord.ui.View):
-    def __init__(self, user: discord.User):
+    def __init__(self, user: discord.User, bot):
         super().__init__(timeout=60)
         self.user = user
+        self.bot = bot
         self.add_item(CrimeDropdown(self))
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -23,15 +24,16 @@ class CrimeDropdown(discord.ui.Select):
         if crime_choice == "Theft":
             await interaction.response.edit_message(
                 content="Where do you want to steal from?",
-                view=TheftLocationView(self.parent_view.user)
+                view=TheftLocationView(self.parent_view.user, self.parent_view.bot)
             )
         else:
             await interaction.response.send_message("Crime not implemented yet.", ephemeral=True)
 
 class TheftLocationView(discord.ui.View):
-    def __init__(self, user: discord.User):
+    def __init__(self, user: discord.User, bot):
         super().__init__(timeout=60)
         self.user = user
+        self.bot = bot
         self.add_item(TheftLocationDropdown(self))
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -49,9 +51,12 @@ class TheftLocationDropdown(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         location = self.values[0]
         if location == "Rob your job":
-            await interaction.response.send_message(
-                "You chose to rob your job! Mini-game coming soon...",
-                ephemeral=True
-            )
+            cog = self.parent_view.bot.get_cog("CrimeCommands")
+            if cog:
+                await cog.handle_rob_job(interaction)
+            else:
+                await interaction.response.send_message(
+                    "⚠️ Crime system not available.", ephemeral=True
+                )
         else:
             await interaction.response.send_message("Location not implemented yet.", ephemeral=True)
