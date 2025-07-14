@@ -3,6 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 from crimes.crime_views import CrimeSelectionView, ConfirmRobberyView
 from crimes.break_job_vault import VaultGameView
+import random
 
 class CrimeCommands(commands.Cog):
     def __init__(self, bot):

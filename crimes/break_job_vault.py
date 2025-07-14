@@ -7,7 +7,7 @@ class VaultGame:
     def __init__(self):
         self.code = [random.randint(0, 9) for _ in range(3)]
         self.attempts = 0
-        self.max_attempts = 5
+        self.max_attempts = 50
         print(f"[DEBUG][VaultGame] New game started with code: {self.code}")
 
     def check_guess(self, guess_str):
