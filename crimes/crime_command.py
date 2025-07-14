@@ -19,64 +19,49 @@ class CrimeCommands(commands.Cog):
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-    async def handle_rob_job(self, base_interaction: discord.Interaction):
-        print(f"[DEBUG] handle_rob_job started for {base_interaction.user} ({base_interaction.user.id})")
+    async def handle_rob_job(self, interaction: discord.Interaction):
+        print(f"[DEBUG] handle_rob_job started for {interaction.user} ({interaction.user.id})")
 
-        # Step 1: Confirmation View
         class ConfirmRobberyView(discord.ui.View):
             def __init__(self, user_id):
                 super().__init__(timeout=60)
                 self.user_id = user_id
                 self.value = None
-                self.interaction: discord.Interaction = None
+                self.button_interaction: discord.Interaction = None
 
-            async def interaction_check(self, interaction: discord.Interaction):
+            async def interaction_check(self, interaction: discord.Interaction) -> bool:
                 if interaction.user.id != self.user_id:
-                    await interaction.response.send_message(
-                        "This isn't your robbery to confirm/cancel!", ephemeral=True
-                    )
+                    await interaction.response.send_message("This isn't your robbery to confirm/cancel!", ephemeral=True)
                     return False
-                self.interaction = interaction  # Store interaction for followup
                 return True
 
             @discord.ui.button(label="Continue", style=discord.ButtonStyle.green)
             async def continue_button(self, button, interaction: discord.Interaction):
                 self.value = True
-                for child in self.children:
-                    child.disabled = True
-                await interaction.response.edit_message(
-                    content="✅ Robbery confirmed! Cracking the vault now...",
-                    view=self,
-                    embed=None
-                )
+                self.button_interaction = interaction
+                await interaction.response.send_message("✅ Robbery confirmed! Cracking the vault now...", ephemeral=True)
                 self.stop()
 
             @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
             async def cancel_button(self, button, interaction: discord.Interaction):
                 self.value = False
-                for child in self.children:
-                    child.disabled = True
-                await interaction.response.edit_message(
-                    content="❌ Robbery cancelled.",
-                    view=self,
-                    embed=None
-                )
+                self.button_interaction = interaction
+                await interaction.response.send_message("❌ Robbery cancelled.", ephemeral=True)
                 self.stop()
 
-        confirm_embed = discord.Embed(
+        # Step 1: Show the confirmation view
+        confirm_view = ConfirmRobberyView(user_id=interaction.user.id)
+        intro_embed = discord.Embed(
             title="💼 Breaking In...",
             description="You're breaking into your workplace safe... Try to crack the code!",
             color=0xFAA61A
         )
-
-        confirm_view = ConfirmRobberyView(user_id=base_interaction.user.id)
-        await base_interaction.response.send_message(embed=confirm_embed, view=confirm_view, ephemeral=True)
+        await interaction.response.send_message(embed=intro_embed, view=confirm_view, ephemeral=True)
 
         await confirm_view.wait()
 
-        # Don't use base_interaction anymore. Use confirm_view.interaction.
         if confirm_view.value is None:
-            await confirm_view.interaction.followup.send(
+            await interaction.followup.send(
                 embed=discord.Embed(
                     title="⌛ Timeout",
                     description="You took too long to decide. Robbery cancelled.",
@@ -87,20 +72,14 @@ class CrimeCommands(commands.Cog):
             return
 
         if not confirm_view.value:
-            await confirm_view.interaction.followup.send(
-                embed=discord.Embed(
-                    title="❌ Robbery Cancelled",
-                    description="You decided not to rob your job. Smart choice!",
-                    color=0xF04747
-                ),
-                ephemeral=True
-            )
+            # Already responded inside cancel_button
             return
 
-        # Step 2: Start vault game
+        # Step 2: Start VaultGameView
         try:
-            vault_view = VaultGameView(user_id=base_interaction.user.id)
-            await confirm_view.interaction.followup.send(
+            vault_view = VaultGameView(user_id=interaction.user.id)
+
+            await confirm_view.button_interaction.followup.send(
                 embed=discord.Embed(
                     title="🔐 Vault Crack In Progress",
                     description="Enter the 3-digit code to crack the vault!",
@@ -114,45 +93,36 @@ class CrimeCommands(commands.Cog):
 
             print(f"[DEBUG] VaultGameView ended with outcome: {vault_view.outcome}")
 
-            if vault_view.outcome == "success":
-                await confirm_view.interaction.followup.send(
-                    embed=discord.Embed(
-                        title="✅ Vault Cracked!",
-                        description="You successfully cracked the vault and got away with the loot! 💰",
-                        color=0x43B581
-                    ),
-                    ephemeral=True
-                )
+            outcome_embed = discord.Embed(color=discord.Color.blurple())
 
+            if vault_view.outcome == "success":
+                outcome_embed.title = "✅ Vault Cracked!"
+                outcome_embed.description = "You successfully cracked the vault and got away with the loot! 💰"
+                outcome_embed.color = 0x43B581
             elif vault_view.outcome == "failure":
-                await confirm_view.interaction.followup.send(
+                outcome_embed.title = "🚨 Alarm Triggered!"
+                outcome_embed.description = "You failed to crack the vault. Police are on their way! 🚓"
+                outcome_embed.color = 0xF04747
+            else:
+                outcome_embed.title = "⏳ Timeout or Abandoned"
+                outcome_embed.description = "You gave up or the game timed out."
+                outcome_embed.color = 0x747F8D
+
+            await confirm_view.button_interaction.followup.send(embed=outcome_embed, ephemeral=True)
+
+        except Exception as e:
+            print(f"❌ Exception in vault game: {e}")
+            try:
+                await confirm_view.button_interaction.followup.send(
                     embed=discord.Embed(
-                        title="🚨 Alarm Triggered!",
-                        description="You failed to crack the vault. Police are on their way! 🐷",
+                        title="❌ Error",
+                        description="Something went wrong during the robbery.",
                         color=0xF04747
                     ),
                     ephemeral=True
                 )
-            else:
-                await confirm_view.interaction.followup.send(
-                    embed=discord.Embed(
-                        title="🕒 Timeout or Abandoned",
-                        description="You gave up or the game timed out.",
-                        color=0x747F8D
-                    ),
-                    ephemeral=True
-                )
-
-        except Exception as e:
-            print(f"❌ Exception in vault game: {e}")
-            await confirm_view.interaction.followup.send(
-                embed=discord.Embed(
-                    title="❌ Error",
-                    description="Something went wrong during the robbery.",
-                    color=0xF04747
-                ),
-                ephemeral=True
-            )
+            except Exception as inner_e:
+                print(f"❌ Could not send error message: {inner_e}")
 
 async def setup(bot):
     await bot.add_cog(CrimeCommands(bot))
