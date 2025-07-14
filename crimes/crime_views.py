@@ -6,9 +6,13 @@ class CrimeSelectionView(discord.ui.View):
         self.user = user
         self.bot = bot
         self.add_item(CrimeDropdown(self))
+        print(f"[DEBUG][CrimeSelectionView] Initialized for user {user} ({user.id})")
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return interaction.user.id == self.user.id
+        is_user = interaction.user.id == self.user.id
+        if not is_user:
+            print(f"[DEBUG][CrimeSelectionView] Interaction check failed for user {interaction.user} ({interaction.user.id})")
+        return is_user
 
 class CrimeDropdown(discord.ui.Select):
     def __init__(self, parent_view):
@@ -21,6 +25,8 @@ class CrimeDropdown(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         crime_choice = self.values[0]
+        print(f"[DEBUG][CrimeDropdown] User {interaction.user} selected crime: {crime_choice}")
+
         if crime_choice == "Theft":
             await interaction.response.edit_message(
                 content="Where do you want to steal from?",
@@ -36,9 +42,13 @@ class TheftLocationView(discord.ui.View):
         self.user = user
         self.bot = bot
         self.add_item(TheftLocationDropdown(self))
+        print(f"[DEBUG][TheftLocationView] Initialized for user {user} ({user.id})")
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return interaction.user.id == self.user.id
+        is_user = interaction.user.id == self.user.id
+        if not is_user:
+            print(f"[DEBUG][TheftLocationView] Interaction check failed for user {interaction.user} ({interaction.user.id})")
+        return is_user
 
 class TheftLocationDropdown(discord.ui.Select):
     def __init__(self, parent_view):
@@ -51,24 +61,30 @@ class TheftLocationDropdown(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         location = self.values[0]
+        print(f"[DEBUG][TheftLocationDropdown] User {interaction.user} selected location: {location}")
+
         if location == "Rob your job":
             cog = self.parent_view.bot.get_cog("CrimeCommands")
             if cog:
                 try:
                     # Let handle_rob_job do the response
+                    print(f"[DEBUG][TheftLocationDropdown] Passing interaction to CrimeCommands.handle_rob_job for user {interaction.user}")
                     await cog.handle_rob_job(interaction)
                 except Exception as e:
                     print(f"❌ Error in handle_rob_job: {e}")
-                    if not interaction.response.is_done():
-                        await interaction.response.send_message(
-                            "❌ Something went wrong during the robbery attempt.",
-                            ephemeral=True
-                        )
-                    else:
-                        await interaction.followup.send(
-                            "❌ Something went wrong during the robbery attempt.",
-                            ephemeral=True
-                        )
+                    try:
+                        if not interaction.response.is_done():
+                            await interaction.response.send_message(
+                                "❌ Something went wrong during the robbery attempt.",
+                                ephemeral=True
+                            )
+                        else:
+                            await interaction.followup.send(
+                                "❌ Something went wrong during the robbery attempt.",
+                                ephemeral=True
+                            )
+                    except Exception as inner_e:
+                        print(f"❌ Failed to send error message: {inner_e}")
             else:
                 print("❌ CrimeCommands cog not found!")
                 await interaction.response.send_message(
