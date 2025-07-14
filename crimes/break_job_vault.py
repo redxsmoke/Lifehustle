@@ -1,5 +1,7 @@
 import discord
 import random
+from datetime import timedelta
+from datetime import datetime
 
 COLOR_PRIMARY = 0x5865F2  # Discord blurple
 
@@ -108,7 +110,7 @@ class VaultGameView(discord.ui.View):
         )
 
     async def disable_snitch_button_later(self, message: discord.Message):
-        await discord.utils.sleep_until(discord.utils.utcnow() + discord.utils.timedelta(seconds=10))
+        await discord.utils.sleep_until(datetime.utcnow() + timedelta(seconds=10))
 
         self.snitch_disabled = True  # Mark snitch as disabled
 
