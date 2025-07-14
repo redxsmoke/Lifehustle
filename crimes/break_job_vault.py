@@ -44,7 +44,7 @@ class VaultGame:
             return f"Attempt {self.attempts}/{self.max_attempts}: {clue_str}"
 
 class VaultGameView(discord.ui.View):
-    def __init__(self, user_id):
+    def __init__(self, user_id, bot):
         super().__init__(timeout=120)
         self.user_id = user_id
         self.robbery_complete = asyncio.Event()
