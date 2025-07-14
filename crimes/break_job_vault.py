@@ -125,44 +125,37 @@ class VaultGameView(discord.ui.View):
 
         print("[DEBUG][VaultGameView] Starting police arrival delay (5s)...")
         await asyncio.sleep(5)
-        print("[DEBUG][VaultGameView] Sending police arrival message.")
-        await interaction.followup.send("🚨 The police have arrived on scene...", ephemeral=True)
+
+        await interaction.channel.send("🚨 The police have arrived on scene...")
+        print("[DEBUG][VaultGameView] Police arrived.")
 
         for emoji, spot in searched_spots:
-            print(f"[DEBUG][VaultGameView] Sleeping 5s before searching {spot}")
             await asyncio.sleep(5)
-            print(f"[DEBUG][VaultGameView] Searching {spot}")
-            await interaction.followup.send(f"🔍 The police search **{spot}**...", ephemeral=True)
+            await interaction.channel.send(f"🔍 The police search **{spot}**...")
+            print(f"[DEBUG][VaultGameView] Police searched: {spot}")
             if spot == chosen_spot:
                 caught = True
-                print(f"[DEBUG][VaultGameView] Match found! Robber hiding in {spot}")
                 break
-            else:
-                print(f"[DEBUG][VaultGameView] {spot} is clear.")
 
-        print("[DEBUG][VaultGameView] Final 5s delay before outcome...")
         await asyncio.sleep(5)
 
         if caught:
-            await interaction.followup.send(f"🚨 The police found you hiding **{chosen_spot}**! You're arrested and fired!", ephemeral=True)
+            await interaction.channel.send(f"🚨 The police found someone hiding **{chosen_spot}**! They're arrested and fired!")
             print(f"[DEBUG][VaultGameView] User {interaction.user.id} caught hiding in {chosen_spot}")
 
-            try:
-                async with interaction.client.pool.acquire() as conn:
-                    await conn.execute("UPDATE user_finances SET checking_account_balance = 0 WHERE user_id = $1", interaction.user.id)
-                    await conn.execute("UPDATE users SET occupation_id = NULL WHERE user_id = $1", interaction.user.id)
-                    await conn.execute(
-                        "INSERT INTO user_criminal_record (user_id, date_of_offense, crime_id, crime_description, class) VALUES ($1, NOW(), 1, 'Theft', 'Misdemeanor')",
-                        interaction.user.id
-                    )
-                print(f"[DEBUG][VaultGameView] Arrest DB updates completed for user {interaction.user.id}")
-            except Exception as e:
-                print(f"[ERROR][VaultGameView] Error during arrest DB update: {e}")
+            async with interaction.client.pool.acquire() as conn:
+                await conn.execute("UPDATE user_finances SET checking_account_balance = 0 WHERE user_id = $1", interaction.user.id)
+                await conn.execute("UPDATE users SET occupation_id = NULL WHERE user_id = $1", interaction.user.id)
+                await conn.execute(
+                    "INSERT INTO user_criminal_record (user_id, date_of_offense, crime_id, crime_description, class) VALUES ($1, NOW(), 1, 'Theft', 'Misdemeanor')",
+                    interaction.user.id
+                )
         else:
-            await interaction.followup.send("🎉 The police searched everywhere but couldn’t find you. You evaded capture!", ephemeral=True)
+            await interaction.channel.send("🎉 The police searched everywhere but couldn’t find anyone. The suspect evaded capture!")
             print(f"[DEBUG][VaultGameView] User {interaction.user.id} evaded police successfully")
 
         self.stop()
+
         print("[DEBUG][VaultGameView] View stopped.")
 
 
