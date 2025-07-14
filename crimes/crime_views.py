@@ -102,7 +102,14 @@ class ConfirmRobberyView(discord.ui.View):
         print(f"[DEBUG][ConfirmRobberyView] Continue button clicked.")
         self.value = True
         self.user_interaction = interaction
-        await interaction.response.send_message("✅ Robbery confirmed!", ephemeral=True)
+
+        embed = discord.Embed(
+            title="✅ Robbery Confirmed!",
+            description="You're moving forward with the heist. Let's crack the vault...",
+            color=0x43B581  # Green
+        )
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
         self.stop()
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
@@ -110,5 +117,12 @@ class ConfirmRobberyView(discord.ui.View):
         print(f"[DEBUG][ConfirmRobberyView] Cancel button clicked.")
         self.value = False
         self.user_interaction = interaction
-        await interaction.response.send_message("❌ Robbery cancelled.", ephemeral=True)
+
+        embed = discord.Embed(
+            title="❌ Robbery Cancelled",
+            description="You've backed out. Maybe next time...",
+            color=0xF04747  # Red
+        )
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
         self.stop()
