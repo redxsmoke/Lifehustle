@@ -55,7 +55,7 @@ class TheftLocationDropdown(discord.ui.Select):
             cog = self.parent_view.bot.get_cog("CrimeCommands")
             if cog:
                 try:
-                    # Don't respond here — let handle_rob_job do the response
+                    # Let handle_rob_job do the response
                     await cog.handle_rob_job(interaction)
                 except Exception as e:
                     print(f"❌ Error in handle_rob_job: {e}")

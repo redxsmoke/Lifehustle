@@ -32,7 +32,6 @@ class VaultGame:
         else:
             return f"Attempt {self.attempts}/{self.max_attempts}: {' '.join(clues)}"
 
-
 class VaultGameView(discord.ui.View):
     def __init__(self, user_id):
         super().__init__(timeout=120)
@@ -48,7 +47,6 @@ class VaultGameView(discord.ui.View):
 
         modal = VaultGuessModal(view=self)
         await interaction.response.send_modal(modal)
-
 
 class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
     guess_input = discord.ui.TextInput(label="Enter 3-digit code", max_length=3)
@@ -78,7 +76,6 @@ class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
             self.view.stop()
 
         else:
-            # Incorrect guess, show clues and keep button active
             embed.title = "Vault Code Guess"
             embed.description = result
             await interaction.response.edit_message(content=None, embed=embed, view=self.view)
