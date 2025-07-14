@@ -268,7 +268,7 @@ class SnitchConfirmView(discord.ui.View):
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.parent.outcome = "snitched"
         self.parent.snitched = True
-        self.parent.stop()
+        
 
         embed = discord.Embed(
             title="🚨 Police Alerted!",
