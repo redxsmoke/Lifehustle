@@ -158,16 +158,31 @@ class VaultGameView(discord.ui.View):
         except Exception as e:
             print(f"[ERROR][VaultGameView] Failed to disable snitch button: {e}")
 
-    async def show_hide_button(self, interaction: discord.Interaction):
-        for child in self.children:
-            if isinstance(child, discord.ui.Button) and child.label == "Hide":
-                child.disabled = False
-                break
+    class HideOnlyView(discord.ui.View):
+        def __init__(self, vault_view: VaultGameView):
+            super().__init__(timeout=120)
+            self.vault_view = vault_view
+            # Add only Hide button enabled here
+            self.hide_button = discord.ui.Button(label="Hide", style=discord.ButtonStyle.green)
+            self.hide_button.callback = self.on_hide_click
+            self.add_item(self.hide_button)
 
+        async def on_hide_click(self, interaction: discord.Interaction):
+            if interaction.user.id != self.vault_view.user_id:
+                await interaction.response.send_message("You can’t hide if you weren’t robbing the vault. 👀", ephemeral=True)
+                return
+            # Prevent multiple clicks
+            self.hide_button.disabled = True
+            await interaction.response.edit_message(content="Preparing hide options...", view=None)
+            await interaction.response.defer(ephemeral=True)
+
+
+    async def show_hide_button(self, interaction: discord.Interaction):
         try:
+            view = self.HideOnlyView(self)
             await interaction.followup.send(
                 content="🚨 Alarm Triggered!\nYou failed to crack the vault. Police are on their way to this location! 🚓",
-                view=self,
+                view=view,
             )
         except Exception as e:
             print(f"[ERROR][VaultGameView] Failed to send hide button message: {e}")
