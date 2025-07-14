@@ -1,6 +1,8 @@
 import discord 
 import random
 from datetime import timedelta, datetime
+import asyncio
+
 
 COLOR_PRIMARY = 0x5865F2  # Discord blurple
 
