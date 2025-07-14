@@ -127,7 +127,10 @@ class VaultGameView(discord.ui.View):
         print("[DEBUG][VaultGameView] Starting police arrival delay (5s)...")
         await asyncio.sleep(5)
 
+        print("[DEBUG][VaultGameView] Police arrived after delay.")
         await interaction.channel.send("🚨 The police have arrived on scene...")
+        print("[DEBUG][VaultGameView] Sent police arrival message.")
+
         print("[DEBUG][VaultGameView] Police arrived.")
 
         for emoji, spot in searched_spots:

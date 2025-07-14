@@ -31,9 +31,7 @@ from Bot_commands.lifecheck_command import register_commands as register_lifeche
 from data_tier import (
     seed_grocery_types,
     seed_grocery_categories,
-    drop_vehicle_appearence_table,
-    create_vehicle_appearance_table,
-    seed_vehicle_appearance,
+  
 )
 
 import globals
@@ -45,33 +43,14 @@ intents.members = True  # <<< Needed to receive member info and join events!
 bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
-##### DATABASE UPDATES
-async def reset_user_secret_button_table(pool):
-    async with pool.acquire() as conn:
-        await conn.execute("DROP TABLE IF EXISTS user_achievements;")
-        await conn.execute("""
-            CREATE TABLE user_achievements (
-                user_id BIGINT PRIMARY KEY,
-                achievement_id BIGINT NULL,
-                achievement_name TEXT NULL,
-                achievement_description TEXT NULL,
-                achievement_emoji TEXT NULL,
-                date_unlocked DATE NULL,
-                guild_id BIGINT NOT NULL,
-                CONSTRAINT user_achievements_user_achievement_unique UNIQUE (user_id, achievement_id)                
-            );
-        """)
-    print("✅ user_secret_button table reset successfully.")
-#### DATABASE UPDATES
+
 
 async def setup_database():
     await init_db(globals.pool)
     await seed_grocery_categories(globals.pool)
     await seed_grocery_types(globals.pool)
-    await drop_vehicle_appearence_table(globals.pool)
-    await create_vehicle_appearance_table(globals.pool)
-    await seed_vehicle_appearance(globals.pool)
-    await reset_user_secret_button_table(globals.pool)
+
+
 
 
 async def create_pool():
