@@ -117,6 +117,10 @@ class VaultGameView(discord.ui.View):
                     return
 
                 self.vault_view.hide_used = True
+
+                # Defer response to allow followups later
+                await interaction.response.defer(ephemeral=True)
+
                 chosen_spot = random.choice(self.vault_view.hide_spots)
                 await self.vault_view.process_hide_choice(interaction, chosen_spot)
 
@@ -135,6 +139,7 @@ class VaultGameView(discord.ui.View):
             )
         except Exception as e:
             print(f"[ERROR][VaultGameView] Failed to send hide button message: {e}")
+
 
     async def process_hide_choice(self, interaction: discord.Interaction, chosen_spot: str):
         await interaction.followup.send(f"You hid {chosen_spot}... waiting for the police to arrive...", ephemeral=True)
