@@ -48,6 +48,7 @@ class VaultGameView(discord.ui.View):
         super().__init__(timeout=120)
         self.user_id = user_id
         self.robbery_complete = asyncio.Event()
+        self.bot = bot
         self.game = VaultGame()
         self.outcome = None
         self.snitched = False
@@ -259,10 +260,14 @@ class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
 
     async def on_submit(self, interaction: discord.Interaction):
         if self.view.snitched:
-            await interaction.response.send_message(
-                "Someone snitched on you! Hide or get the hell out of there! 🚨", ephemeral=True
+            embed = discord.Embed(
+                title="🚨 Snitch Alert!",
+                description="Someone snitched on you! Hide or get the hell out of there!",
+                color=0xF04747  # Red color
             )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
             return
+
 
         print(f"[DEBUG][VaultGuessModal] Guess submitted by user_id: {interaction.user.id} with value: {self.guess_input.value}")
         result = self.view.game.check_guess(self.guess_input.value)

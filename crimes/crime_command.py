@@ -71,7 +71,7 @@ class CrimeCommands(commands.Cog):
             return
 
         try:
-            vault_view = VaultGameView(user_id=interaction.user.id)
+            vault_view = VaultGameView(user_id=interaction.user.id, bot=self.bot)
 
             print("[DEBUG] Sending VaultGameView to channel.")
             msg = await interaction.channel.send(
