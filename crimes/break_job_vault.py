@@ -197,7 +197,7 @@ class SnitchConfirmView(discord.ui.View):
             color=0xF04747
         )
         await interaction.response.edit_message(content=None, embed=embed, view=None)
-        print(f"[DEBUG][SnitchConfirmView] Snitched by {interaction.user.id]")
+        print(f"[DEBUG][SnitchConfirmView] Snitched by {interaction.user.id}")
 
         try:
             await self.parent.show_hide_button(interaction)
