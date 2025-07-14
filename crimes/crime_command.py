@@ -122,7 +122,7 @@ class CrimeCommands(commands.Cog):
                     description=(
                         f"The police searched **{chosen_spot}** and found {robber.display_name} hiding there. "
                         "He/She has been arrested and fired from their job. "
-                        "Their checking account funds have also been seized for investigation 😉😉"
+                        "His/her checking account funds have also been seized for investigation 😉😉"
                     ),
                     color=0xF04747,
                 )
