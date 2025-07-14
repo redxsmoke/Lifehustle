@@ -277,6 +277,14 @@ class SnitchConfirmView(discord.ui.View):
         await interaction.response.edit_message(content=None, embed=embed, view=None)
         print(f"[DEBUG][SnitchConfirmView] Snitched by {interaction.user.id}")
 
+        # --- NEW: send public alert BEFORE calling show_hide_button ---
+        try:
+            channel = interaction.channel
+            await channel.send("🚨 Someone snitched! The police are on their way to this location!")
+        except Exception as e:
+            print(f"[ERROR][SnitchConfirmView] Failed to send snitch alert: {e}")
+        # --- end new ---
+
         try:
             await self.parent.show_hide_button(interaction)
         except Exception as e:
@@ -286,3 +294,4 @@ class SnitchConfirmView(discord.ui.View):
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.edit_message(content="Respect. 👏", view=None)
         print(f"[DEBUG][SnitchConfirmView] {interaction.user.id} backed out of snitching.")
+
