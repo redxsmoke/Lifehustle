@@ -89,20 +89,6 @@ class VaultGameView(discord.ui.View):
             ephemeral=True
         )
 
-    @discord.ui.button(label="Hide", style=discord.ButtonStyle.green, disabled=True)
-    async def hide(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("You can’t hide if you weren’t robbing the vault. 👀", ephemeral=True)
-            return
-
-        if self.hide_used:
-            await interaction.response.send_message("You’ve already tried hiding!", ephemeral=True)
-            return
-
-        self.hide_used = True
-        chosen_spot = random.choice(self.hide_spots)
-        await self.process_hide_choice(interaction, chosen_spot)
-
     async def disable_snitch_button_later(self, message: discord.Message):
         await discord.utils.sleep_until(datetime.utcnow() + timedelta(seconds=10))
         self.snitch_disabled = True
@@ -115,16 +101,37 @@ class VaultGameView(discord.ui.View):
         except Exception as e:
             print(f"[ERROR][VaultGameView] Failed to disable snitch button: {e}")
 
-    async def show_hide_button(self, interaction: discord.Interaction):
-        for child in self.children:
-            if isinstance(child, discord.ui.Button) and child.label == "Hide":
-                child.disabled = False
-                break
+    async def show_hide_button(self, interaction: discord.Interaction, reason: str = "snitched"):
+        class HideButton(discord.ui.Button):
+            def __init__(self, view: VaultGameView):
+                super().__init__(label="Hide", style=discord.ButtonStyle.green)
+                self.view = view
+
+            async def callback(self, interaction: discord.Interaction):
+                if interaction.user.id != self.view.user_id:
+                    await interaction.response.send_message("You can’t hide if you weren’t robbing the vault. 👀", ephemeral=True)
+                    return
+
+                if self.view.hide_used:
+                    await interaction.response.send_message("You’ve already tried hiding!", ephemeral=True)
+                    return
+
+                self.view.hide_used = True
+                chosen_spot = random.choice(self.view.hide_spots)
+                await self.view.process_hide_choice(interaction, chosen_spot)
+
+        alert_text = {
+            "snitched": "🚨 Police Alerted!\nSomeone snitched! The police are on their way to this location! 👮",
+            "failed": "🚨 Alarm Triggered!\nYou failed to crack the vault. Police are on their way to this location! 🚓"
+        }
+
+        new_view = discord.ui.View(timeout=30)
+        new_view.add_item(HideButton(self))
 
         try:
             await interaction.followup.send(
-                content="🚨 Alarm Triggered!\nYou failed to crack the vault. Police are on their way to this location! 🚓",
-                view=self,
+                content=alert_text.get(reason, "🚨 Police have been notified."),
+                view=new_view
             )
         except Exception as e:
             print(f"[ERROR][VaultGameView] Failed to send hide button message: {e}")
@@ -177,7 +184,7 @@ class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
                 code_str = ''.join(map(str, self.view.game.code))
                 embed.description = f"You were caught! The code was `{code_str}`."
                 await interaction.response.edit_message(content=None, embed=embed, view=None)
-                await self.view.show_hide_button(interaction)
+                await self.view.show_hide_button(interaction, reason="failed")
                 self.view.stop()
 
             else:
@@ -215,7 +222,7 @@ class SnitchConfirmView(discord.ui.View):
         print(f"[DEBUG][SnitchConfirmView] Snitched by {interaction.user.id}")
 
         try:
-            await self.parent.show_hide_button(interaction)
+            await self.parent.show_hide_button(interaction, reason="snitched")
         except Exception as e:
             print(f"[ERROR][SnitchConfirmView] Failed to show hide button after snitch: {e}")
 
