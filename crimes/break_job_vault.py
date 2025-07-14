@@ -125,6 +125,10 @@ class VaultGameView(discord.ui.View):
 
 
     async def process_police_search(self, interaction: discord.Interaction, chosen_spot: str):
+        if self.robbery_complete.is_set():
+            print("[DEBUG][VaultGameView] Robbery already completed, skipping police search.")
+            return
+
         searched_spots = random.sample(self.hide_spots, 3)
         caught = False
 
@@ -191,8 +195,8 @@ class VaultGameView(discord.ui.View):
             )
             print(f"[DEBUG][VaultGameView] User {self.user_id} evaded police successfully")
 
-
-        self.robbery_complete.set()
+        if not self.robbery_complete.is_set():
+            self.robbery_complete.set()
         self.stop()
         print("[DEBUG][VaultGameView] View stopped.")
 
@@ -275,12 +279,14 @@ class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
 
             elif result == "locked_out":
                 self.view.outcome = "failure"
+                embed.color = 0xF04747  # Red color for failure
                 embed.title = "🔒 Too Many Failed Attempts"
                 code_str = ''.join(map(str, self.view.game.code))
-                embed.description = f"You were caught! The code was `{code_str}`."
+                embed.description = f"🚨The alarm has been triggered and the police are on their way! The code was `{code_str}`."
                 await interaction.response.edit_message(content=None, embed=embed, view=None)
                 await self.view.show_hide_button(interaction)
                 self.view.stop()
+
 
             else:
                 embed.title = "Vault Code Guess"
