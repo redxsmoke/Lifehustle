@@ -109,7 +109,7 @@ class CrimeCommands(commands.Cog):
 
                 outcome_embed = discord.Embed(
                     title="✅ Vault Cracked!",
-                    description=f"You successfully cracked the vault and escaped with **${payout:,}**! 💰",
+                    description=f"You successfully cracked the vault and escaped with **${payout:,}**. The money has been added to your checking account! 💰",
                     color=0x43B581,
                 )
 
