@@ -1,66 +1,61 @@
 import discord
+from discord import app_commands
+from discord.ext import commands
+from crimes.crime_views import CrimeSelectionView
+from crimes.break_job_vault import VaultGameView
 
-class CrimeSelectionView(discord.ui.View):
-    def __init__(self, user: discord.User, bot):
-        super().__init__(timeout=60)
-        self.user = user
+class CrimeCommands(commands.Cog):
+    def __init__(self, bot):
         self.bot = bot
-        self.add_item(CrimeDropdown(self))
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return interaction.user.id == self.user.id
+    @app_commands.command(name="crime", description="Commit a crime to earn rewards or penalties.")
+    async def crime(self, interaction: discord.Interaction):
+        print(f"[DEBUG] /crime invoked by {interaction.user} ({interaction.user.id})")
+        view = CrimeSelectionView(interaction.user, self.bot)
+        await interaction.response.send_message(
+            "Choose a crime to commit:", view=view, ephemeral=True
+        )
 
-class CrimeDropdown(discord.ui.Select):
-    def __init__(self, parent_view):
-        options = [
-            discord.SelectOption(label="Theft", description="Steal from someone or somewhere"),
-        ]
-        super().__init__(placeholder="Select a crime...", min_values=1, max_values=1, options=options)
-        self.parent_view = parent_view
-
-    async def callback(self, interaction: discord.Interaction):
-        print(f"[DEBUG] CrimeDropdown selected: {self.values[0]}")
-        crime_choice = self.values[0]
-        if crime_choice == "Theft":
-            await interaction.response.edit_message(
-                content="Where do you want to steal from?",
-                view=TheftLocationView(self.parent_view.user, self.parent_view.bot)
+    async def handle_rob_job(self, interaction: discord.Interaction):
+        print(f"[DEBUG] handle_rob_job started for {interaction.user} ({interaction.user.id})")
+        try:
+            view = VaultGameView(user_id=interaction.user.id)
+            await interaction.response.send_message(
+                content="💼 You're breaking into your workplace safe... Try to crack the code!",
+                view=view,
+                ephemeral=True
             )
-        else:
-            await interaction.response.send_message("Crime not implemented yet.", ephemeral=True)
 
-class TheftLocationView(discord.ui.View):
-    def __init__(self, user: discord.User, bot):
-        super().__init__(timeout=60)
-        self.user = user
-        self.bot = bot
-        self.add_item(TheftLocationDropdown(self))
+            # Wait for the game view to finish or timeout
+            await view.wait()
 
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return interaction.user.id == self.user.id
+            print(f"[DEBUG] VaultGameView ended with outcome: {view.outcome}")
 
-class TheftLocationDropdown(discord.ui.Select):
-    def __init__(self, parent_view):
-        options = [
-            discord.SelectOption(label="Rob your job", description="Steal from your workplace"),
-        ]
-        super().__init__(placeholder="Select location...", min_values=1, max_values=1, options=options)
-        self.parent_view = parent_view
-
-    async def callback(self, interaction: discord.Interaction):
-        print(f"[DEBUG] TheftLocationDropdown selected: {self.values[0]}")
-        location = self.values[0]
-        if location == "Rob your job":
-            cog = self.parent_view.bot.get_cog("CrimeCommands")
-            if cog:
-                await cog.handle_rob_job(interaction)
-            else:
-                await interaction.response.send_message(
-                    "⚠️ Crime system not available.", ephemeral=True
+            if view.outcome == "success":
+                await interaction.followup.send(
+                    "✅ You successfully cracked the vault and got away with the loot! (Payout pending)",
+                    ephemeral=True
                 )
-        else:
-            await interaction.response.send_message("Location not implemented yet.", ephemeral=True)
+            elif view.outcome == "failure":
+                await interaction.followup.send(
+                    "🚨 You failed to crack the vault. Alarm triggered. Police are on their way!",
+                    ephemeral=True
+                )
+            else:
+                await interaction.followup.send(
+                    "🤔 You gave up or the game timed out.",
+                    ephemeral=True
+                )
 
+        except Exception as e:
+            print(f"❌ Exception in handle_rob_job: {e}")
+            try:
+                if not interaction.response.is_done():
+                    await interaction.response.send_message("Something went wrong.", ephemeral=True)
+                else:
+                    await interaction.followup.send("Something went wrong.", ephemeral=True)
+            except Exception as inner_e:
+                print(f"❌ Failed to send error message: {inner_e}")
 
 async def setup(bot):
     await bot.add_cog(CrimeCommands(bot))
