@@ -18,7 +18,6 @@ class CrimeDropdown(discord.ui.Select):
     def __init__(self, parent_view):
         options = [
             discord.SelectOption(label="Theft", description="Steal from someone or somewhere"),
-            # Add more crimes here
         ]
         super().__init__(placeholder="Select a crime...", min_values=1, max_values=1, options=options)
         self.parent_view = parent_view
@@ -54,7 +53,6 @@ class TheftLocationDropdown(discord.ui.Select):
     def __init__(self, parent_view):
         options = [
             discord.SelectOption(label="Rob your job", description="Steal from your workplace"),
-            # Add more locations here later
         ]
         super().__init__(placeholder="Select location...", min_values=1, max_values=1, options=options)
         self.parent_view = parent_view
@@ -67,64 +65,49 @@ class TheftLocationDropdown(discord.ui.Select):
             cog = self.parent_view.bot.get_cog("CrimeCommands")
             if cog:
                 try:
-                    # Let handle_rob_job do the response
                     print(f"[DEBUG][TheftLocationDropdown] Passing interaction to CrimeCommands.handle_rob_job for user {interaction.user}")
                     await cog.handle_rob_job(interaction)
                 except Exception as e:
                     print(f"❌ Error in handle_rob_job: {e}")
                     try:
                         if not interaction.response.is_done():
-                            await interaction.response.send_message(
-                                "❌ Something went wrong during the robbery attempt.",
-                                ephemeral=True
-                            )
+                            await interaction.response.send_message("❌ Something went wrong during the robbery attempt.", ephemeral=True)
                         else:
-                            await interaction.followup.send(
-                                "❌ Something went wrong during the robbery attempt.",
-                                ephemeral=True
-                            )
+                            await interaction.followup.send("❌ Something went wrong during the robbery attempt.", ephemeral=True)
                     except Exception as inner_e:
                         print(f"❌ Failed to send error message: {inner_e}")
             else:
                 print("❌ CrimeCommands cog not found!")
-                await interaction.response.send_message(
-                    "⚠️ Crime system not available. (Cog missing)", ephemeral=True
-                )
+                await interaction.response.send_message("⚠️ Crime system not available. (Cog missing)", ephemeral=True)
         else:
             await interaction.response.send_message("Location not implemented yet.", ephemeral=True)
-
-import discord
 
 class ConfirmRobberyView(discord.ui.View):
     def __init__(self, user_id):
         super().__init__(timeout=60)
         self.user_id = user_id
         self.value = None
-        self.user_interaction = None  # Store the interaction object when button clicked
+        self.user_interaction = None
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        print(f"[DEBUG][interaction_check] Received interaction from {interaction.user.id}")
         if interaction.user.id != self.user_id:
-            try:
-                await interaction.response.send_message(
-                    "This isn't your robbery to confirm/cancel!", ephemeral=True
-                )
-                print(f"[DEBUG] Blocked interaction from user {interaction.user.id} not matching {self.user_id}")
-            except Exception as e:
-                print(f"[ERROR] interaction_check failed to send message: {e}")
+            await interaction.response.send_message("Not your robbery.", ephemeral=True)
+            print(f"[DEBUG] Blocked interaction from user {interaction.user.id} not matching {self.user_id}")
             return False
         return True
 
     @discord.ui.button(label="Continue", style=discord.ButtonStyle.green)
-    async def continue_button(self, button, interaction: discord.Interaction):
-        print(f"[DEBUG][ConfirmRobberyView] Continue button clicked by {interaction.user} ({interaction.user.id})")
+    async def continue_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        print(f"[DEBUG][ConfirmRobberyView] Continue button clicked.")
         self.value = True
         self.user_interaction = interaction
-        await interaction.response.send_message("✅ Robbery confirmed! Cracking the vault now...", ephemeral=True)
+        await interaction.response.send_message("✅ Robbery confirmed!", ephemeral=True)
         self.stop()
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
-    async def cancel_button(self, button, interaction: discord.Interaction):
-        print(f"[DEBUG][ConfirmRobberyView] Cancel button clicked by {interaction.user} ({interaction.user.id})")
+    async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        print(f"[DEBUG][ConfirmRobberyView] Cancel button clicked.")
         self.value = False
         self.user_interaction = interaction
         await interaction.response.send_message("❌ Robbery cancelled.", ephemeral=True)

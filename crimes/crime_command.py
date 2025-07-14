@@ -63,10 +63,8 @@ class CrimeCommands(commands.Cog):
 
         if not confirm_view.value:
             print("[DEBUG] Robbery cancelled by user.")
-            # Cancel message already sent in cancel_button
             return
 
-        # User pressed Continue, start vault mini-game
         try:
             vault_view = VaultGameView(user_id=interaction.user.id)
 
@@ -104,11 +102,8 @@ class CrimeCommands(commands.Cog):
                     color=0x747F8D,
                 )
 
-            try:
-                await confirm_view.user_interaction.followup.send(embed=outcome_embed, ephemeral=True)
-                print("[DEBUG] Sent vault outcome embed.")
-            except Exception as e:
-                print(f"[ERROR] Failed to send vault outcome embed: {e}")
+            await confirm_view.user_interaction.followup.send(embed=outcome_embed, ephemeral=True)
+            print("[DEBUG] Sent vault outcome embed.")
 
         except Exception as e:
             print(f"❌ Exception in vault game: {e}")
