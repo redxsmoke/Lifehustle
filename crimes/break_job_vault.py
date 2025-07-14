@@ -103,22 +103,22 @@ class VaultGameView(discord.ui.View):
 
     async def show_hide_button(self, interaction: discord.Interaction, reason: str = "snitched"):
         class HideButton(discord.ui.Button):
-            def __init__(self, view: VaultGameView):
+            def __init__(self, vault_view: VaultGameView):
                 super().__init__(label="Hide", style=discord.ButtonStyle.green)
-                self.view = view
+                self.vault_view = vault_view  # renamed from self.view
 
             async def callback(self, interaction: discord.Interaction):
-                if interaction.user.id != self.view.user_id:
+                if interaction.user.id != self.vault_view.user_id:
                     await interaction.response.send_message("You can’t hide if you weren’t robbing the vault. 👀", ephemeral=True)
                     return
 
-                if self.view.hide_used:
+                if self.vault_view.hide_used:
                     await interaction.response.send_message("You’ve already tried hiding!", ephemeral=True)
                     return
 
-                self.view.hide_used = True
-                chosen_spot = random.choice(self.view.hide_spots)
-                await self.view.process_hide_choice(interaction, chosen_spot)
+                self.vault_view.hide_used = True
+                chosen_spot = random.choice(self.vault_view.hide_spots)
+                await self.vault_view.process_hide_choice(interaction, chosen_spot)
 
         alert_text = {
             "snitched": "🚨 Police Alerted!\nSomeone snitched! The police are on their way to this location! 👮",
