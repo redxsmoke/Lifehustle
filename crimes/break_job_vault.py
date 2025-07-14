@@ -281,7 +281,7 @@ class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
                 embed.color = 0xF04747  # Red color for failure
                 embed.title = "🚨 Police Alert!"
                 code_str = ''.join(map(str, self.view.game.code))
-            embed.description = f"You entered to code incorrectly too many times and the police have been alerted! The code was `{code_str}`."
+                embed.description = f"You entered to code incorrectly too many times and the police have been alerted! The code was `{code_str}`."
                 await interaction.response.edit_message(content=None, embed=embed, view=None)
                 await self.view.show_hide_button(interaction)
                 self.view.stop()
