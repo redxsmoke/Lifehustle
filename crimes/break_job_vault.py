@@ -210,7 +210,6 @@ class HideOnlyView(discord.ui.View):
 
                 # Run police search after user picks
                 await self.vault_view.process_police_search(interaction, self.description)
-                self.vault_view.stop()
                 self.parent_view.stop()
 
 
