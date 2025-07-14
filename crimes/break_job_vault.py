@@ -258,6 +258,12 @@ class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
         print(f"[DEBUG][VaultGuessModal] Modal initialized for user_id: {self.view.user_id}")
 
     async def on_submit(self, interaction: discord.Interaction):
+        if self.view.snitched:
+            await interaction.response.send_message(
+                "Someone snitched on you! Hide or get the hell out of there! 🚨", ephemeral=True
+            )
+            return
+
         print(f"[DEBUG][VaultGuessModal] Guess submitted by user_id: {interaction.user.id} with value: {self.guess_input.value}")
         result = self.view.game.check_guess(self.guess_input.value)
         embed = discord.Embed(color=COLOR_PRIMARY)
@@ -280,7 +286,6 @@ class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
                 await self.view.show_hide_button(interaction)
                 self.view.stop()
 
-
             else:
                 embed.title = "Vault Code Guess"
                 embed.description = result
@@ -295,6 +300,11 @@ class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
                     await interaction.followup.send("An error occurred processing your guess.", ephemeral=True)
             except Exception as inner_e:
                 print(f"[ERROR][VaultGuessModal] Failed to send error message: {inner_e}")
+
+class SnitchConfirmView(discord.ui.View):
+    def __init__(self, parent: VaultGameView):
+        super().__init__(timeout=15)
+        self.parent = parent
 
 class SnitchConfirmView(discord.ui.View):
     def __init__(self, parent: VaultGameView):
