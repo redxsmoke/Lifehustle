@@ -2,7 +2,7 @@ import discord
 
 async def play(pool, guild_id, user_id, user_occupation_id):
     """
-    Mini-game logic triggered during a workshift.
+    Mini-game logic triggered during a clockin.
 
     Returns a dict with:
     - title: Title of the minigame (string)

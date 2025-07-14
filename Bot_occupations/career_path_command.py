@@ -35,7 +35,7 @@ class CareerPath(commands.Cog):
         
         if ctx.invoked_subcommand is None:
             # No defer here, so just regular send
-            await ctx.send("Please use a subcommand: workshift or resign")
+            await ctx.send("Please use a subcommand: clockin or resign")
 
 
     class MiniGameButton(discord.ui.Button):
@@ -96,40 +96,40 @@ class CareerPath(commands.Cog):
             return True
 
 
-    @careerpath.command(name="workshift", description="Log a work shift and add your pay")
-    async def workshift(self, ctx):
-        print("✅ DEBUG: workshift command invoked")
+    @careerpath.command(name="clockin", description="Clock in to work and collect your pay")
+    async def clockin(self, ctx):
+        print("✅ DEBUG: clockin command invoked")
         await ctx.defer()
         user_id = ctx.author.id
-        print(f"[workshift] Started for user_id: {user_id}")
+        print(f"[clockin] Started for user_id: {user_id}")
 
         try:
             async with self.db_pool.acquire() as conn:
-                print("[workshift] Checking occupation_needs_warning...")
+                print("[clockin] Checking occupation_needs_warning...")
                 try:
                     needs_warning = await conn.fetchval(
                         "SELECT occupation_needs_warning FROM users WHERE user_id = $1",
                         user_id
                     )
-                    print(f"[workshift] occupation_needs_warning: {needs_warning}")
+                    print(f"[clockin] occupation_needs_warning: {needs_warning}")
                 except Exception as e:
-                    print(f"[workshift] ERROR fetching occupation_needs_warning: {e}")
+                    print(f"[clockin] ERROR fetching occupation_needs_warning: {e}")
                     raise
 
                 if needs_warning:
-                    print("[workshift] Sending warning message...")
+                    print("[clockin] Sending warning message...")
                     await self._send_warning_message(ctx)
                     try:
                         await conn.execute(
                             "UPDATE users SET occupation_needs_warning = FALSE WHERE user_id = $1",
                             user_id
                         )
-                        print("[workshift] Cleared occupation_needs_warning flag.")
+                        print("[clockin] Cleared occupation_needs_warning flag.")
                     except Exception as e:
-                        print(f"[workshift] ERROR clearing occupation_needs_warning: {e}")
+                        print(f"[clockin] ERROR clearing occupation_needs_warning: {e}")
                         raise
 
-                print("[workshift] Fetching occupation info...")
+                print("[clockin] Fetching occupation info...")
                 occ_query = """
                     SELECT o.cd_occupation_id, o.description, o.pay_rate, o.required_shifts_per_day, o.company_name
                     FROM users u
@@ -138,7 +138,7 @@ class CareerPath(commands.Cog):
                     AND u.occupation_id IS NOT NULL;
                 """
                 occupation = await conn.fetchrow(occ_query, user_id)
-                print(f"[workshift] Occupation row: {occupation}")
+                print(f"[clockin] Occupation row: {occupation}")
 
                 if occupation is None:
                     msg = "❌ You don't have a job yet. Use `/need_work` to get hired!"
@@ -159,7 +159,7 @@ class CareerPath(commands.Cog):
                     "INSERT INTO user_work_log(user_id, work_timestamp) VALUES ($1, NOW())",
                     user_id
                 )
-                print("[workshift] Shift log inserted.")
+                print("[clockin] Shift log inserted.")
 
                             # --- MINI-GAME SELECTION ---
                 minigames_by_id = {
@@ -241,7 +241,7 @@ class CareerPath(commands.Cog):
                     "SELECT COUNT(*) FROM user_work_log WHERE user_id = $1 AND work_timestamp >= CURRENT_DATE",
                     user_id
                 )
-                print(f"[workshift] Shifts today: {shifts_today}")
+                print(f"[clockin] Shifts today: {shifts_today}")
 
 
                 # Get new balance to show in embed
@@ -288,11 +288,11 @@ class CareerPath(commands.Cog):
                 # If no original message (e.g., quick math game), just send the embed
                 await ctx.send(embed=combined_embed)
 
-            print("[workshift] Response sent.")
+            print("[clockin] Response sent.")
 
 
         except Exception as e:
-            print(f"[workshift] Exception caught: {e}")
+            print(f"[clockin] Exception caught: {e}")
             error_msg = "❌ An error occurred while processing your shift. Please try again later."
             if hasattr(ctx, "followup"):
                 await ctx.followup.send(error_msg)
