@@ -97,55 +97,6 @@ class VaultGameView(discord.ui.View):
             ephemeral=True
         )
 
-    @discord.ui.button(label="Hide", style=discord.ButtonStyle.green, disabled=True)
-    async def hide(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("You can’t hide if you weren’t robbing the vault. 👀", ephemeral=True)
-            return
-
-        if self.hide_used:
-            await interaction.response.send_message("You’ve already tried hiding!", ephemeral=True)
-            return
-
-        self.hide_used = True
-
-        # Present 4 random hide location buttons for user to choose from
-        choices = random.sample(self.hide_spots, 4)
-
-        class HideChoiceView(discord.ui.View):
-            def __init__(self, vault_view: VaultGameView):
-                super().__init__(timeout=60)
-                self.vault_view = vault_view
-                self.chosen_spot = None
-
-                for emoji, description in choices:
-                    label = f"{emoji} {description}"
-                    self.add_item(HideChoiceButton(label=label, vault_view=vault_view, parent_view=self, description=description))
-
-        class HideChoiceButton(discord.ui.Button):
-            def __init__(self, label: str, vault_view: VaultGameView, parent_view: discord.ui.View, description: str):
-                super().__init__(label=label, style=discord.ButtonStyle.green)
-                self.vault_view = vault_view
-                self.parent_view = parent_view
-                self.description = description
-
-            async def callback(self, interaction: discord.Interaction):
-                if interaction.user.id != self.vault_view.user_id:
-                    await interaction.response.send_message("Only the robber can pick a hiding spot.", ephemeral=True)
-                    return
-
-                self.parent_view.chosen_spot = self.description
-                await interaction.response.edit_message(content=f"You chose to hide **{self.description}**. Waiting for police to arrive...", view=None)
-
-                # Run police search after user picks
-                await self.vault_view.process_police_search(interaction, self.description)
-                self.vault_view.stop()
-                self.parent_view.stop()
-
-
-        hide_choice_view = HideChoiceView(self)
-        await interaction.response.send_message("Choose a place to hide:", view=hide_choice_view, ephemeral=True)
-
     async def disable_snitch_button_later(self, message: discord.Message):
         await discord.utils.sleep_until(datetime.utcnow() + timedelta(seconds=10))
         self.snitch_disabled = True
@@ -213,47 +164,43 @@ class HideOnlyView(discord.ui.View):
         # Prevent multiple clicks
         self.hide_button.disabled = True
         await interaction.response.edit_message(content="Preparing hide options...", view=None)
-        await interaction.response.defer(ephemeral=True)
+
+        # Send the hide spots choices as an ephemeral followup message
+        choices = random.sample(self.vault_view.hide_spots, 4)
+
+        class HideChoiceView(discord.ui.View):
+            def __init__(self, vault_view: VaultGameView):
+                super().__init__(timeout=60)
+                self.vault_view = vault_view
+                self.chosen_spot = None
+
+                for emoji, description in choices:
+                    label = f"{emoji} {description}"
+                    self.add_item(HideChoiceButton(label=label, vault_view=vault_view, parent_view=self, description=description))
+
+        class HideChoiceButton(discord.ui.Button):
+            def __init__(self, label: str, vault_view: VaultGameView, parent_view: discord.ui.View, description: str):
+                super().__init__(label=label, style=discord.ButtonStyle.green)
+                self.vault_view = vault_view
+                self.parent_view = parent_view
+                self.description = description
+
+            async def callback(self, interaction: discord.Interaction):
+                if interaction.user.id != self.vault_view.user_id:
+                    await interaction.response.send_message("Only the robber can pick a hiding spot.", ephemeral=True)
+                    return
+
+                self.parent_view.chosen_spot = self.description
+                await interaction.response.edit_message(content=f"You chose to hide **{self.description}**. Waiting for police to arrive...", view=None)
+
+                # Run police search after user picks
+                await self.vault_view.process_police_search(interaction, self.description)
+                self.vault_view.stop()
+                self.parent_view.stop()
 
 
-async def show_hide_button(self, interaction: discord.Interaction):
-    try:
-        view = self.HideOnlyView(self)
-        await interaction.followup.send(
-            content="🚨 Alarm Triggered!\nYou failed to crack the vault. Police are on their way to this location! 🚓",
-            view=view,
-        )
-    except Exception as e:
-        print(f"[ERROR][VaultGameView] Failed to send hide button message: {e}")
-
-async def process_police_search(self, interaction: discord.Interaction, chosen_spot: str):
-    # Police will search 3 random locations from the full list
-    searched_spots = random.sample(self.hide_spots, 3)
-    await interaction.followup.send(f"🚓 Police are searching the following locations:", ephemeral=True)
-
-    caught = False
-    for spot in searched_spots:
-        await interaction.followup.send(f"🔍 Searching **{spot}**...", ephemeral=True)
-        if spot == chosen_spot:
-            caught = True
-            break
-
-    if caught:
-        await interaction.followup.send(f"🚨 The police found you hiding {chosen_spot}! You're arrested and fired!", ephemeral=True)
-        print(f"[DEBUG][VaultGameView] User {interaction.user.id} caught hiding in {chosen_spot}")
-
-        async with interaction.client.pool.acquire() as conn:
-            await conn.execute("UPDATE user_finances SET checking_account_balance = 0 WHERE user_id = $1", interaction.user.id)
-            await conn.execute("UPDATE users SET occupation_id = NULL WHERE user_id = $1", interaction.user.id)
-            await conn.execute(
-                "INSERT INTO user_criminal_record (user_id, date_of_offense, crime_id, crime_description, class) VALUES ($1, NOW(), 1, 'Theft', 'Misdemeanor')",
-                interaction.user.id
-            )
-    else:
-        await interaction.followup.send(f"🎉 The police searched everywhere but couldn’t find you. You evaded capture!", ephemeral=True)
-        print(f"[DEBUG][VaultGameView] User {interaction.user.id} evaded police successfully")
-
-    self.stop()
+        hide_choice_view = HideChoiceView(self.vault_view)
+        await interaction.followup.send("Choose a place to hide:", view=hide_choice_view, ephemeral=True)
 
 class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
     guess_input = discord.ui.TextInput(label="Enter 3-digit code", max_length=3)
