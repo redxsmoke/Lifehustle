@@ -33,7 +33,7 @@ class CrimeCommands(commands.Cog):
             await interaction.response.send_message(
                 embed=discord.Embed(
                     title="💼 Breaking In...",
-                    description="You're breaking into your workplace safe...If you get caught you will certainly be fired and possibly go to jail. Do you with to continue?",
+                    description="You're breaking into your workplace safe...If you get caught you will certainly be fired and possibly go to jail. Do you wish to continue?",
                     color=0xFAA61A,
                 ),
                 view=confirm_view,
@@ -69,22 +69,28 @@ class CrimeCommands(commands.Cog):
         try:
             vault_view = VaultGameView(user_id=interaction.user.id)
 
-            print("[DEBUG] Sending VaultGameView to user.")
-            await confirm_view.user_interaction.followup.send(
+            print("[DEBUG] Sending VaultGameView to channel.")
+            await interaction.channel.send(
                 embed=discord.Embed(
                     title="🔐 Vault Crack In Progress",
-                    description="Enter the 3-digit code to crack the vault!",
+                    description="A mysterious employee is trying to crack the vault...",
                     color=0xFAA61A,
                 ),
-                view=vault_view,
-                ephemeral=True,
+                view=vault_view
             )
             print("[DEBUG] VaultGameView message sent.")
 
             await vault_view.wait()
-            print(f"[DEBUG] VaultGameView ended with outcome: {vault_view.outcome}")
+            print(f"[DEBUG] VaultGameView ended with outcome: {vault_view.outcome}, snitched: {vault_view.snitched}")
 
-            if vault_view.outcome == "success":
+            if vault_view.snitched:
+                outcome_embed = discord.Embed(
+                    title="🚨 Police Alerted!",
+                    description="Someone snitched! The robbery was shut down by authorities. 👮",
+                    color=0xF04747,
+                )
+
+            elif vault_view.outcome == "success":
                 base_amount = random.randint(1000, 5000)
                 multiplier = round(random.uniform(1.0, 5.0), 2)
                 payout = int(base_amount * multiplier)
@@ -126,19 +132,18 @@ class CrimeCommands(commands.Cog):
                     color=0x747F8D,
                 )
 
-            await confirm_view.user_interaction.followup.send(embed=outcome_embed, ephemeral=True)
+            await interaction.channel.send(embed=outcome_embed)
             print("[DEBUG] Sent vault outcome embed.")
 
         except Exception as e:
             print(f"❌ Exception in vault game: {e}")
             try:
-                await confirm_view.user_interaction.followup.send(
+                await interaction.channel.send(
                     embed=discord.Embed(
                         title="❌ Error",
                         description="Something went wrong during the robbery.",
                         color=0xF04747,
-                    ),
-                    ephemeral=True,
+                    )
                 )
                 print("[DEBUG] Sent error message after vault game exception.")
             except Exception as inner_e:

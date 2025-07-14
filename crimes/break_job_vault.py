@@ -42,28 +42,53 @@ class VaultGame:
 
 class VaultGameView(discord.ui.View):
     def __init__(self, user_id):
-        super().__init__(timeout=120)
-        self.user_id = user_id
-        self.game = VaultGame()
+        super().__init__(timeout=60)
+        self.robber_id = user_id
         self.outcome = None
-        print(f"[DEBUG][VaultGameView] View created for user_id: {user_id}")
+        self.snitched = False
+        self.code = [random.randint(0, 9) for _ in range(3)]
+        self.attempts = 0
 
-    @discord.ui.button(label="Enter Safe Code", style=discord.ButtonStyle.blurple)
-    async def submit(self, interaction: discord.Interaction, button: discord.ui.Button):
-        print(f"[DEBUG][VaultGameView] Button pressed by user_id: {interaction.user.id}")
-
-        if interaction.user.id != self.user_id:
-            print("[DEBUG][VaultGameView] User ID mismatch. Rejecting interaction.")
-            await interaction.response.send_message("This isn't your vault to crack!", ephemeral=True)
+    @discord.ui.button(label="Enter Code", style=discord.ButtonStyle.green)
+    async def enter_code(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.robber_id:
+            await interaction.response.send_message("You can't crack this vault. You're not the one robbing it.", ephemeral=True)
             return
+        # Vault cracking logic...
+        # set self.outcome = "success" or "failure" accordingly
+        self.stop()
 
-        print("[DEBUG][VaultGameView] Showing modal for vault code input.")
-        modal = VaultGuessModal(view=self)
-        try:
-            await interaction.response.send_modal(modal)
-        except Exception as e:
-            print(f"[ERROR][VaultGameView] Failed to send modal: {e}")
+    @discord.ui.button(label="Snitch", style=discord.ButtonStyle.danger)
+    async def snitch_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        snitch_view = SnitchConfirmView(self)
+        await interaction.response.send_message(
+            embed=discord.Embed(
+                title="🚨 Snitch?",
+                description="Do you want to alert the police and shut this down?",
+                color=0xFF5555
+            ),
+            view=snitch_view,
+            ephemeral=True
+        )
 
+class SnitchConfirmView(discord.ui.View):
+    def __init__(self, vault_view):
+        super().__init__()
+        self.vault_view = vault_view
+
+    @discord.ui.button(label="Report to Police", style=discord.ButtonStyle.red)
+    async def confirm_snitch(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.vault_view.snitched = True
+        self.vault_view.outcome = "failure"
+        self.vault_view.stop()
+        await interaction.response.send_message("🚨 You snitched. Police have been alerted.", ephemeral=True)
+
+    @discord.ui.button(label="I ain't no snitch", style=discord.ButtonStyle.gray)
+    async def cancel_snitch(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("🫡 Good choice.", ephemeral=True)
+        self.stop()
+
+        
 class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
     guess_input = discord.ui.TextInput(label="Enter 3-digit code", max_length=3)
 
