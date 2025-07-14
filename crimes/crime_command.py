@@ -118,8 +118,12 @@ class CrimeCommands(commands.Cog):
 
             elif vault_view.outcome in ("failure", "Caught"):
                 outcome_embed = discord.Embed(
-                    title="🚨 Alarm Triggered!",
-                    description="You failed to crack the vault or were caught by police. Police are on their way! 🚓",
+                    title="🚨 Caught!",
+                    description=(
+                        f"The police searched **{chosen_spot}** and found {robber.display_name} hiding there. "
+                        "He/She has been arrested and fired from their job. "
+                        "Their checking account funds have also been seized for investigation 😉😉"
+                    ),
                     color=0xF04747,
                 )
 

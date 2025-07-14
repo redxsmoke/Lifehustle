@@ -165,13 +165,14 @@ class VaultGameView(discord.ui.View):
             self.outcome = "Caught"
             robber = interaction.guild.get_member(self.user_id)
             robber_name = robber.mention if robber else "the suspect"
-            await interaction.channel.send(
-                embed=discord.Embed(
-                    title="🚨 Suspect Caught!",
-                    description=f"The police found {robber_name} hiding **{chosen_spot}**! They're arrested and fired!",
-                    color=0xF04747,
-                )
-            )
+            # REMOVED: final embed message to prevent duplicate
+            # await interaction.channel.send(
+            #     embed=discord.Embed(
+            #         title="🚨 Suspect Caught!",
+            #         description=f"The police found {robber_name} hiding **{chosen_spot}**! They're arrested and fired!",
+            #         color=0xF04747,
+            #     )
+            # )
             print(f"[DEBUG][VaultGameView] User {self.user_id} caught hiding in {chosen_spot}")
 
             try:
@@ -186,20 +187,12 @@ class VaultGameView(discord.ui.View):
                 print(f"[ERROR][VaultGameView] Failed to update DB after police caught user: {e}")
         else:
             self.outcome = 'Evaded Police'
-            await interaction.channel.send(
-                embed=discord.Embed(
-                    title="🎉 Suspect Evaded Capture!",
-                    description="The police searched everywhere but couldn’t find anyone. The suspect evaded capture!",
-                    color=0xFAA61A,
-                )
-            )
             print(f"[DEBUG][VaultGameView] User {self.user_id} evaded police successfully")
 
         if not self.robbery_complete.is_set():
             self.robbery_complete.set()
         self.stop()
         print("[DEBUG][VaultGameView] View stopped.")
-
 
 class HideOnlyView(discord.ui.View):
     def __init__(self, vault_view: VaultGameView):
