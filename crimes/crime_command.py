@@ -87,7 +87,7 @@ class CrimeCommands(commands.Cog):
 
             # Removed if vault_view.snitched block here
 
-            elif vault_view.outcome == "success":
+            if vault_view.outcome == "success":
                 base_amount = random.randint(1000, 5000)
                 multiplier = round(random.uniform(1.0, 5.0), 2)
                 payout = int(base_amount * multiplier)
