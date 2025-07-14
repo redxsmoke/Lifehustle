@@ -40,6 +40,7 @@ class VaultGame:
             clue_str = ' '.join(clues)
             print(f"[DEBUG][VaultGame] Guess clues: {clue_str}")
             return f"Attempt {self.attempts}/{self.max_attempts}: {clue_str}"
+
 class VaultGameView(discord.ui.View):
     def __init__(self, user_id):
         super().__init__(timeout=120)
@@ -88,6 +89,20 @@ class VaultGameView(discord.ui.View):
             ephemeral=True
         )
 
+    @discord.ui.button(label="Hide", style=discord.ButtonStyle.green, disabled=True)
+    async def hide(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("You can’t hide if you weren’t robbing the vault. 👀", ephemeral=True)
+            return
+
+        if self.hide_used:
+            await interaction.response.send_message("You’ve already tried hiding!", ephemeral=True)
+            return
+
+        self.hide_used = True
+        chosen_spot = random.choice(self.hide_spots)
+        await self.process_hide_choice(interaction, chosen_spot)
+
     async def disable_snitch_button_later(self, message: discord.Message):
         await discord.utils.sleep_until(datetime.utcnow() + timedelta(seconds=10))
         self.snitch_disabled = True
@@ -99,13 +114,12 @@ class VaultGameView(discord.ui.View):
             print("[DEBUG][VaultGameView] Snitch button disabled after 10 seconds.")
         except Exception as e:
             print(f"[ERROR][VaultGameView] Failed to disable snitch button: {e}")
+
     async def show_hide_button(self, interaction: discord.Interaction):
         for child in self.children:
             if isinstance(child, discord.ui.Button) and child.label == "Hide":
                 child.disabled = False
                 break
-        else:
-            self.add_item(VaultGameView.hide)  # Re-add hide button if not found
 
         try:
             await interaction.followup.send(
@@ -180,6 +194,7 @@ class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
                     await interaction.followup.send("An error occurred processing your guess.", ephemeral=True)
             except Exception as inner_e:
                 print(f"[ERROR][VaultGuessModal] Failed to send error message: {inner_e}")
+
 class SnitchConfirmView(discord.ui.View):
     def __init__(self, parent: VaultGameView):
         super().__init__(timeout=15)
@@ -193,7 +208,7 @@ class SnitchConfirmView(discord.ui.View):
 
         embed = discord.Embed(
             title="🚨 Police Alerted!",
-            description="Someone snitched! The police are on their way to this location! 👮",
+            description="You snitched on the suspect! The police are on their way to this location! 👮",
             color=0xF04747
         )
         await interaction.response.edit_message(content=None, embed=embed, view=None)

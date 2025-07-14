@@ -88,7 +88,7 @@ class CrimeCommands(commands.Cog):
             if vault_view.snitched:
                 outcome_embed = discord.Embed(
                     title="🚨 Police Alerted!",
-                    description="Someone snitched! The robbery was shut down by authorities. 👮",
+                    description="Someone snitched! The police are on their way to this location!👮",
                     color=0xF04747,
                 )
 
