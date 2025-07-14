@@ -116,14 +116,14 @@ class CrimeCommands(commands.Cog):
                     color=0x43B581,
                 )
 
-            elif vault_view.outcome == "failure":
+            elif vault_view.outcome in ("failure", "Caught"):
                 outcome_embed = discord.Embed(
                     title="🚨 Alarm Triggered!",
-                    description="You failed to crack the vault. Police are on their way! 🚓",
+                    description="You failed to crack the vault or were caught by police. Police are on their way! 🚓",
                     color=0xF04747,
                 )
 
-                # --- NEW: Reset finances, fire, and log criminal record when caught ---
+                # --- NEW: Reset finances, fire, and log criminal record when caught or failed ---
                 try:
                     async with self.bot.pool.acquire() as conn:
                         await conn.execute(
@@ -140,6 +140,13 @@ class CrimeCommands(commands.Cog):
                         )
                 except Exception as e:
                     print(f"[ERROR][handle_rob_job] Failed to update DB on failure: {e}")
+
+            elif vault_view.outcome == "Evaded Police":
+                outcome_embed = discord.Embed(
+                    title="🎉 Suspect Evaded Capture!",
+                    description="The police searched everywhere but couldn’t find anyone. The suspect evaded capture!",
+                    color=0xFAA61A,
+                )
 
             else:
                 outcome_embed = discord.Embed(

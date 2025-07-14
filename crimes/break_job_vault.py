@@ -53,6 +53,7 @@ class VaultGameView(discord.ui.View):
         self.snitched = False
         self.hide_used = False
         self.snitch_disabled = False
+        self.hide_spot_chosen = False  # <-- ADDED flag to track hide choice
         print(f"[DEBUG][VaultGameView] View created for user_id: {user_id}")
 
         self.hide_spots = [
@@ -131,12 +132,24 @@ class VaultGameView(discord.ui.View):
         await asyncio.sleep(5)
 
         print("[DEBUG][VaultGameView] Police arrived after delay.")
-        await interaction.channel.send("🚨 The police have arrived on scene...")
+        await interaction.channel.send(
+            embed=discord.Embed(
+                title="🚨 Police Arrival",
+                description="The police have arrived on scene...",
+                color=0xF04747,
+            )
+        )
         print("[DEBUG][VaultGameView] Sent police arrival message.")
 
         for emoji, spot in searched_spots:
             await asyncio.sleep(5)
-            await interaction.channel.send(f"🔍 The police search **{spot}**...")
+            await interaction.channel.send(
+                embed=discord.Embed(
+                    title="🔍 Police Search",
+                    description=f"The police search **{spot}**...",
+                    color=0xFAA61A,
+                )
+            )
             print(f"[DEBUG][VaultGameView] Police searched: {spot}")
             if spot == chosen_spot:
                 caught = True
@@ -149,7 +162,11 @@ class VaultGameView(discord.ui.View):
             robber = interaction.guild.get_member(self.user_id)
             robber_name = robber.mention if robber else "the suspect"
             await interaction.channel.send(
-                f"🚨 The police found {robber_name} hiding **{chosen_spot}**! They're arrested and fired!"
+                embed=discord.Embed(
+                    title="🚨 Suspect Caught!",
+                    description=f"The police found {robber_name} hiding **{chosen_spot}**! They're arrested and fired!",
+                    color=0xF04747,
+                )
             )
             print(f"[DEBUG][VaultGameView] User {self.user_id} caught hiding in {chosen_spot}")
 
@@ -165,13 +182,19 @@ class VaultGameView(discord.ui.View):
                 print(f"[ERROR][VaultGameView] Failed to update DB after police caught user: {e}")
         else:
             self.outcome = 'Evaded Police'
-            await interaction.channel.send("🎉 The police searched everywhere but couldn’t find anyone. The suspect evaded capture!")
+            await interaction.channel.send(
+                embed=discord.Embed(
+                    title="🎉 Suspect Evaded Capture!",
+                    description="The police searched everywhere but couldn’t find anyone. The suspect evaded capture!",
+                    color=0xFAA61A,
+                )
+            )
             print(f"[DEBUG][VaultGameView] User {self.user_id} evaded police successfully")
+
 
         self.robbery_complete.set()
         self.stop()
         print("[DEBUG][VaultGameView] View stopped.")
-
 
 
 class HideOnlyView(discord.ui.View):
@@ -217,6 +240,8 @@ class HideOnlyView(discord.ui.View):
                     return
 
                 self.parent_view.chosen_spot = self.description
+                self.vault_view.hide_spot_chosen = True  # <-- SET flag on hide choice
+
                 await interaction.response.edit_message(content=f"You chose to hide **{self.description}**. Waiting for police to arrive...", view=None)
 
                 # Run police search after user picks
@@ -281,7 +306,7 @@ class SnitchConfirmView(discord.ui.View):
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.parent.outcome = "snitched"
         self.parent.snitched = True
-        
+        self.parent.hide_spot_chosen = False  # reset hide choice flag
 
         embed = discord.Embed(
             title="🚨 Police Alerted!",
@@ -294,7 +319,13 @@ class SnitchConfirmView(discord.ui.View):
         # --- NEW: send public alert BEFORE calling show_hide_button ---
         try:
             channel = interaction.channel
-            await channel.send("🚨 Someone snitched! The police are on their way to this location!")
+            await channel.send(
+                embed=discord.Embed(
+                    title="🚨 Police Alert!",
+                    description="Someone snitched! The police are on their way to this location!",
+                    color=0xF04747,
+                )
+            )
         except Exception as e:
             print(f"[ERROR][SnitchConfirmView] Failed to send snitch alert: {e}")
         # --- end new ---
@@ -304,8 +335,32 @@ class SnitchConfirmView(discord.ui.View):
         except Exception as e:
             print(f"[ERROR][SnitchConfirmView] Failed to show hide button after snitch: {e}")
 
+        # --- NEW: start a 60-second timer waiting for hide choice ---
+        async def wait_for_hide_choice():
+            try:
+                await asyncio.wait_for(self.parent.robbery_complete.wait(), timeout=60)
+            except asyncio.TimeoutError:
+                if not self.parent.hide_spot_chosen:
+                    # Robber failed to hide, mark failure and notify
+                    self.parent.outcome = "failure"
+                    await channel.send(f"🚨 The suspect failed to hide after snitch and got caught!")
+                    print("[DEBUG][SnitchConfirmView] Robber failed to hide in time and got caught!")
+
+                    # Update DB to reflect caught state
+                    try:
+                        async with self.parent.bot.pool.acquire() as conn:
+                            await conn.execute("UPDATE user_finances SET checking_account_balance = 0 WHERE user_id = $1", self.parent.user_id)
+                            await conn.execute("UPDATE users SET occupation_id = NULL WHERE user_id = $1", self.parent.user_id)
+                            await conn.execute(
+                                "INSERT INTO user_criminal_record (user_id, date_of_offense, crime_id, crime_description, class) VALUES ($1, NOW(), 1, 'Theft', 'Misdemeanor')",
+                                self.parent.user_id
+                            )
+                    except Exception as e:
+                        print(f"[ERROR][SnitchConfirmView] Failed to update DB for caught robber after no hide: {e}")
+                    self.parent.robbery_complete.set()
+        asyncio.create_task(wait_for_hide_choice())
+
     @discord.ui.button(label="I ain't no snitch", style=discord.ButtonStyle.grey)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.edit_message(content="Respect. 👏", view=None)
         print(f"[DEBUG][SnitchConfirmView] {interaction.user.id} backed out of snitching.")
-
