@@ -85,12 +85,7 @@ class CrimeCommands(commands.Cog):
             await vault_view.wait()
             print(f"[DEBUG] VaultGameView ended with outcome: {vault_view.outcome}, snitched: {vault_view.snitched}")
 
-            if vault_view.snitched:
-                outcome_embed = discord.Embed(
-                    title="🚨 Police Alerted!",
-                    description="Someone snitched! The police are on their way to this location!👮",
-                    color=0xF04747,
-                )
+            # Removed if vault_view.snitched block here
 
             elif vault_view.outcome == "success":
                 base_amount = random.randint(1000, 5000)
@@ -150,6 +145,7 @@ class CrimeCommands(commands.Cog):
                 print("[DEBUG] Sent error message after vault game exception.")
             except Exception as inner_e:
                 print(f"❌ Could not send error message: {inner_e}")
+
 
 async def setup(bot):
     await bot.add_cog(CrimeCommands(bot))
