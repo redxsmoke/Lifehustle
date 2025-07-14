@@ -15,83 +15,94 @@ class CrimeCommands(commands.Cog):
         embed = discord.Embed(
             title="Choose a Crime",
             description="Select a crime to commit:",
-            color=0x7289DA  # blurple
+            color=0x7289DA
         )
-        await interaction.response.send_message(
-            embed=embed, view=view, ephemeral=True
-        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-    async def handle_rob_job(self, interaction: discord.Interaction):
-        print(f"[DEBUG] handle_rob_job started for {interaction.user} ({interaction.user.id})")
+    async def handle_rob_job(self, base_interaction: discord.Interaction):
+        print(f"[DEBUG] handle_rob_job started for {base_interaction.user} ({base_interaction.user.id})")
 
+        # Step 1: Confirmation View
         class ConfirmRobberyView(discord.ui.View):
-            def __init__(self, user_id, timeout=60):
-                super().__init__(timeout=timeout)
+            def __init__(self, user_id):
+                super().__init__(timeout=60)
                 self.user_id = user_id
                 self.value = None
+                self.interaction: discord.Interaction = None
 
-            async def interaction_check(self, interaction: discord.Interaction) -> bool:
+            async def interaction_check(self, interaction: discord.Interaction):
                 if interaction.user.id != self.user_id:
                     await interaction.response.send_message(
                         "This isn't your robbery to confirm/cancel!", ephemeral=True
                     )
                     return False
+                self.interaction = interaction  # Store interaction for followup
                 return True
 
             @discord.ui.button(label="Continue", style=discord.ButtonStyle.green)
-            async def continue_button(self, button: discord.ui.Button, interaction: discord.Interaction):
+            async def continue_button(self, button, interaction: discord.Interaction):
                 self.value = True
                 for child in self.children:
                     child.disabled = True
                 await interaction.response.edit_message(
-                    content="Robbery confirmed! Preparing to crack the vault...", view=self
+                    content="✅ Robbery confirmed! Cracking the vault now...",
+                    view=self,
+                    embed=None
                 )
                 self.stop()
 
             @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
-            async def cancel_button(self, button: discord.ui.Button, interaction: discord.Interaction):
+            async def cancel_button(self, button, interaction: discord.Interaction):
                 self.value = False
                 for child in self.children:
                     child.disabled = True
                 await interaction.response.edit_message(
-                    content="Robbery cancelled.", view=self
+                    content="❌ Robbery cancelled.",
+                    view=self,
+                    embed=None
                 )
                 self.stop()
 
-        intro_embed = discord.Embed(
+        confirm_embed = discord.Embed(
             title="💼 Breaking In...",
             description="You're breaking into your workplace safe... Try to crack the code!",
             color=0xFAA61A
         )
 
-        view = ConfirmRobberyView(user_id=interaction.user.id)
-        await interaction.response.send_message(embed=intro_embed, view=view, ephemeral=True)
+        confirm_view = ConfirmRobberyView(user_id=base_interaction.user.id)
+        await base_interaction.response.send_message(embed=confirm_embed, view=confirm_view, ephemeral=True)
 
-        await view.wait()
+        await confirm_view.wait()
 
-        if view.value is None:
-            timeout_embed = discord.Embed(
-                title="⌛ Timeout",
-                description="You took too long to decide. Robbery cancelled.",
-                color=0x747F8D
-            )
-            await interaction.followup.send(embed=timeout_embed, ephemeral=True)
-            return
-
-        if not view.value:
-            cancel_embed = discord.Embed(
-                title="❌ Robbery Cancelled",
-                description="You decided not to rob your job. Smart choice!",
-                color=0xF04747
-            )
-            await interaction.followup.send(embed=cancel_embed, ephemeral=True)
-            return
-
-        try:
-            vault_view = VaultGameView(user_id=interaction.user.id)
-            await interaction.followup.send(
+        # Don't use base_interaction anymore. Use confirm_view.interaction.
+        if confirm_view.value is None:
+            await confirm_view.interaction.followup.send(
                 embed=discord.Embed(
-                    title="💼 Vault Crack In Progress",
+                    title="⌛ Timeout",
+                    description="You took too long to decide. Robbery cancelled.",
+                    color=0x747F8D
+                ),
+                ephemeral=True
+            )
+            return
+
+        if not confirm_view.value:
+            await confirm_view.interaction.followup.send(
+                embed=discord.Embed(
+                    title="❌ Robbery Cancelled",
+                    description="You decided not to rob your job. Smart choice!",
+                    color=0xF04747
+                ),
+                ephemeral=True
+            )
+            return
+
+        # Step 2: Start vault game
+        try:
+            vault_view = VaultGameView(user_id=base_interaction.user.id)
+            await confirm_view.interaction.followup.send(
+                embed=discord.Embed(
+                    title="🔐 Vault Crack In Progress",
                     description="Enter the 3-digit code to crack the vault!",
                     color=0xFAA61A
                 ),
@@ -104,42 +115,44 @@ class CrimeCommands(commands.Cog):
             print(f"[DEBUG] VaultGameView ended with outcome: {vault_view.outcome}")
 
             if vault_view.outcome == "success":
-                success_embed = discord.Embed(
-                    title="✅ Vault Cracked!",
-                    description="You successfully cracked the vault and got away with the loot! (Payout pending)",
-                    color=0x43B581
+                await confirm_view.interaction.followup.send(
+                    embed=discord.Embed(
+                        title="✅ Vault Cracked!",
+                        description="You successfully cracked the vault and got away with the loot! 💰",
+                        color=0x43B581
+                    ),
+                    ephemeral=True
                 )
-                await interaction.followup.send(embed=success_embed, ephemeral=True)
 
             elif vault_view.outcome == "failure":
-                failure_embed = discord.Embed(
-                    title="🚨 Alarm Triggered!",
-                    description="You failed to crack the vault. Alarm triggered. Police are on their way!",
-                    color=0xF04747
+                await confirm_view.interaction.followup.send(
+                    embed=discord.Embed(
+                        title="🚨 Alarm Triggered!",
+                        description="You failed to crack the vault. Police are on their way! 🐷",
+                        color=0xF04747
+                    ),
+                    ephemeral=True
                 )
-                await interaction.followup.send(embed=failure_embed, ephemeral=True)
-
             else:
-                neutral_embed = discord.Embed(
-                    title="⏳ Timeout or Abandoned",
-                    description="You gave up or the game timed out.",
-                    color=0x747F8D
+                await confirm_view.interaction.followup.send(
+                    embed=discord.Embed(
+                        title="🕒 Timeout or Abandoned",
+                        description="You gave up or the game timed out.",
+                        color=0x747F8D
+                    ),
+                    ephemeral=True
                 )
-                await interaction.followup.send(embed=neutral_embed, ephemeral=True)
 
         except Exception as e:
-            print(f"❌ Exception in handle_rob_job: {e}")
-            error_embed = discord.Embed(
-                title="❌ Error",
-                description="Something went wrong during the robbery attempt.",
-                color=0xF04747
+            print(f"❌ Exception in vault game: {e}")
+            await confirm_view.interaction.followup.send(
+                embed=discord.Embed(
+                    title="❌ Error",
+                    description="Something went wrong during the robbery.",
+                    color=0xF04747
+                ),
+                ephemeral=True
             )
-            if not interaction.response.is_done():
-                await interaction.response.send_message(embed=error_embed, ephemeral=True)
-            else:
-                await interaction.followup.send(embed=error_embed, ephemeral=True)
-        except Exception as inner_e:
-            print(f"❌ Failed to send error message: {inner_e}")
 
 async def setup(bot):
     await bot.add_cog(CrimeCommands(bot))
