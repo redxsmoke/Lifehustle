@@ -14,7 +14,7 @@ class CrimeDropdown(discord.ui.Select):
     def __init__(self, parent_view):
         options = [
             discord.SelectOption(label="Theft", description="Steal from someone or somewhere"),
-            # Add more crimes later here
+            # Add more crimes here
         ]
         super().__init__(placeholder="Select a crime...", min_values=1, max_values=1, options=options)
         self.parent_view = parent_view
@@ -24,7 +24,8 @@ class CrimeDropdown(discord.ui.Select):
         if crime_choice == "Theft":
             await interaction.response.edit_message(
                 content="Where do you want to steal from?",
-                view=TheftLocationView(self.parent_view.user, self.parent_view.bot)
+                view=TheftLocationView(self.parent_view.user, self.parent_view.bot),
+                embed=None
             )
         else:
             await interaction.response.send_message("Crime not implemented yet.", ephemeral=True)
@@ -54,13 +55,20 @@ class TheftLocationDropdown(discord.ui.Select):
             cog = self.parent_view.bot.get_cog("CrimeCommands")
             if cog:
                 try:
+                    # Don't respond here — let handle_rob_job do the response
                     await cog.handle_rob_job(interaction)
                 except Exception as e:
                     print(f"❌ Error in handle_rob_job: {e}")
-                    await interaction.followup.send(
-                        "❌ Something went wrong during the robbery attempt.",
-                        ephemeral=True
-                    )
+                    if not interaction.response.is_done():
+                        await interaction.response.send_message(
+                            "❌ Something went wrong during the robbery attempt.",
+                            ephemeral=True
+                        )
+                    else:
+                        await interaction.followup.send(
+                            "❌ Something went wrong during the robbery attempt.",
+                            ephemeral=True
+                        )
             else:
                 print("❌ CrimeCommands cog not found!")
                 await interaction.response.send_message(
