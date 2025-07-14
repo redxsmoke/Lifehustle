@@ -60,3 +60,7 @@ class TheftLocationDropdown(discord.ui.Select):
                 )
         else:
             await interaction.response.send_message("Location not implemented yet.", ephemeral=True)
+
+
+async def setup(bot):
+    await bot.add_cog(CrimeCommands(bot))
