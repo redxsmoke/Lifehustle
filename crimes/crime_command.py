@@ -30,18 +30,19 @@ class CrimeCommands(commands.Cog):
                     self.value = None
 
                 @discord.ui.button(label="Continue", style=discord.ButtonStyle.green)
-                async def continue_button(self, button: discord.ui.Button, interaction_: discord.Interaction):
-                    if interaction_.user.id != interaction.user.id:
-                        await interaction_.response.send_message("This isn't your robbery to confirm!", ephemeral=True)
+                async def continue_button(self, button: discord.ui.Button, interaction: discord.Interaction):
+                    if interaction.user.id != self.user_id:
+                        await interaction.response.send_message("This isn't your robbery to confirm!", ephemeral=True)
                         return
+                    await interaction.response.defer()  # Important! Acknowledge interaction
                     self.value = True
                     self.stop()
-
                 @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
-                async def cancel_button(self, button: discord.ui.Button, interaction_: discord.Interaction):
-                    if interaction_.user.id != interaction.user.id:
-                        await interaction_.response.send_message("This isn't your robbery to cancel!", ephemeral=True)
+                async def cancel_button(self, button: discord.ui.Button, interaction: discord.Interaction):
+                    if interaction.user.id != self.user_id:
+                        await interaction.response.send_message("This isn't your robbery to cancel!", ephemeral=True)
                         return
+                    await interaction.response.defer()  # Important! Acknowledge interaction
                     self.value = False
                     self.stop()
 
