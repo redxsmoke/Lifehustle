@@ -31,7 +31,9 @@ class CrimeCommands(commands.Cog):
 
             async def interaction_check(self, interaction: discord.Interaction) -> bool:
                 if interaction.user.id != self.user_id:
-                    await interaction.response.send_message("This isn't your robbery to confirm/cancel!", ephemeral=True)
+                    await interaction.response.send_message(
+                        "This isn't your robbery to confirm/cancel!", ephemeral=True
+                    )
                     return False
                 return True
 
@@ -39,25 +41,36 @@ class CrimeCommands(commands.Cog):
             async def continue_button(self, button, interaction: discord.Interaction):
                 self.value = True
                 self.button_interaction = interaction
-                await interaction.response.send_message("✅ Robbery confirmed! Cracking the vault now...", ephemeral=True)
+                await interaction.response.send_message(
+                    "✅ Robbery confirmed! Cracking the vault now...", ephemeral=True
+                )
                 self.stop()
 
             @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
             async def cancel_button(self, button, interaction: discord.Interaction):
                 self.value = False
                 self.button_interaction = interaction
-                await interaction.response.send_message("❌ Robbery cancelled.", ephemeral=True)
+                await interaction.response.send_message(
+                    "❌ Robbery cancelled.", ephemeral=True
+                )
                 self.stop()
 
-        # Step 1: Show the confirmation view
         confirm_view = ConfirmRobberyView(user_id=interaction.user.id)
-        intro_embed = discord.Embed(
-            title="💼 Breaking In...",
-            description="You're breaking into your workplace safe... Try to crack the code!",
-            color=0xFAA61A
-        )
-        await interaction.response.send_message(embed=intro_embed, view=confirm_view, ephemeral=True)
 
+        # Defer original slash command response because we'll send the view in a followup
+        await interaction.response.defer(ephemeral=True)
+
+        await interaction.followup.send(
+            embed=discord.Embed(
+                title="💼 Breaking In...",
+                description="You're breaking into your workplace safe... Try to crack the code!",
+                color=0xFAA61A
+            ),
+            view=confirm_view,
+            ephemeral=True,
+        )
+
+        # Wait for Continue or Cancel button press
         await confirm_view.wait()
 
         if confirm_view.value is None:
@@ -65,48 +78,51 @@ class CrimeCommands(commands.Cog):
                 embed=discord.Embed(
                     title="⌛ Timeout",
                     description="You took too long to decide. Robbery cancelled.",
-                    color=0x747F8D
+                    color=0x747F8D,
                 ),
-                ephemeral=True
+                ephemeral=True,
             )
             return
 
         if not confirm_view.value:
-            # Already responded inside cancel_button
+            # User cancelled, message already sent in cancel_button
             return
 
-        # Step 2: Start VaultGameView
+        # User confirmed robbery, start VaultGameView
         try:
             vault_view = VaultGameView(user_id=interaction.user.id)
-
             await confirm_view.button_interaction.followup.send(
                 embed=discord.Embed(
                     title="🔐 Vault Crack In Progress",
                     description="Enter the 3-digit code to crack the vault!",
-                    color=0xFAA61A
+                    color=0xFAA61A,
                 ),
                 view=vault_view,
-                ephemeral=True
+                ephemeral=True,
             )
 
             await vault_view.wait()
 
             print(f"[DEBUG] VaultGameView ended with outcome: {vault_view.outcome}")
 
-            outcome_embed = discord.Embed(color=discord.Color.blurple())
-
             if vault_view.outcome == "success":
-                outcome_embed.title = "✅ Vault Cracked!"
-                outcome_embed.description = "You successfully cracked the vault and got away with the loot! 💰"
-                outcome_embed.color = 0x43B581
+                outcome_embed = discord.Embed(
+                    title="✅ Vault Cracked!",
+                    description="You successfully cracked the vault and got away with the loot! 💰",
+                    color=0x43B581,
+                )
             elif vault_view.outcome == "failure":
-                outcome_embed.title = "🚨 Alarm Triggered!"
-                outcome_embed.description = "You failed to crack the vault. Police are on their way! 🚓"
-                outcome_embed.color = 0xF04747
+                outcome_embed = discord.Embed(
+                    title="🚨 Alarm Triggered!",
+                    description="You failed to crack the vault. Police are on their way! 🚓",
+                    color=0xF04747,
+                )
             else:
-                outcome_embed.title = "⏳ Timeout or Abandoned"
-                outcome_embed.description = "You gave up or the game timed out."
-                outcome_embed.color = 0x747F8D
+                outcome_embed = discord.Embed(
+                    title="⏳ Timeout or Abandoned",
+                    description="You gave up or the game timed out.",
+                    color=0x747F8D,
+                )
 
             await confirm_view.button_interaction.followup.send(embed=outcome_embed, ephemeral=True)
 
@@ -117,9 +133,9 @@ class CrimeCommands(commands.Cog):
                     embed=discord.Embed(
                         title="❌ Error",
                         description="Something went wrong during the robbery.",
-                        color=0xF04747
+                        color=0xF04747,
                     ),
-                    ephemeral=True
+                    ephemeral=True,
                 )
             except Exception as inner_e:
                 print(f"❌ Could not send error message: {inner_e}")
