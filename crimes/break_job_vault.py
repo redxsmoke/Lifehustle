@@ -120,19 +120,23 @@ class VaultGameView(discord.ui.View):
             print(f"[ERROR][VaultGameView] Failed to send hide button message: {e}")
 
     async def process_police_search(self, interaction: discord.Interaction, chosen_spot: str):
-        # Police will search 3 random locations from the full list
         searched_spots = random.sample(self.hide_spots, 3)
-        await interaction.followup.send(f"🚓 Police are searching the following locations:", ephemeral=True)
-
         caught = False
+
+        await asyncio.sleep(5)
+        await interaction.followup.send("🚨 The police have arrived on scene...", ephemeral=True)
+
         for emoji, spot in searched_spots:
-            await interaction.followup.send(f"🔍 Searching **{spot}**...", ephemeral=True)
+            await asyncio.sleep(5)
+            await interaction.followup.send(f"🔍 The police search **{spot}**...", ephemeral=True)
             if spot == chosen_spot:
                 caught = True
                 break
 
+        await asyncio.sleep(5)
+
         if caught:
-            await interaction.followup.send(f"🚨 The police found you hiding {chosen_spot}! You're arrested and fired!", ephemeral=True)
+            await interaction.followup.send(f"🚨 The police found you hiding **{chosen_spot}**! You're arrested and fired!", ephemeral=True)
             print(f"[DEBUG][VaultGameView] User {interaction.user.id} caught hiding in {chosen_spot}")
 
             async with interaction.client.pool.acquire() as conn:
@@ -143,7 +147,7 @@ class VaultGameView(discord.ui.View):
                     interaction.user.id
                 )
         else:
-            await interaction.followup.send(f"🎉 The police searched everywhere but couldn’t find you. You evaded capture!", ephemeral=True)
+            await interaction.followup.send("🎉 The police searched everywhere but couldn’t find you. You evaded capture!", ephemeral=True)
             print(f"[DEBUG][VaultGameView] User {interaction.user.id} evaded police successfully")
 
         self.stop()
