@@ -45,7 +45,7 @@ class VaultGame:
 
 class VaultGameView(discord.ui.View):
     def __init__(self, user_id, bot):
-        super().__init__(timeout=120)
+        super().__init__(timeout=300)
         self.user_id = user_id
         self.robbery_complete = asyncio.Event()
         self.bot = bot
@@ -198,7 +198,7 @@ class VaultGameView(discord.ui.View):
 
 class HideOnlyView(discord.ui.View):
     def __init__(self, vault_view: VaultGameView):
-        super().__init__(timeout=120)
+        super().__init__(timeout=300)
         self.vault_view = vault_view
         # Add only Hide button enabled here
         self.hide_button = discord.ui.Button(label="Hide", style=discord.ButtonStyle.green)
@@ -218,7 +218,7 @@ class HideOnlyView(discord.ui.View):
 
         class HideChoiceView(discord.ui.View):
             def __init__(self, vault_view: VaultGameView):
-                super().__init__(timeout=60)
+                super().__init__(timeout=300)
                 self.vault_view = vault_view
                 self.chosen_spot = None
 
@@ -314,7 +314,7 @@ class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
 
 class SnitchConfirmView(discord.ui.View):
     def __init__(self, parent: VaultGameView):
-        super().__init__(timeout=15)
+        super().__init__(timeout=10)
         self.parent = parent
 
     @discord.ui.button(label="Report to Police", style=discord.ButtonStyle.red)
@@ -351,7 +351,7 @@ class SnitchConfirmView(discord.ui.View):
 
         async def wait_for_hide_choice(interaction):
             try:
-                await asyncio.wait_for(self.parent.robbery_complete.wait(), timeout=60)
+                await asyncio.wait_for(self.parent.robbery_complete.wait(), timeout=300)
             except asyncio.TimeoutError:
                 if not self.parent.hide_spot_chosen:
                     self.parent.outcome = "failure"
