@@ -147,7 +147,7 @@ class CrimeCommands(commands.Cog):
 
             elif vault_view.outcome == "Evaded Police":
                 outcome_embed = discord.Embed(
-                    title="🎉 Suspect Evaded Capture!",
+                    title="🏃‍♂️💨 Suspect Evaded Capture!",
                     description="The police searched everywhere but couldn’t find anyone. The suspect evaded capture!",
                     color=0xFAA61A,
                 )

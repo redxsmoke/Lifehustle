@@ -336,6 +336,7 @@ class SnitchConfirmView(discord.ui.View):
 
         try:
             channel = interaction.channel
+            guild = interaction.guild  # Add this line
             await channel.send(
                 embed=discord.Embed(
                     title="🚨 Police Alert!",
@@ -359,7 +360,8 @@ class SnitchConfirmView(discord.ui.View):
                     self.parent.outcome = "failure"
                     self.parent.chosen_spot = None
 
-                    robber = self.parent.bot.get_user(self.parent.user_id)
+                    # Use guild.get_member instead of bot.get_user
+                    robber = guild.get_member(self.parent.user_id) if guild else None
                     robber_mention = robber.mention if robber else "The suspect"
 
                     embed = discord.Embed(
