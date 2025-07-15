@@ -124,9 +124,6 @@ class CrimeCommands(commands.Cog):
                 print("[DEBUG] Sending payout embed")
                 await interaction.channel.send(embed=outcome_embed)
                 print("[DEBUG] Payout embed sent")
-            else:
-                print("[DEBUG] Outcome was not 'success', payout skipped")
-
 
             elif vault_view.outcome == "Caught":
                 robber = interaction.guild.get_member(interaction.user.id)
