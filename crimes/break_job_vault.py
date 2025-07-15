@@ -50,6 +50,7 @@ class VaultGameView(discord.ui.View):
         self.robbery_complete = asyncio.Event()
         self.bot = bot
         self.game = VaultGame()
+        self.chosen_spot = None
         self.outcome = None
         self.snitched = False
         self.hide_used = False

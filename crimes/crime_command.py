@@ -126,7 +126,7 @@ class CrimeCommands(commands.Cog):
                 outcome_embed = discord.Embed(
                     title="🚨 Caught!",
                     description=(
-                        f"The police searched **{chosen_spot}** and found {robber.display_name} hiding there. "
+                        f"The police searched **{vault_view.chosen_spot}** and found {robber.display_name} hiding there. "
                         "He/She has been arrested and fired from their job. "
                         "His/her checking account funds have also been seized for investigation 😉😉"
                     ),
