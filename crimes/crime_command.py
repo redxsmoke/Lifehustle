@@ -109,13 +109,7 @@ class CrimeCommands(commands.Cog):
                             "INSERT INTO user_finances (user_id, checking_account_balance) VALUES ($1, $2)",
                             interaction.user.id, payout
                                         )
-                await interaction.followup.send(
-                        embed=discord.Embed(
-                            title="💰 Payout Received!",
-                            description=f"You escaped with **${payout:,}**!",
-                            color=0x2ECC71
-                        )
-                    )
+
                 outcome_embed = discord.Embed(
                     title="✅ Vault Cracked!",
                     description=f"You successfully cracked the vault and escaped with **${payout:,}**. The money has been added to your checking account! 💰",

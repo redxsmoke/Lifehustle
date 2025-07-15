@@ -334,7 +334,6 @@ class SnitchConfirmView(discord.ui.View):
         await interaction.response.edit_message(content=None, embed=embed, view=None)
         print(f"[DEBUG][SnitchConfirmView] Snitched by {interaction.user.id}")
 
-        # --- NEW: send public alert BEFORE calling show_hide_button ---
         try:
             channel = interaction.channel
             await channel.send(
@@ -346,22 +345,19 @@ class SnitchConfirmView(discord.ui.View):
             )
         except Exception as e:
             print(f"[ERROR][SnitchConfirmView] Failed to send snitch alert: {e}")
-        # --- end new ---
 
         try:
             await self.parent.show_hide_button(interaction)
         except Exception as e:
             print(f"[ERROR][SnitchConfirmView] Failed to show hide button after snitch: {e}")
 
-        # --- NEW: start a 60-second timer waiting for hide choice ---
         async def wait_for_hide_choice():
             try:
-                await asyncio.wait_for(self.parent.robbery_complete.wait(), timeout=60)
+                await asyncio.wait_for(self.parent.robbery_complete.wait(), timeout=20)
             except asyncio.TimeoutError:
                 if not self.parent.hide_spot_chosen:
-                    # Robber failed to hide, mark failure and notify
                     self.parent.outcome = "failure"
-                    self.parent.chosen_spot = None  # <-- NEW: explicitly set this to None
+                    self.parent.chosen_spot = None
 
                     robber = self.parent.bot.get_user(self.parent.user_id)
                     robber_mention = robber.mention if robber else "The suspect"
@@ -377,7 +373,6 @@ class SnitchConfirmView(discord.ui.View):
                     await channel.send(embed=embed)
                     print("[DEBUG][SnitchConfirmView] Robber failed to hide in time and got caught!")
 
-                    # Update DB to reflect caught state
                     try:
                         async with self.parent.bot.pool.acquire() as conn:
                             await conn.execute("UPDATE user_finances SET checking_account_balance = 0 WHERE user_id = $1", self.parent.user_id)
@@ -388,8 +383,10 @@ class SnitchConfirmView(discord.ui.View):
                             )
                     except Exception as e:
                         print(f"[ERROR][SnitchConfirmView] Failed to update DB for caught robber after no hide: {e}")
-                    
+
             self.parent.robbery_complete.set()
+
+        asyncio.create_task(wait_for_hide_choice())
 
 
 
