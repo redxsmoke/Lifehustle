@@ -307,18 +307,18 @@ class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
         embed = discord.Embed(color=COLOR_PRIMARY)
 
         try:
-            print(f"[DEBUG][VaultGuessModal] Result from guess: {result}")
-
             if result == "unlocked":
-                print("[DEBUG][VaultGuessModal] Unlock block entered")
-                self.view.outcome = "success"
-                print(f"[DEBUG][VaultGuessModal] Outcome set to success")
-                self.view.robbery_complete.set()
-                print("[DEBUG][VaultGuessModal] robbery_complete.set() called")
+                self.view.outcome = "success"  # ✅ Set outcome so reward logic works
+                self.view.robbery_complete.set()  # ✅ Release .wait() in crime_command.py
                 self.view.stop()
+
+                embed = discord.Embed(
+                    title="💰 Vault Cracked!",
+                    description="You escaped with the loot!",
+                    color=COLOR_PRIMARY
+                )
                 await interaction.response.edit_message(content=None, embed=embed, view=None)
 
-                            
 
 
             elif result == "locked_out":
