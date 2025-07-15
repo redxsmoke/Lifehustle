@@ -88,6 +88,9 @@ class CrimeCommands(commands.Cog):
             await vault_view.robbery_complete.wait()
             print(f"[DEBUG] VaultGameView robbery completed. Outcome: {vault_view.outcome}, snitched: {vault_view.snitched}")
 
+            
+            print(f"[DEBUG] VaultGameView robbery completed. Outcome: {vault_view.outcome}, snitched: {vault_view.snitched}")
+
             if vault_view.outcome == "success":
                 base_amount = random.randint(1000, 5000)
                 multiplier = round(random.uniform(1.0, 5.0), 2)
