@@ -77,8 +77,8 @@ class CrimeCommands(commands.Cog):
             print("[DEBUG] Sending VaultGameView to channel.")
             msg = await interaction.channel.send(
                 embed=discord.Embed(
-                    title="🔐 Vault Crack In Progress",
-                    description="A mysterious employee is trying to crack the vault...",
+                    title="🔐 Safe Crack In Progress",
+                    description="A disgruntled employee is trying to rob their employer...",
                     color=0xFAA61A,
                 ),
                 view=vault_view
