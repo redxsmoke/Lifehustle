@@ -350,7 +350,7 @@ class SnitchConfirmView(discord.ui.View):
 
         async def wait_for_hide_choice(interaction):
             try:
-                await asyncio.wait_for(self.parent.robbery_complete.wait(), timeout=20)
+                await asyncio.wait_for(self.parent.robbery_complete.wait(), timeout=5)
             except asyncio.TimeoutError:
                 if not self.parent.hide_spot_chosen:
                     self.parent.outcome = "failure"
