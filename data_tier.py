@@ -79,19 +79,8 @@ async def seed_grocery_categories(pool):
 
 async def migrate_cd_locations(pool):
     drop_create_sql = """
-    DROP TABLE IF EXISTS cd_destinations CASCADE;
-
-    CREATE TABLE cd_locations (
-        cd_location_id SERIAL PRIMARY KEY,
-        location_name TEXT NOT NULL,
-        location_description TEXT,
-        district TEXT,
-        region TEXT,
-        travel_time INTEGER NOT NULL DEFAULT 0,
-        active BOOLEAN NOT NULL DEFAULT TRUE,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ
-    );
+    ALTER TABLE cd_occupations DROP COLUMN IF EXISTS location_id;
+    
     """
 
     async with pool.acquire() as conn:
