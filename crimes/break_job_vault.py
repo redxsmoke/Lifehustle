@@ -105,10 +105,19 @@ class VaultGameView(discord.ui.View):
             ephemeral=True
         )
     async def on_timeout(self):
+        print(f"[DEBUG][VaultGameView] on_timeout triggered. Outcome: {self.outcome}, Robbery complete: {self.robbery_complete.is_set()}")
+
+        # 🚫 If the game is already complete, skip timeout logic
+        if self.robbery_complete.is_set():
+            print("[DEBUG][VaultGameView] Robbery already completed. Skipping timeout message.")
+            return
+
+        # 🛡️ Fallback: if outcome was already marked, also skip
         if self.outcome in ("success", "failure", "Caught", "Evaded Police", "snitched"):
             print(f"[DEBUG][VaultGameView] Skipping timeout — already handled: {self.outcome}")
             return
 
+        # ✅ Otherwise, post timeout message
         if self.channel:
             embed = discord.Embed(
                 title="⏳ Timeout or Abandoned",
