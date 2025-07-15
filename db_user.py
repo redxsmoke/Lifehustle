@@ -72,11 +72,7 @@ async def get_user(pool, user_id: int):
     async with pool.acquire() as conn:
         row = await conn.fetchrow('SELECT * FROM users WHERE user_id = $1', user_id)
         if row:
-            return {
-                'user_id': row['user_id'],
-                'user_name': row['user_name'],
-                'last_seen': row['last_seen']
-            }
+            return dict(row)  # <-- converts asyncpg Record to a full dictionary
         return None
 
 
