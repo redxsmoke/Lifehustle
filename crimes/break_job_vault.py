@@ -105,11 +105,11 @@ class VaultGameView(discord.ui.View):
             ephemeral=True
         )
     async def on_timeout(self):
-        if self.outcome is not None:
-            print("[DEBUG][VaultGameView] Timeout triggered but outcome already set, skipping timeout message.")
-            return  # already finished, skip
+        if self.outcome in ("success", "failure", "Caught", "Evaded Police", "snitched"):
+            print(f"[DEBUG][VaultGameView] Skipping timeout — already handled: {self.outcome}")
+            return
 
-        if self.channel is not None:
+        if self.channel:
             embed = discord.Embed(
                 title="⏳ Timeout or Abandoned",
                 description="You gave up or the game timed out.",
@@ -120,7 +120,9 @@ class VaultGameView(discord.ui.View):
                 print("[DEBUG][VaultGameView] Timeout message sent.")
             except Exception as e:
                 print(f"[ERROR][VaultGameView] Failed to send timeout message: {e}")
+
         self.stop()
+
 
     
     async def disable_snitch_button_later(self, message: discord.Message):
