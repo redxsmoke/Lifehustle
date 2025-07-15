@@ -275,11 +275,14 @@ class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
 
         try:
             if result == "unlocked":
-                self.view.outcome = "success"
+                self.view.outcome = "success"  # ✅ Set outcome so reward logic works
+                self.view.robbery_complete.set()  # ✅ Release .wait() in crime_command.py
+
                 embed.title = "💰 Vault Cracked!"
                 embed.description = "You escaped with the loot!"
                 await interaction.response.edit_message(content=None, embed=embed, view=None)
                 self.view.stop()
+
 
             elif result == "locked_out":
                 self.view.outcome = "failure"
@@ -357,6 +360,7 @@ class SnitchConfirmView(discord.ui.View):
                 if not self.parent.hide_spot_chosen:
                     # Robber failed to hide, mark failure and notify
                     self.parent.outcome = "failure"
+                    self.parent.chosen_spot = None  # <-- NEW: explicitly set this to None
 
                     robber = self.parent.bot.get_user(self.parent.user_id)
                     robber_mention = robber.mention if robber else "The suspect"
@@ -384,7 +388,8 @@ class SnitchConfirmView(discord.ui.View):
                     except Exception as e:
                         print(f"[ERROR][SnitchConfirmView] Failed to update DB for caught robber after no hide: {e}")
                     
-                    self.parent.robbery_complete.set()
+            self.parent.robbery_complete.set()
+
 
 
     @discord.ui.button(label="I ain't no snitch", style=discord.ButtonStyle.grey)
