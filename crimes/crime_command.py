@@ -123,7 +123,7 @@ class CrimeCommands(commands.Cog):
                     title="🚨 Caught!",
                     description=(
                         f"The police searched **{vault_view.chosen_spot}** and found {robber_name} hiding there. "
-                        "They’ve been arrested and fired. Their checking account funds have also been seized for investigation 😉😉"
+                        "They’ve been arrested and fired. Their checking account funds have also been seized for investigation 😳😞"
                     ),
                     color=0xF04747,
                 )
