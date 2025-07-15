@@ -310,10 +310,6 @@ class VaultGuessModal(discord.ui.Modal, title="🔐 Enter Vault Code"):
             except Exception as inner_e:
                 print(f"[ERROR][VaultGuessModal] Failed to send error message: {inner_e}")
 
-class SnitchConfirmView(discord.ui.View):
-    def __init__(self, parent: VaultGameView):
-        super().__init__(timeout=15)
-        self.parent = parent
 
 class SnitchConfirmView(discord.ui.View):
     def __init__(self, parent: VaultGameView):
@@ -352,7 +348,7 @@ class SnitchConfirmView(discord.ui.View):
         except Exception as e:
             print(f"[ERROR][SnitchConfirmView] Failed to show hide button after snitch: {e}")
 
-        async def wait_for_hide_choice():
+        async def wait_for_hide_choice(interaction):
             try:
                 await asyncio.wait_for(self.parent.robbery_complete.wait(), timeout=20)
             except asyncio.TimeoutError:
@@ -360,8 +356,7 @@ class SnitchConfirmView(discord.ui.View):
                     self.parent.outcome = "failure"
                     self.parent.chosen_spot = None
 
-                    # Use guild.get_member instead of bot.get_user
-                    robber = guild.get_member(self.parent.user_id) if guild else None
+                    robber = interaction.guild.get_member(self.parent.user_id) if interaction.guild else None
                     robber_mention = robber.mention if robber else "The suspect"
 
                     embed = discord.Embed(
@@ -372,7 +367,7 @@ class SnitchConfirmView(discord.ui.View):
                         ),
                         color=0xF04747
                     )
-                    await channel.send(embed=embed)
+                    await interaction.channel.send(embed=embed)
                     print("[DEBUG][SnitchConfirmView] Robber failed to hide in time and got caught!")
 
                     try:
@@ -388,7 +383,7 @@ class SnitchConfirmView(discord.ui.View):
 
             self.parent.robbery_complete.set()
 
-        asyncio.create_task(wait_for_hide_choice())
+        asyncio.create_task(wait_for_hide_choice(interaction))
 
 
 
