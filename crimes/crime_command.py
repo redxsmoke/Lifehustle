@@ -160,11 +160,9 @@ class CrimeCommands(commands.Cog):
                 )
 
             else:
-                outcome_embed = discord.Embed(
-                    title="⏳ Timeout or Abandoned",
-                    description="You gave up or the game timed out.",
-                    color=0x747F8D,
-                )
+                print("[DEBUG] Skipping duplicate timeout message. Already handled in on_timeout().")
+                return  # Don't send a second message
+
 
             await interaction.channel.send(embed=outcome_embed)
             print("[DEBUG] Sent vault outcome embed.")
