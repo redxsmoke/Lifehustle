@@ -116,19 +116,22 @@ class CrimeCommands(commands.Cog):
                     color=0x43B581,
                 )
 
-            elif vault_view.outcome in ("failure", "Caught"):
-                robber = interaction.guild.get_member(interaction.user.id) if interaction.guild else None
+            elif vault_view.outcome == "Caught":
+                robber = interaction.guild.get_member(interaction.user.id)
                 robber_name = robber.display_name if robber else "The suspect"
-
                 outcome_embed = discord.Embed(
                     title="🚨 Caught!",
                     description=(
                         f"The police searched **{vault_view.chosen_spot}** and found {robber_name} hiding there. "
-                        "He/She has been arrested and fired from their job. "
-                        "His/her checking account funds have also been seized for investigation 😉😉"
+                        "They’ve been arrested and fired. Their checking account funds have also been seized for investigation 😉😉"
                     ),
                     color=0xF04747,
                 )
+            elif vault_view.outcome == "failure":
+                # Don't send any message — already sent by SnitchConfirmView
+                print("[DEBUG] Timeout failure already handled in SnitchConfirmView. Skipping extra embed.")
+                return  # skip sending another message
+
 
 
                 # --- NEW: Reset finances, fire, and log criminal record when caught or failed ---
