@@ -36,7 +36,7 @@ class CrimeCommands(commands.Cog):
         try:
             await interaction.response.send_message(
                 embed=discord.Embed(
-                    title="💼 Breaking In...",
+                    title="🔐🔓 Breaking In...",
                     description="You're breaking into your workplace safe...If you get caught you will certainly be fired and possibly go to jail. Do you wish to continue?",
                     color=0xFAA61A,
                 ),
@@ -108,7 +108,7 @@ class CrimeCommands(commands.Cog):
                         await conn.execute(
                             "INSERT INTO user_finances (user_id, checking_account_balance) VALUES ($1, $2)",
                             interaction.user.id, payout
-                                        )
+                        )
 
                 outcome_embed = discord.Embed(
                     title="✅ Vault Cracked!",
@@ -132,9 +132,8 @@ class CrimeCommands(commands.Cog):
                 print("[DEBUG] Timeout failure already handled in SnitchConfirmView. Skipping extra embed.")
                 return  # skip sending another message
 
-
-
-                # --- NEW: Reset finances, fire, and log criminal record when caught or failed ---
+            # --- NEW: Reset finances, fire, and log criminal record when caught or failed ---
+            if vault_view.outcome in ("Caught", "failure"):
                 try:
                     async with self.bot.pool.acquire() as conn:
                         await conn.execute(
