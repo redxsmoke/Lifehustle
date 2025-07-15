@@ -96,7 +96,7 @@ def register_commands(tree: app_commands.CommandTree):
             """
             SELECT cd_location_id, location_name, location_description
             FROM cd_locations
-            WHERE active = 'T' AND cd_location_id != $1
+            WHERE active = 'true' AND cd_location_id != $1
             """,
             current_location
         )
