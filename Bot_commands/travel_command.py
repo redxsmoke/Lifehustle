@@ -38,8 +38,40 @@ def condition_from_usage(travel_count: int, breakdown_threshold: int = 200) -> s
     else:
         return "Broken Down"
 
+class LocationSelect(discord.ui.Select):
+    def __init__(self, locations, user_id, pool):
+        self.user_id = user_id
+        self.pool = pool
+        options = [
+            discord.SelectOption(
+                label=loc["location_name"],
+                description=loc["location_description"] if loc["location_description"] else None,
+                value=str(loc["cd_location_id"])
+            )
+            for loc in locations
+        ]
+        super().__init__(placeholder="Where to?", options=options, min_values=1, max_values=1)
+
+    async def callback(self, interaction: discord.Interaction):
+        new_location_id = int(self.values[0])
+        await self.pool.execute(
+            "UPDATE users SET current_location = $1 WHERE user_id = $2",
+            new_location_id, self.user_id
+        )
+        await interaction.response.send_message(
+            f"🧳 You’ve traveled to **{self.placeholder or 'your destination'}**!",
+            ephemeral=True
+        )
+
+
+class LocationTravelView(discord.ui.View):
+    def __init__(self, locations, user_id, pool):
+        super().__init__(timeout=60)
+        self.add_item(LocationSelect(locations, user_id, pool))
+
+
 def register_commands(tree: app_commands.CommandTree):
-    @tree.command(name="travel", description="Travel to work using buttons")
+    @tree.command(name="travel", description="Travel to a different location")
     async def travel(interaction: Interaction):
         pool = globals.pool
         if pool is None:
@@ -59,19 +91,34 @@ def register_commands(tree: app_commands.CommandTree):
             )
             return
 
-        from views import TravelButtons
-        view = TravelButtons()
-        await interaction.response.defer(ephemeral=True)
-        msg = await interaction.followup.send(
+        current_location = user.get("current_location")
+        results = await pool.fetch(
+            """
+            SELECT cd_location_id, location_name, location_description
+            FROM cd_locations
+            WHERE active = 'T' AND cd_location_id != $1
+            """,
+            current_location
+        )
+
+        if not results:
+            await interaction.response.send_message(
+                embed=embed_message("⛔ Nowhere to Go", "You're already at the only active location.", COLOR_RED),
+                ephemeral=True
+            )
+            return
+
+        view = LocationTravelView(results, user_id, pool)
+        await interaction.response.send_message(
             embed=embed_message(
-                "🚗 Travel",
-                "> Choose your travel method:",
+                "🌍 Where to?",
+                "Pick a destination from the list below.",
                 discord.Color.blue()
             ),
             view=view,
             ephemeral=True
         )
-        view.message = msg
+
 async def handle_travel(interaction: Interaction, method: str):
     pool = globals.pool
     user_id = interaction.user.id

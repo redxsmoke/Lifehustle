@@ -76,7 +76,7 @@ async def seed_grocery_categories(pool):
             )
     print("✅ Seeded grocery categories with emojis.")
 
-
+""""
 async def migrate_cd_locations(pool):
     drop_create_sql = """
     ALTER TABLE cd_occupations DROP COLUMN IF EXISTS location_id;
@@ -87,3 +87,4 @@ async def migrate_cd_locations(pool):
         await conn.execute(drop_create_sql)
 
     print("✅ Dropped cd_destinations and created cd_locations.")
+""""

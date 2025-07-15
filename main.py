@@ -31,7 +31,7 @@ from Bot_commands.lifecheck_command import register_commands as register_lifeche
 from data_tier import (
     seed_grocery_types,
     seed_grocery_categories,
-    migrate_cd_locations,
+    
   
 )
 
@@ -50,7 +50,7 @@ async def setup_database():
     await init_db(globals.pool)
     await seed_grocery_categories(globals.pool)
     await seed_grocery_types(globals.pool)
-    await migrate_cd_locations(globals.pool)
+    
 
 
 
