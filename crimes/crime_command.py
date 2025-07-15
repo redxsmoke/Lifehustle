@@ -37,7 +37,7 @@ class CrimeCommands(commands.Cog):
             await interaction.response.send_message(
                 embed=discord.Embed(
                     title="🔐🔓 Breaking In...",
-                    description="You're breaking into your workplace safe...If you get caught you will certainly be fired and possibly go to jail. Do you wish to continue?",
+                    description="You're breaking into your workplace safe...If you get caught you will certainly be fired and arrested. Other consequences may also occurr. Do you wish to continue?",
                     color=0xFAA61A,
                 ),
                 view=confirm_view,

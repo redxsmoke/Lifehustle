@@ -239,6 +239,7 @@ class HideOnlyView(discord.ui.View):
                     return
 
                 self.parent_view.chosen_spot = self.description
+                self.vault_view.chosen_spot = self.description 
                 self.vault_view.hide_spot_chosen = True  # <-- SET flag on hide choice
 
                 await interaction.response.edit_message(content=f"You chose to hide **{self.description}**. Waiting for police to arrive...", view=None)
