@@ -84,37 +84,49 @@ class CrimeCommands(commands.Cog):
                 view=vault_view
             )
             print("[DEBUG] VaultGameView message sent.")
-            await vault_view.disable_snitch_button_later(msg)
+            asyncio.create_task(vault_view.disable_snitch_button_later(msg))
             await vault_view.robbery_complete.wait()
             print(f"[DEBUG] VaultGameView robbery completed. Outcome: {vault_view.outcome}, snitched: {vault_view.snitched}")
+            print(f"[DEBUG] VaultGameView robbery completed. Outcome: {vault_view.outcome}")
+
             if vault_view.outcome == "success":
+                print("[DEBUG] Starting payout block")
                 base_amount = random.randint(1000, 5000)
                 multiplier = round(random.uniform(1.0, 5.0), 2)
                 payout = int(base_amount * multiplier)
 
-                async with self.bot.pool.acquire() as conn:
-                    row = await conn.fetchrow(
-                        "SELECT checking_account_balance FROM user_finances WHERE user_id = $1",
-                        interaction.user.id
-                    )
-                    if row:
-                        new_balance = row["checking_account_balance"] + payout
-                        await conn.execute(
-                            "UPDATE user_finances SET checking_account_balance = $1 WHERE user_id = $2",
-                            new_balance, interaction.user.id
+                try:
+                    async with self.bot.pool.acquire() as conn:
+                        row = await conn.fetchrow(
+                            "SELECT checking_account_balance FROM user_finances WHERE user_id = $1",
+                            interaction.user.id
                         )
-                    else:
-                        new_balance = payout
-                        await conn.execute(
-                            "INSERT INTO user_finances (user_id, checking_account_balance) VALUES ($1, $2)",
-                            interaction.user.id, payout
-                        )
+                        if row:
+                            new_balance = row["checking_account_balance"] + payout
+                            await conn.execute(
+                                "UPDATE user_finances SET checking_account_balance = $1 WHERE user_id = $2",
+                                new_balance, interaction.user.id
+                            )
+                        else:
+                            new_balance = payout
+                            await conn.execute(
+                                "INSERT INTO user_finances (user_id, checking_account_balance) VALUES ($1, $2)",
+                                interaction.user.id, payout
+                            )
+                except Exception as e:
+                    print(f"[ERROR] Exception during payout DB update: {e}")
 
                 outcome_embed = discord.Embed(
                     title="✅ Vault Cracked!",
                     description=f"You successfully cracked the vault and escaped with **${payout:,}**. The money has been added to your checking account! 💰",
                     color=0x43B581,
                 )
+                print("[DEBUG] Sending payout embed")
+                await interaction.channel.send(embed=outcome_embed)
+                print("[DEBUG] Payout embed sent")
+            else:
+                print("[DEBUG] Outcome was not 'success', payout skipped")
+
 
             elif vault_view.outcome == "Caught":
                 robber = interaction.guild.get_member(interaction.user.id)
