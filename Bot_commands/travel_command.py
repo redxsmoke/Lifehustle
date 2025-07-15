@@ -104,14 +104,16 @@ def register_commands(tree: app_commands.CommandTree):
         )
 
         print(f"[DEBUG] Found {len(results)} locations available for travel.")
-        for loc in results:
-            print(f"[DEBUG] Location: {loc['location_name']} (ID: {loc['cd_location_id']})")
-
+        if not results:
             await interaction.response.send_message(
                 embed=embed_message("⛔ Nowhere to Go", "You're already at the only active location.", COLOR_RED),
                 ephemeral=True
             )
             return
+
+        for loc in results:
+            print(f"[DEBUG] Location: {loc['location_name']} (ID: {loc['cd_location_id']})")
+
 
         view = LocationTravelView(results, user_id, pool)
         await interaction.response.send_message(
