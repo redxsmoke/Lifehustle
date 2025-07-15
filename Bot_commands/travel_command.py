@@ -92,16 +92,21 @@ def register_commands(tree: app_commands.CommandTree):
             return
 
         current_location = user.get("current_location")
+        print(f"[DEBUG] current_location (type {type(current_location)}): {current_location}")
+
         results = await pool.fetch(
             """
             SELECT cd_location_id, location_name, location_description
             FROM cd_locations
             WHERE active = true AND cd_location_id != $1
             """,
-            current_location
+            current_location,
         )
 
-        if not results:
+        print(f"[DEBUG] Found {len(results)} locations available for travel.")
+        for loc in results:
+            print(f"[DEBUG] Location: {loc['location_name']} (ID: {loc['cd_location_id']})")
+
             await interaction.response.send_message(
                 embed=embed_message("⛔ Nowhere to Go", "You're already at the only active location.", COLOR_RED),
                 ephemeral=True
