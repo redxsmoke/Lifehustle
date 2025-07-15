@@ -44,11 +44,12 @@ class VaultGame:
             return f"Attempt {self.attempts}/{self.max_attempts}: {clue_str}"
 
 class VaultGameView(discord.ui.View):
-    def __init__(self, user_id, bot):
+    def __init__(self, user_id, bot, channel=None):
         super().__init__(timeout=300)
         self.user_id = user_id
         self.robbery_complete = asyncio.Event()
         self.bot = bot
+        self.channel = channel  # Save channel for timeout message
         self.game = VaultGame()
         self.chosen_spot = None
         self.outcome = None
@@ -72,6 +73,7 @@ class VaultGameView(discord.ui.View):
             ("🧣", "behind the coat rack"),
             ("🌬️", "inside the ventilation duct"),
         ]
+
 
     @discord.ui.button(label="Enter Safe Code", style=discord.ButtonStyle.blurple)
     async def submit(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -102,7 +104,21 @@ class VaultGameView(discord.ui.View):
             view=view,
             ephemeral=True
         )
-
+    async def on_timeout(self):
+        # Only send timeout message if outcome not yet decided
+        if self.outcome is None and self.channel is not None:
+            embed = discord.Embed(
+                title="⏳ Timeout or Abandoned",
+                description="You gave up or the game timed out.",
+                color=0x747F8D,
+            )
+            try:
+                await self.channel.send(embed=embed)
+                print("[DEBUG][VaultGameView] Timeout message sent.")
+            except Exception as e:
+                print(f"[ERROR][VaultGameView] Failed to send timeout message: {e}")
+        self.stop()
+    
     async def disable_snitch_button_later(self, message: discord.Message):
         await discord.utils.sleep_until(datetime.utcnow() + timedelta(seconds=10))
         self.snitch_disabled = True
