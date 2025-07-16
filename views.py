@@ -13,6 +13,7 @@ from vehicle_logic import ConfirmSellView, sell_all_vehicles
 from Bot_commands.lifecheck_command import get_mock_weather_dynamic
 from utilities import charge_user, reward_user
 
+
 # Fixed base prices by vehicle type
 BASE_PRICES = {
     "Bike": 2000,
