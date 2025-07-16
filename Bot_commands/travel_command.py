@@ -216,17 +216,6 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         return
 
 
-        await charge_user(pool, user_id, cost)
-
-        outcome = await select_weighted_travel_outcome(pool, method)
-        updated_finances = await get_user_finances(pool, user_id)
-        updated_balance = updated_finances.get("checking_account_balance", 0)
-
-        embed_text = (
-            f"> You traveled by **{method.title()}** for ${cost}.\n"
-            f"> Your updated balance is: **${updated_balance}**."
-        )
-
         if outcome:
             desc = outcome.get("description", "")
             effect = outcome.get("effect_amount", 0)
@@ -254,7 +243,61 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             ),
             ephemeral=True
         )
+        
+    elif method == 'subway' or method == 'bus':
+        cost = 10 if method == 'subway' else 5
+        finances = await get_user_finances(pool, user_id)
+        if finances.get("checking_account_balance", 0) < cost:
+            await interaction.followup.send(
+                embed=embed_message(
+                    "❌ Insufficient Funds",
+                    f"> You need ${cost} to travel by {method}, but your balance is ${finances.get('checking_account_balance', 0)}.",
+                    discord.Color.red()
+                ),
+                ephemeral=True
+            )
+            return
+
+        await charge_user(pool, user_id, cost)
+
+        outcome = await select_weighted_travel_outcome(pool, method)
+        updated_finances = await get_user_finances(pool, user_id)
+        updated_balance = updated_finances.get("checking_account_balance", 0)
+
+        embed_text = (
+            f"> You traveled by **{method.title()}** for ${cost}.\n"
+            f"> Your updated balance is: **${updated_balance}**."
+        )
+
+        if outcome:
+            desc = outcome.get("description", "")
+            effect = outcome.get("effect_amount", 0)
+
+            if effect < 0 and updated_balance >= -effect:
+                await charge_user(pool, user_id, -effect)
+                updated_balance -= -effect
+            elif effect > 0:
+                await reward_user(pool, user_id, effect)
+                updated_balance += effect
+
+            embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Balance: ${effect}"
+
+        # Update user location
+        await pool.execute(
+            "UPDATE users SET current_location = $1 WHERE user_id = $2",
+            user_travel_location, user_id
+        )
+
+        await interaction.followup.send(
+            embed=embed_message(
+                f"{'🚇' if method == 'subway' else '🚌'} Travel Summary",
+                embed_text,
+                COLOR_GREEN
+            ),
+            ephemeral=True
+        )
         return
+
 
     else:
         await interaction.followup.send(
@@ -269,9 +312,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
 
 async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location):
-    await interaction.response.defer(ephemeral=True)
-
-
+ 
     pool = globals.pool
     user_id = interaction.user.id
 
