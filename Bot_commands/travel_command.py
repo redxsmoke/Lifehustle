@@ -184,8 +184,12 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
                 "> You have multiple vehicles. Please choose one to travel with:",
                 discord.Color.blue()
             )
-            msg = await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            if interaction.response.is_done():
+                msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+            else:
+                msg = await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
             view.message = msg
+
         return
 
 
@@ -211,10 +215,12 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
                 "> You have multiple bikes. Please choose one to travel with:",
                 discord.Color.green()
             )
-            msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+            if interaction.response.is_done():
+                msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+            else:
+                msg = await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
             view.message = msg
-        return
-
+            return
 
         if outcome:
             desc = outcome.get("description", "")
