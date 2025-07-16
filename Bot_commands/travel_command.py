@@ -153,7 +153,8 @@ def register_commands(tree: app_commands.CommandTree):
             ephemeral=True
         )
 
-async def handle_travel(interaction: Interaction, method: str):
+async def handle_travel(interaction: Interaction, method: str, destination_id: int):
+
     pool = globals.pool
     user_id = interaction.user.id
 
