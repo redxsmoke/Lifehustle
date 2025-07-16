@@ -264,10 +264,22 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         updated_finances = await get_user_finances(pool, user_id)
         updated_balance = updated_finances.get("checking_account_balance", 0)
 
+        # Get old location before updating
+        user = await get_user(pool, user_id)
+        old_location_id = user.get("current_location")
+        old_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", old_location_id)
+        old_location_name = old_loc["location_name"] if old_loc else f"Location {old_location_id}"
+
+        # Get new location name
+        new_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", user_travel_location)
+        new_location_name = new_loc["location_name"] if new_loc else f"Location {user_travel_location}"
+
+        # Now safe to build embed_text
         embed_text = (
-            f"> You traveled by **{method.title()}** for ${cost}.\n"
+            f"> You traveled from **{old_location_name}** to **{new_location_name}** by **{method.title()}** for ${cost}.\n"
             f"> Your updated balance is: **${updated_balance}**."
         )
+
 
         if outcome:
             desc = outcome.get("description", "")
@@ -282,7 +294,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
             embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Balance: ${effect}"
 
-        # Update user location
+       
         await pool.execute(
             "UPDATE users SET current_location = $1 WHERE user_id = $2",
             user_travel_location, user_id
@@ -397,28 +409,42 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         appearance_desc = vehicle.get("appearance_description", "No description available.")
 
     
+    # Get old location BEFORE updating
+    user = await get_user(pool, user_id)
+    old_location_id = user.get("current_location")
+
+    # Fetch old location name
+    old_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", old_location_id)
+    old_location_name = old_loc["location_name"] if old_loc else f"Location {old_location_id}"
+
+    # Fetch new location name
+    new_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", user_travel_location)
+    new_location_name = new_loc["location_name"] if new_loc else f"Location {user_travel_location}"
+
+    # Now update to new location
     await pool.execute(
         "UPDATE users SET current_location = $1 WHERE user_id = $2",
         user_travel_location, user_id
     )
 
-    await interaction.followup.send(
-        embed=discord.Embed(
-            title=f"{'🚗' if method == 'car' else '🚴'} Travel Summary",
-            description=(
-                f"You traveled using your {vehicle.get('vehicle_type', 'vehicle')} "
-                f"(Color: {vehicle.get('color', 'Unknown')}, Plate: {vehicle.get('plate_number', 'N/A')}).\n"
-                f"- Travel Count: {travel_count}\n"
-                f"- Condition: {condition_str}\n"
-                f"- Appearance: {appearance_desc}\n\n"
-                f"🎲 Outcome: {outcome_desc}\n"
-                f"💰 Balance: ${effect}\n\n"
-                f"Your current balance is: ${current_balance:,}."
-            ),
-            color=COLOR_GREEN
+
+    embed = discord.Embed(
+        title=f"{'🚗' if method == 'car' else '🚴'} Travel Summary",
+        description=(
+            f"You traveled **from `{old_location_name}` to `{new_location_name}`** using your "
+            f"{vehicle.get('vehicle_type', 'vehicle')} (Color: {vehicle.get('color', 'Unknown')}, "
+            f"Plate: {vehicle.get('plate_number', 'N/A')}).\n"
+            f"- Travel Count: {travel_count}\n"
+            f"- Condition: {condition_str}\n"
+            f"- Appearance: {appearance_desc}\n\n"
+            f"🎲 Outcome: {outcome_desc}\n"
+            f"💰 Balance: ${effect}\n\n"
+            f"Your current balance is: ${current_balance:,}."
         ),
-        ephemeral=True
+        color=COLOR_GREEN
     )
+
+    await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 
