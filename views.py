@@ -422,18 +422,23 @@ async def select_weighted_travel_outcome(pool, travel_type):
     return weighted_choices[-1][0]
 
 
+from discord.ui import View, Button
+import discord
+
 class VehicleUseButton(Button):
-    def __init__(self, vehicle: dict, method: str):
+    def __init__(self, vehicle: dict, method: str, user_id: int, user_travel_location: int):
         label = f"{vehicle.get('vehicle_type', 'Vehicle')} - Plate: {vehicle.get('plate_number', 'N/A')} - Color: {vehicle.get('color', 'Unknown')}"
         super().__init__(label=label, style=discord.ButtonStyle.primary)
         self.vehicle = vehicle
         self.method = method
+        self.user_id = user_id
+        self.user_travel_location = user_travel_location
 
     async def callback(self, interaction: discord.Interaction):
         try:
             await interaction.response.defer(ephemeral=True)
 
-            if interaction.user.id != self.view.user_id:
+            if interaction.user.id != self.user_id:
                 await interaction.followup.send("❌ This isn't your vehicle menu.", ephemeral=True)
                 return
 
@@ -444,20 +449,18 @@ class VehicleUseButton(Button):
             pool = globals.pool
             user_id = interaction.user.id
 
-            
             async with pool.acquire() as conn:
                 user_row = await conn.fetchrow("SELECT current_location FROM users WHERE user_id = $1", user_id)
                 old_location_id = user_row["current_location"] if user_row else None
 
-          
             async def get_location_name(pool, location_id):
                 if location_id is None:
                     return "Unknown"
                 row = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", location_id)
                 return row["location_name"] if row else "Unknown"
- 
+
             old_location_name = await get_location_name(pool, old_location_id)
-            new_location_name = await get_location_name(pool, self.view.user_travel_location)
+            new_location_name = await get_location_name(pool, self.user_travel_location)
 
             # Update travel count
             async with pool.acquire() as conn:
@@ -490,7 +493,6 @@ class VehicleUseButton(Button):
                     updated_balance += effect
                 outcome_desc = desc
 
-  
             embed_text = (
                 f"You traveled from **{old_location_name}** to **{new_location_name}** "
                 f"using your {self.vehicle.get('vehicle_type', 'vehicle')} "
@@ -508,10 +510,10 @@ class VehicleUseButton(Button):
                 ephemeral=True
             )
 
-            # ✅ NEW: Update user's location in DB
+            # Update user's location in DB
             await pool.execute(
                 "UPDATE users SET current_location = $1 WHERE user_id = $2",
-                self.view.user_travel_location, user_id
+                self.user_travel_location, user_id
             )
 
         except Exception:
@@ -524,26 +526,16 @@ class VehicleUseButton(Button):
                 )
 
 
-
-class VehicleUseButton(Button):
-    def __init__(self, vehicle, method, user_id, user_travel_location):
-        super().__init__(label=f"{vehicle['vehicle_type']} - {vehicle['plate_number']}", style=discord.ButtonStyle.primary)
-        self.vehicle = vehicle
-        self.method = method
+class VehicleUseView(View):
+    def __init__(self, user_id: int, vehicles: list, method: str, user_travel_location: int):
+        super().__init__(timeout=60)
         self.user_id = user_id
+        self.vehicles = vehicles
+        self.method = method
         self.user_travel_location = user_travel_location
-
-    async def callback(self, interaction: discord.Interaction):
-        from Travel_commands.travel import handle_travel_with_vehicle  # avoid circular import issues
-
-        await interaction.response.defer(ephemeral=True)
-        await handle_travel_with_vehicle(
-            interaction,
-            self.vehicle,
-            self.method,
-            self.user_travel_location
-        )
-
+        for vehicle in vehicles:
+            # Pass user_id and user_travel_location here correctly
+            self.add_item(VehicleUseButton(vehicle, method, user_id, user_travel_location))
 
     def disable_all_buttons(self):
         for child in self.children:
