@@ -162,10 +162,10 @@ async def show_vehicle_selection(interaction, user_id, vehicles, method, user_tr
     restricted = False
     filtered_vehicles = vehicles
 
+    # ENFORCE VEHICLE LOCK REGARDLESS OF METHOD
     if current_location != HOME_LOCATION_ID and current_vehicle_id:
         filtered_vehicles = [v for v in vehicles if v["id"] == current_vehicle_id]
         restricted = True
-
 
     view = await VehicleUseView.create(user_id, filtered_vehicles, method, user_travel_location)
 
@@ -175,8 +175,8 @@ async def show_vehicle_selection(interaction, user_id, vehicles, method, user_tr
 
     if restricted:
         description = (
-            "> Since you are currently away from home, you can only travel using the vehicle you started with.\n"
-            "> To switch vehicles, you must first return home."
+            "> Since you're away from home, you can only travel using the vehicle you left with.\n"
+            "> To switch vehicles, return 🏠 home first."
         )
 
     embed = embed_message(
