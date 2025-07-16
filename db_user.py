@@ -182,7 +182,7 @@ async def get_user_achievements(pool, user_id: int):
     return rows
 
 async def can_user_own_vehicle(user_id: int, vehicle_type_id: int, conn) -> bool:
-    # Step 1: Get the class_type for the requested vehicle (e.g., 'CAR' or 'BIKE')
+    # Get the class_type for the requested vehicle (e.g., 'car' or 'bike')
     row = await conn.fetchrow("""
         SELECT class_type
         FROM cd_vehicle_type
@@ -190,37 +190,31 @@ async def can_user_own_vehicle(user_id: int, vehicle_type_id: int, conn) -> bool
     """, vehicle_type_id)
 
     if not row or not row['class_type']:
-        print("[can_user_own_vehicle] 🚫 Unknown or undefined vehicle type")
         return False  # Unknown or undefined class type
 
-    class_type = row['class_type'].upper()
+    class_type = row['class_type'].lower()  # Make sure to lowercase to match DB
 
-    # Step 2: Count how many vehicles of that class_type the user already owns
-    counts = await conn.fetchval("""
+    count = await conn.fetchval("""
         SELECT COUNT(*)
         FROM user_vehicle_inventory uvi
         JOIN cd_vehicle_type cvt ON uvi.vehicle_type_id = cvt.id
-        WHERE uvi.user_id = $1 AND LOWER(cvt.class_type) = LOWER($2)
+        WHERE uvi.user_id = $1 AND LOWER(cvt.class_type) = $2
     """, user_id, class_type)
+
     if count is None:
         count = 0
 
-    # Step 3: Check if user has a garage
     has_garage_row = await conn.fetchrow("SELECT has_garage FROM users WHERE user_id = $1", user_id)
     has_garage = has_garage_row['has_garage'] if has_garage_row else False
 
-    # Step 4: Determine limits
     car_limit = 5 if has_garage else 1
     bike_limit = 5 if has_garage else 2
 
-    print(f"[can_user_own_vehicle] class_type={class_type}, owned={count}, has_garage={has_garage}")
-
-    # Step 5: Compare against limit
-    if class_type == "CAR":
+    if class_type == "car":
         return count < car_limit
-    elif class_type == "BIKE":
+    elif class_type == "bike":
         return count < bike_limit
     else:
-        print(f"[can_user_own_vehicle] ❌ Unsupported vehicle class_type: {class_type}")
         return False  # Unsupported class type
+
 
