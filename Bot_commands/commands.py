@@ -10,7 +10,7 @@ from vehicle_logic import generate_random_plate
 import globals
 
 from datetime import datetime, timezone, timedelta   
-from db_user import get_user_finances, upsert_user_finances  
+from db_user import get_user_finances, upsert_user_finances, can_user_own_vehicle
 from utilities import parse_amount, embed_message, normalize
 from shop_items import TransportationShopButtons
 
