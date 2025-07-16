@@ -455,7 +455,9 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     user_after_update = await get_user(pool, user_id)
     print(f"[DEBUG] After UPDATE, current_location in DB: {user_after_update.get('current_location')}")
 
-    # Update last used vehicle and vehicle status#
+    print(f"vehicle_id: {vehicle_id} (type: {type(vehicle_id)})")
+    print(f"vehicle_status: {vehicle_status} (type: {type(vehicle_status)})")
+    print(f"location_id: {location_id} (type: {type(location_id)})")
     await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status, user_travel_location)
 
 
