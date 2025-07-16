@@ -64,6 +64,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
         async with pool.acquire() as conn:
             # 1. Ownership limit check
             can_buy = await can_user_own_vehicle(user_id, item["vehicle_type_id"], conn)
+            print(f"[handle_vehicle_purchase] Ownership limit check result: can_buy={can_buy}")
             if not can_buy:
                 await interaction.followup.send(
                     embed=embed_message(
