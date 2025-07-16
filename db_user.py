@@ -1,6 +1,7 @@
 import json
 import asyncpg
 import datetime
+import traceback
 
  
 
@@ -219,26 +220,32 @@ async def can_user_own_vehicle(user_id: int, vehicle_type_id: int, conn) -> bool
 
 
 async def update_last_used_vehicle(pool, user_id: int, vehicle_id: int | None, vehicle_status: str | None = None, location_id: int | None = None):
-    await pool.execute(
-        """
-        UPDATE users
-        SET last_used_vehicle = $1
-        WHERE user_id = $2
-        """,
-        vehicle_id,
-        user_id
-    )
+    try:
+        print(f"[DEBUG] Executing update_last_used_vehicle with vehicle_id={vehicle_id}, vehicle_status={vehicle_status}, location_id={location_id}")
 
-    if vehicle_id is not None and vehicle_status and location_id is not None:
         await pool.execute(
             """
-            UPDATE user_vehicle_inventory
-            SET vehicle_status = $1,
-                location_id = $2
-            WHERE user_id = $3 AND id = $4
+            UPDATE users
+            SET last_used_vehicle = $1
+            WHERE user_id = $2
             """,
-            vehicle_status,
-            location_id,
-            user_id,
-            vehicle_id
+            vehicle_id,
+            user_id
         )
+
+        if vehicle_id is not None and vehicle_status and location_id is not None:
+            await pool.execute(
+                """
+                UPDATE user_vehicle_inventory
+                SET vehicle_status = $1,
+                    location_id = $2
+                WHERE user_id = $3 AND id = $4
+                """,
+                vehicle_status,
+                location_id,
+                user_id,
+                vehicle_id
+            )
+        print("[DEBUG] update_last_used_vehicle executed successfully.")
+    except Exception as e:
+        print(f"[ERROR] update_last_used_vehicle failed: {e}")
