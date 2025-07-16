@@ -311,7 +311,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             ),
             ephemeral=True
         )
-youasync def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location):
+async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location):
     pool = globals.pool
     user_id = interaction.user.id
 
