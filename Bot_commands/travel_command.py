@@ -1,5 +1,4 @@
 import asyncio
-import datetime
 import json
 import random
 import string
@@ -265,7 +264,8 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         await charge_user(pool, user_id, cost)
-      
+
+        print(f"Vehicle ID: {vehicle.get('id')}, User ID: {user_id}, Status: {vehicle_status}")
         await update_last_used_vehicle(pool, user_id, None)
 
         outcome = await select_weighted_travel_outcome(pool, method)
@@ -352,8 +352,10 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
     await charge_user(pool, user_id, cost)
     current_balance = finances.get("checking_account_balance", 0) - cost
+    
+    print(f"Vehicle ID: {vehicle.get('id')}, User ID: {user_id}, Status: {vehicle_status}")
+    await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status)
 
-    await update_last_used_vehicle(pool, user_id, vehicle["id"])
 
     outcome = await select_weighted_travel_outcome(pool, method)
     outcome_desc = "No special events today."
@@ -418,12 +420,17 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         condition_str = vehicle.get("condition", "Unknown")
         appearance_desc = vehicle.get("appearance_description", "No description available.")
 
-    
-    # Get old location BEFORE updating
-    user = await get_user(pool, user_id)
-    old_location_id = user.get("current_location")
+    # First, update to new location (outside else)
+    await pool.execute(
+        "UPDATE users SET current_location = $1 WHERE user_id = $2",
+        user_travel_location, user_id
+    )
 
-    vehicle_status = "in use" if old_location_id == 3 else "stored"
+
+    # Now decide vehicle status based on the NEW location
+    vehicle_status = "stored" if user_travel_location == 3 else "in use"
+
+    # Update last used vehicle and vehicle status
     await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status)
 
     # Fetch old location name
@@ -433,12 +440,6 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     # Fetch new location name
     new_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", user_travel_location)
     new_location_name = new_loc["location_name"] if new_loc else f"Location {user_travel_location}"
-
-    # Now update to new location
-    await pool.execute(
-        "UPDATE users SET current_location = $1 WHERE user_id = $2",
-        user_travel_location, user_id
-    )
 
 
     embed = discord.Embed(

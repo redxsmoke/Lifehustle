@@ -123,7 +123,7 @@ async def handle_vehicle_purchase(
     plate = generate_random_plate()
 
     # Condition and travel count logic
-    if vehicle_type_id == 1:  # Beater Car always poor condition
+    if vehicle_type_id == 1:  
         condition_id = 4  # Poor Condition
         travel_count = 151
     else:
