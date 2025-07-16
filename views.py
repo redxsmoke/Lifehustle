@@ -525,15 +525,24 @@ class VehicleUseButton(Button):
 
 
 
-class VehicleUseView(View):
-    def __init__(self, user_id: int, vehicles: list, method: str, user_travel_location: int):
-        super().__init__(timeout=60)
-        self.user_id = user_id
-        self.vehicles = vehicles
+class VehicleUseButton(Button):
+    def __init__(self, vehicle, method, user_id, user_travel_location):
+        super().__init__(label=f"{vehicle['vehicle_type']} - {vehicle['plate_number']}", style=discord.ButtonStyle.primary)
+        self.vehicle = vehicle
         self.method = method
-        self.user_travel_location = user_travel_location  # <-- ADD THIS LINE
-        for vehicle in vehicles:
-            self.add_item(VehicleUseButton(vehicle, method))
+        self.user_id = user_id
+        self.user_travel_location = user_travel_location
+
+    async def callback(self, interaction: discord.Interaction):
+        from Travel_commands.travel import handle_travel_with_vehicle  # avoid circular import issues
+
+        await interaction.response.defer(ephemeral=True)
+        await handle_travel_with_vehicle(
+            interaction,
+            self.vehicle,
+            self.method,
+            self.user_travel_location
+        )
 
 
     def disable_all_buttons(self):

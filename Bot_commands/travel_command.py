@@ -189,6 +189,10 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
                 msg = await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
             view.message = msg
 
+print("[DEBUG] RETURNING EARLY after car no vehicle")
+print("[DEBUG] RETURNING EARLY after multiple car choice")
+print("[DEBUG] RETURNING EARLY after subway cost too high")
+
         return
 
 
