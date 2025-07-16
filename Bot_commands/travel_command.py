@@ -456,7 +456,8 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     print(f"[DEBUG] After UPDATE, current_location in DB: {user_after_update.get('current_location')}")
 
     # Update last used vehicle and vehicle status#
-    await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status)
+    await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status, user_travel_location)
+
 
     # Fetch old location name
     old_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", old_location_id)
