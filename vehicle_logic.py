@@ -169,7 +169,7 @@ async def get_user_vehicles(pool, user_id: int) -> list:
         uvi.travel_count,
         uvi.resale_value,
         uvi.resale_percent,
-        cvt.class_type
+        cvt.class_type,
         uvi.id
     FROM user_vehicle_inventory uvi
     JOIN cd_vehicle_type cvt ON cvt.id = uvi.vehicle_type_id
