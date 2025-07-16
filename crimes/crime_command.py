@@ -164,7 +164,7 @@ class CrimeCommands(commands.Cog):
                 outcome_embed = discord.Embed(
                     title="🏃‍♂️💨 Suspect Evaded Capture!",
                     description="The police searched everywhere but couldn’t find anyone. The suspect evaded capture!",
-                    color=0xFAA61A,
+                    color=0x00FF00,
                 )
 
             else:
