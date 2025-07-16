@@ -156,13 +156,30 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
     pool = globals.pool
     user_id = interaction.user.id
 
+    user = await get_user(pool, user_id)
+    current_location = user.get("current_location")
+    current_vehicle_id = user.get("current_vehicle_id")
+    HOME_LOCATION_ID = 3  # Replace with actual home ID if different
+
     vehicles = await get_user_vehicles(pool, user_id)
     working_vehicles = [v for v in vehicles if v.get("condition") != "Broken Down"]
 
+    # 🚫 Enforce same vehicle usage if away from home
+    if current_location != HOME_LOCATION_ID and current_vehicle_id and method in ['car', 'bike']:
+        allowed_vehicle = next((v for v in working_vehicles if v["id"] == current_vehicle_id), None)
+        if not allowed_vehicle:
+            await interaction.response.send_message(
+                embed=embed_message(
+                    "🚫 Wrong Vehicle",
+                    "> You're currently away from home using a different vehicle. You must return 🏠 home before switching.",
+                    COLOR_RED
+                ),
+                ephemeral=True
+            )
+            return
+
     if method == 'car':
         cars = [v for v in working_vehicles if v.get("class_type") == "car"]
-
-        
         if not cars:
             await interaction.followup.send(
                 embed=embed_message(
@@ -175,11 +192,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         if len(cars) == 1:
-            vehicle = cars[0]
-            vehicle_status = "stored" if user_travel_location == 3 else "in use"
-            await handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location)
-            return
-
+            await handle_travel_with_vehicle(interaction, cars[0], method, user_travel_location)
         else:
             view = VehicleUseView(user_id=user_id, vehicles=cars, method=method, user_travel_location=user_travel_location)
             embed = embed_message(
@@ -192,10 +205,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             else:
                 msg = await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
             view.message = msg
-
-
         return
-
 
     elif method == 'bike':
         bikes = [v for v in working_vehicles if v.get("class_type") == "bike"]
@@ -211,7 +221,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         if len(bikes) == 1:
-            await handle_travel_with_vehicle(interaction, bikes[0], method, user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id"))
+            await handle_travel_with_vehicle(interaction, bikes[0], method, user_travel_location)
         else:
             view = VehicleUseView(user_id=user_id, vehicles=bikes, method=method, user_travel_location=user_travel_location)
             embed = embed_message(
@@ -224,44 +234,9 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             else:
                 msg = await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
             view.message = msg
-            return
+        return
 
-        if outcome:
-            desc = outcome.get("description", "")
-            effect = outcome.get("effect_amount", 0)
-
-            if effect < 0 and updated_balance >= -effect:
-                await charge_user(pool, user_id, -effect)
-                updated_balance -= -effect
-            elif effect > 0:
-                await reward_user(pool, user_id, effect)
-                updated_balance += effect
-
-            embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Balance Impact +/-: ${effect}"
-
-        print(f"[DEBUG] user_travel_location: {user_travel_location} (type: {type(user_travel_location)})")
-        print(f"[DEBUG] user_id: {user_id} (type: {type(user_id)})")
-        location_id = user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id")
-
-        await pool.execute(
-            "UPDATE users SET current_location = $1 WHERE user_id = $2",
-            location_id,
-            user_id
-        )
-
-        user_after_update = await get_user(pool, user_id)
-        print(f"[DEBUG] After UPDATE, current_location in DB: {user_after_update.get('current_location')}")
-
-        await interaction.followup.send(
-            embed=embed_message(
-                f"{'🚇' if method == 'subway' else '🚌'} Travel Summary",
-                embed_text,
-                COLOR_GREEN
-            ),
-            ephemeral=True
-        )
-        
-    elif method == 'subway' or method == 'bus':
+    elif method in ['subway', 'bus']:
         cost = 10 if method == 'subway' else 5
         finances = await get_user_finances(pool, user_id)
         if finances.get("checking_account_balance", 0) < cost:
@@ -276,27 +251,22 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         await charge_user(pool, user_id, cost)
-        
+
         outcome = await select_weighted_travel_outcome(pool, method)
         updated_finances = await get_user_finances(pool, user_id)
         updated_balance = updated_finances.get("checking_account_balance", 0)
 
-        # Get old location before updating
-        user = await get_user(pool, user_id)
         old_location_id = user.get("current_location")
         old_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", old_location_id)
         old_location_name = old_loc["location_name"] if old_loc else f"Location {old_location_id}"
 
-        # Get new location name
         new_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", user_travel_location)
         new_location_name = new_loc["location_name"] if new_loc else f"Location {user_travel_location}"
 
-        # Now safe to build embed_text
         embed_text = (
             f"> You traveled from **{old_location_name}** to **{new_location_name}** by **{method.title()}** for ${cost}.\n"
             f"> Your updated balance is: **${updated_balance}**."
         )
-
 
         if outcome:
             desc = outcome.get("description", "")
@@ -311,9 +281,6 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
             embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Balance Impact +/-: ${effect}"
 
-        print(f"[DEBUG] user_travel_location: {user_travel_location} (type: {type(user_travel_location)})")
-        print(f"[DEBUG] user_id: {user_id} (type: {type(user_id)})")
-            
         location_id = user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id")
 
         await pool.execute(
@@ -325,7 +292,6 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         user_after_update = await get_user(pool, user_id)
         print(f"[DEBUG] After UPDATE, current_location in DB: {user_after_update.get('current_location')}")
 
-
         await interaction.followup.send(
             embed=embed_message(
                 f"{'🚇' if method == 'subway' else '🚌'} Travel Summary",
@@ -336,7 +302,6 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         )
         return
 
-
     else:
         await interaction.followup.send(
             embed=embed_message(
@@ -346,10 +311,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             ),
             ephemeral=True
         )
-
-
-
-async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location):
+youasync def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location):
     pool = globals.pool
     user_id = interaction.user.id
 
