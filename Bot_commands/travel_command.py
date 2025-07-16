@@ -265,6 +265,17 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         await charge_user(pool, user_id, cost)
+        
+        await pool.execute(
+            """
+            UPDATE users
+            SET last_used_vehicle = $1
+            WHERE user_id = $2
+            """,
+            method,  # will be 'bus' or 'subway'
+            user_id
+        )
+
 
         outcome = await select_weighted_travel_outcome(pool, method)
         updated_finances = await get_user_finances(pool, user_id)
@@ -350,6 +361,18 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
     await charge_user(pool, user_id, cost)
     current_balance = finances.get("checking_account_balance", 0) - cost
+
+    if method in ("car", "bike"):
+        await pool.execute(
+            """
+            UPDATE users
+            SET last_used_vehicle = $1
+            WHERE user_id = $2
+            """,
+            vehicle.get("plate_number"),  # store the actual vehicle plate number
+            user_id
+        )
+
 
     outcome = await select_weighted_travel_outcome(pool, method)
     outcome_desc = "No special events today."
