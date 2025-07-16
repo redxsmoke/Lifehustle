@@ -178,8 +178,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         if len(cars) == 1:
             await handle_travel_with_vehicle(interaction, cars[0], method, user_travel_location)
         else:
-            view = VehicleUseView(user_id=user_id, vehicles=cars, method=method)
-            view.user_travel_location = user_travel_location  # 👈 Make sure this is passed along
+            view = VehicleUseView(user_id=user_id, vehicles=cars, method=method, user_travel_location=user_travel_location)
             embed = embed_message(
                 "🚗 Your Cars",
                 "> You have multiple vehicles. Please choose one to travel with:",
@@ -188,7 +187,8 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
             view.message = msg
         return
-    
+
+
     elif method == 'bike':
         bikes = [v for v in working_vehicles if v.get("vehicle_type") == "Bike"]
         if not bikes:
@@ -205,8 +205,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         if len(bikes) == 1:
             await handle_travel_with_vehicle(interaction, bikes[0], method, user_travel_location)
         else:
-            view = VehicleUseView(user_id=user_id, vehicles=bikes, method=method)
-            view.user_travel_location = user_travel_location  # 👈 Pass it down
+            view = VehicleUseView(user_id=user_id, vehicles=bikes, method=method, user_travel_location=user_travel_location)
             embed = embed_message(
                 "🚴 Your Bikes",
                 "> You have multiple bikes. Please choose one to travel with:",
@@ -216,20 +215,6 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             view.message = msg
         return
 
-    elif method in ('subway', 'bus'):
-        cost = 10 if method == 'subway' else 5
-        finances = await get_user_finances(pool, user_id)
-
-        if finances.get("checking_account_balance", 0) < cost:
-            await interaction.followup.send(
-                embed=embed_message(
-                    "❌ Insufficient Funds",
-                    f"> Yikes! You need ${cost} to ride the {method}, but your wallet says only ${finances.get('checking_account_balance', 0)}. Maybe find some couch change?",
-                    discord.Color.red()
-                ),
-                ephemeral=True
-            )
-            return
 
         await charge_user(pool, user_id, cost)
 

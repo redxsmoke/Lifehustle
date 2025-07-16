@@ -525,13 +525,15 @@ class VehicleUseButton(Button):
 
 
 class VehicleUseView(View):
-    def __init__(self, user_id: int, vehicles: list, method: str):
+    def __init__(self, user_id: int, vehicles: list, method: str, user_travel_location: int):
         super().__init__(timeout=60)
         self.user_id = user_id
         self.vehicles = vehicles
         self.method = method
+        self.user_travel_location = user_travel_location  # <-- ADD THIS LINE
         for vehicle in vehicles:
             self.add_item(VehicleUseButton(vehicle, method))
+
 
     def disable_all_buttons(self):
         for child in self.children:
