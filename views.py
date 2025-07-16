@@ -430,7 +430,6 @@ class VehicleUseButton(Button):
 
     async def callback(self, interaction: discord.Interaction):
         try:
-            # Must defer or respond to interaction or Discord will error
             await interaction.response.defer(ephemeral=True)
 
             if interaction.user.id != self.view.user_id:
@@ -438,74 +437,82 @@ class VehicleUseButton(Button):
                 return
 
             self.view.disable_all_buttons()
-
             if hasattr(self.view, "message") and self.view.message:
                 await self.view.message.edit(view=self.view)
 
             pool = globals.pool
             user_id = interaction.user.id
 
-            # Update travel_count by 1
+            
+            async with pool.acquire() as conn:
+                user_row = await conn.fetchrow("SELECT current_location FROM users WHERE user_id = $1", user_id)
+                old_location_id = user_row["current_location"] if user_row else None
+
+          
+            async def get_location_name(pool, location_id):
+                if location_id is None:
+                    return "Unknown"
+                row = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE id = $1", location_id)
+                return row["location_name"] if row else "Unknown"
+ 
+            old_location_name = await get_location_name(pool, old_location_id)
+            new_location_name = await get_location_name(pool, self.view.user_travel_location)
+
+            # Update travel count
             async with pool.acquire() as conn:
                 await conn.execute(
-                    """
-                    UPDATE user_vehicle_inventory
-                    SET travel_count = travel_count + 1
-                    WHERE id = $1 AND user_id = $2
-                    """,
+                    "UPDATE user_vehicle_inventory SET travel_count = travel_count + 1 WHERE id = $1 AND user_id = $2",
                     self.vehicle['id'], user_id
                 )
-                # Fetch updated travel_count from DB
                 travel_count_row = await conn.fetchrow(
                     "SELECT travel_count FROM user_vehicle_inventory WHERE id = $1 AND user_id = $2",
                     self.vehicle['id'], user_id
                 )
                 travel_count = travel_count_row['travel_count'] if travel_count_row else 0
 
-            # Get current finances
             finances = await get_user_finances(pool, user_id)
 
-          
             outcome = await select_weighted_travel_outcome(pool, self.method)
-
-
             updated_finances = await get_user_finances(pool, user_id)
             updated_balance = updated_finances.get("checking_account_balance", 0)
 
-            # Initialize outcome description and effect
-            outcome_desc = "No special events today."
+            outcome_desc = "Nothing happened, and that's... okay."
             effect = 0
-
             if outcome:
                 desc = outcome.get("description", "")
                 effect = outcome.get("effect_amount", 0)
-
                 if effect < 0 and updated_balance >= -effect:
                     await charge_user(pool, user_id, -effect)
                     updated_balance -= -effect
                 elif effect > 0:
                     await reward_user(pool, user_id, effect)
                     updated_balance += effect
-
                 outcome_desc = desc
 
+  
             embed_text = (
-                f"You traveled using your {self.vehicle.get('vehicle_type', 'vehicle')} "
+                f"You traveled from **{old_location_name}** to **{new_location_name}** "
+                f"using your {self.vehicle.get('vehicle_type', 'vehicle')} "
                 f"(Color: {self.vehicle.get('color', 'Unknown')}, Plate: {self.vehicle.get('plate_number', 'N/A')}).\n"
-                f"Travel Count: {travel_count}\n\n"
+                f"Travel Count: {travel_count}\n"
+                f"Condition: {self.vehicle.get('condition', 'Unknown')}\n"
+                f"Appearance: {self.vehicle.get('appearance_description', 'No description')}\n\n"
                 f"🎲 Outcome: {outcome_desc}\n"
                 f"💰 Balance Impact: ${effect}\n\n"
                 f"Your current balance is: **${updated_balance:,}**."
             )
 
             await interaction.followup.send(
-                embed=embed_message(
-                    "🚗 Travel Summary",
-                    embed_text,
-                    COLOR_GREEN
-                ),
+                embed=embed_message("🚗 Travel Summary", embed_text, COLOR_GREEN),
                 ephemeral=True
             )
+
+            # ✅ NEW: Update user's location in DB
+            await pool.execute(
+                "UPDATE users SET current_location = $1 WHERE user_id = $2",
+                self.view.user_travel_location, user_id
+            )
+
         except Exception:
             import traceback
             traceback.print_exc()
