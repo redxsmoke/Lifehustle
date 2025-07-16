@@ -147,7 +147,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
                     user_id, vehicle_type_id, color, appearance_description, plate_number, condition, travel_count, created_at, resale_percent
                 )
                 VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)
-                RETURNING vehicle_id
+                RETURNING id
             """
             vehicle_id = await conn.fetchval(
                 insert_query,
