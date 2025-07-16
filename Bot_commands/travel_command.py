@@ -188,7 +188,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
             view.message = msg
         return
-
+    
     elif method == 'bike':
         bikes = [v for v in working_vehicles if v.get("vehicle_type") == "Bike"]
         if not bikes:
@@ -367,6 +367,12 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         travel_count = vehicle.get("travel_count", 0) + 1
         condition_str = vehicle.get("condition", "Unknown")
         appearance_desc = vehicle.get("appearance_description", "No description available.")
+
+    
+    await pool.execute(
+        "UPDATE users SET current_location = $1 WHERE user_id = $2",
+        user_travel_location, user_id
+    )
 
     await interaction.followup.send(
         embed=discord.Embed(
