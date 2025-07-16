@@ -452,7 +452,7 @@ class VehicleUseButton(Button):
             async def get_location_name(pool, location_id):
                 if location_id is None:
                     return "Unknown"
-                row = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE id = $1", location_id)
+                row = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", location_id)
                 return row["location_name"] if row else "Unknown"
  
             old_location_name = await get_location_name(pool, old_location_id)
