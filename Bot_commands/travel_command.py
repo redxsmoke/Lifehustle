@@ -424,7 +424,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         user_travel_location, user_id
     )
 
-    # Update last used vehicle and vehicle status
+    # Update last used vehicle and vehicle status#
     await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status)
 
     # Fetch old location name
