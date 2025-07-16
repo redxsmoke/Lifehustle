@@ -231,18 +231,9 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         if len(cars) == 1:
             await handle_travel_with_vehicle(interaction, cars[0], method, user_travel_location)
         else:
-            view = await VehicleUseView.create(user_id=user_id, vehicles=cars, method=method, user_travel_location=user_travel_location)
-            embed = embed_message(
-                "🚗 Your Cars",
-                "> You have multiple vehicles. Please choose one to travel with:",
-                discord.Color.blue()
-            )
-            if interaction.response.is_done():
-                msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
-            else:
-                msg = await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-            view.message = msg
+            await show_vehicle_selection(interaction, user_id, cars, method, user_travel_location)
         return
+
 
     elif method == 'bike':
         bikes = [v for v in working_vehicles if v.get("class_type") == "bike"]
@@ -260,18 +251,9 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         if len(bikes) == 1:
             await handle_travel_with_vehicle(interaction, bikes[0], method, user_travel_location)
         else:
-            view = await VehicleUseView.create(user_id=user_id, vehicles=bikes, method=method, user_travel_location=user_travel_location)
-            embed = embed_message(
-                "🚴 Your Bikes",
-                "> You have multiple bikes. Please choose one to travel with:",
-                discord.Color.green()
-            )
-            if interaction.response.is_done():
-                msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
-            else:
-                msg = await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-            view.message = msg
+            await show_vehicle_selection(interaction, user_id, bikes, method, user_travel_location)
         return
+
 
     elif method in ['subway', 'bus']:
         cost = 10 if method == 'subway' else 5
