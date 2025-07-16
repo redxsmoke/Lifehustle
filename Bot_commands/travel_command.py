@@ -265,11 +265,6 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
         await charge_user(pool, user_id, cost)
         
-
-        print(f"No vehicle used for user {user_id}, clearing last_used_vehicle")
-        await update_last_used_vehicle(pool, user_id, None)
-
-
         outcome = await select_weighted_travel_outcome(pool, method)
         updated_finances = await get_user_finances(pool, user_id)
         updated_balance = updated_finances.get("checking_account_balance", 0)
@@ -356,8 +351,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     current_balance = finances.get("checking_account_balance", 0) - cost
     
     vehicle_status = "stored" if user_travel_location == 3 else "in use"
-    print(f"Vehicle ID: {vehicle.get('id')}, User ID: {user_id}, Status: {vehicle_status}")
-    await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status)
+
 
 
 
@@ -429,10 +423,6 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         "UPDATE users SET current_location = $1 WHERE user_id = $2",
         user_travel_location, user_id
     )
-
-
-    
-    
 
     # Update last used vehicle and vehicle status
     await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status)
