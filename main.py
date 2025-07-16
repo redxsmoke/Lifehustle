@@ -108,7 +108,7 @@ async def setup_hook():
     await bot.load_extension("crimes.crime_command")
 
 
-    bot.add_view(TravelButtons())  # renamed to match change
+    
 
     try:
         synced = await tree.sync()
