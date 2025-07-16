@@ -220,9 +220,12 @@ class SellFromStashView(View):
 
 
 class TravelButtons(View):
-    def __init__(self):
+    def __init__(self, user_id: int, user_travel_location: int):
         super().__init__(timeout=None)
-        self.message = None  # Will hold the message with buttons
+        self.message = None
+        self.user_id = user_id
+        self.user_travel_location = user_travel_location
+
 
     def set_message(self, message: discord.Message):
         self.message = message
@@ -268,7 +271,7 @@ class TravelButtons(View):
                 return
 
             await interaction.response.defer()
-            await handle_travel(interaction, "car")
+            await handle_travel(interaction, "car", self.user_travel_location)
             await self.disable_all_items()
         except Exception:
             import traceback
@@ -311,7 +314,7 @@ class TravelButtons(View):
                 return
 
             await interaction.response.defer()
-            await handle_travel(interaction, "bike")
+            await handle_travel(interaction, "bike", self.user_travel_location)
             await self.disable_all_items()
         except Exception:
             import traceback
@@ -327,7 +330,7 @@ class TravelButtons(View):
         try:
             from Bot_commands.travel_command import handle_travel
             await interaction.response.defer()
-            await handle_travel(interaction, "subway")
+            await handle_travel(interaction, "subway", self.user_travel_location)
             await self.disable_all_items()
         except Exception:
             import traceback
@@ -343,7 +346,7 @@ class TravelButtons(View):
         try:
             from Bot_commands.travel_command import handle_travel
             await interaction.response.defer()
-            await handle_travel(interaction, "bus")
+            await handle_travel(interaction, "bus", self.user_travel_location)
             await self.disable_all_items()
         except Exception:
             import traceback

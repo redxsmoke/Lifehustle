@@ -26,6 +26,8 @@ from vehicle_logic import get_user_vehicles
 from embeds import embed_message, COLOR_GREEN
 from views import select_weighted_travel_outcome, VehicleUseView
 
+user_travel_location = {}
+
 def condition_from_usage(travel_count: int, breakdown_threshold: int = 200) -> str:
     if 0 <= travel_count < 50:
         return "Brand New"
@@ -42,10 +44,12 @@ class LocationSelect(discord.ui.Select):
     def __init__(self, locations, user_id, pool):
         self.user_id = user_id
         self.pool = pool
+        self.locations = locations
+        self.selected_location_id = None
         options = [
             discord.SelectOption(
                 label=loc["location_name"],
-                description=loc["location_description"] if loc["location_description"] else None,
+                description=loc["location_description"] or None,
                 value=str(loc["cd_location_id"])
             )
             for loc in locations
@@ -53,15 +57,33 @@ class LocationSelect(discord.ui.Select):
         super().__init__(placeholder="Where to?", options=options, min_values=1, max_values=1)
 
     async def callback(self, interaction: discord.Interaction):
-        new_location_id = int(self.values[0])
-        await self.pool.execute(
-            "UPDATE users SET current_location = $1 WHERE user_id = $2",
-            new_location_id, self.user_id
+        self.selected_location_id = int(self.values[0])
+        selected_location = next(
+            loc for loc in self.locations if int(loc["cd_location_id"]) == self.selected_location_id
         )
+
+        # Store the selected location for this user globally
+        user_travel_location[self.user_id] = {
+            "cd_location_id": self.selected_location_id,
+            "location_name": selected_location["location_name"]
+        }
+
+        
+        view = TravelButtons(user_id=self.user_id, user_travel_location=self.selected_location_id)
+
+
         await interaction.response.send_message(
-            f"🧳 You’ve traveled to **{self.placeholder or 'your destination'}**!",
+            embed=embed_message(
+                "🧭 Choose Travel Method",
+                f"You're heading to **{selected_location['location_name']}**.\nHow would you like to get there?",
+                discord.Color.blurple()
+            ),
+            view=view,
             ephemeral=True
         )
+
+
+
 
 
 class LocationTravelView(discord.ui.View):
