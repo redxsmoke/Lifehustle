@@ -162,9 +162,10 @@ async def show_vehicle_selection(interaction, user_id, vehicles, method, user_tr
     restricted = False
     filtered_vehicles = vehicles
 
-    if current_location != HOME_LOCATION_ID and current_vehicle_id and method in ['car', 'bike']:
+    if current_location != HOME_LOCATION_ID and current_vehicle_id:
         filtered_vehicles = [v for v in vehicles if v["id"] == current_vehicle_id]
         restricted = True
+
 
     view = await VehicleUseView.create(user_id, filtered_vehicles, method, user_travel_location)
 
@@ -201,6 +202,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
     # 🚫 Enforce same vehicle usage if away from home
     if current_location != HOME_LOCATION_ID and current_vehicle_id and method in ['car', 'bike']:
+        # Combine all working vehicles, regardless of class
         allowed_vehicle = next((v for v in working_vehicles if v["id"] == current_vehicle_id), None)
         if not allowed_vehicle:
             await interaction.response.send_message(
