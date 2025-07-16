@@ -160,9 +160,9 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
     working_vehicles = [v for v in vehicles if v.get("condition") != "Broken Down"]
 
     if method == 'car':
-        cars = [v for v in working_vehicles if v.get("vehicle_type") in (
-            "Beater Car", "Sedan Car", "Sports Car", "Pickup Truck", "Motorcycle"
-        )]
+        cars = [v for v in working_vehicles if v.get("class_type") == "car"]
+
+        
         if not cars:
             await interaction.followup.send(
                 embed=embed_message(
@@ -198,7 +198,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
 
     elif method == 'bike':
-        bikes = [v for v in working_vehicles if v.get("vehicle_type") == "Bike"]
+        bikes = [v for v in working_vehicles if v.get("class_type") == "bike"]
         if not bikes:
             await interaction.followup.send(
                 embed=embed_message(
