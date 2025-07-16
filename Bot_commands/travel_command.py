@@ -152,6 +152,41 @@ def register_commands(tree: app_commands.CommandTree):
             ephemeral=True
         )
 
+async def show_vehicle_selection(interaction, user_id, vehicles, method, user_travel_location):
+    pool = globals.pool
+    user = await get_user(pool, user_id)
+    current_location = user.get("current_location")
+    current_vehicle_id = user.get("current_vehicle_id")
+    HOME_LOCATION_ID = 3
+
+    restricted = False
+    filtered_vehicles = vehicles
+
+    if current_location != HOME_LOCATION_ID and current_vehicle_id and method in ['car', 'bike']:
+        filtered_vehicles = [v for v in vehicles if v["id"] == current_vehicle_id]
+        restricted = True
+
+    view = await VehicleUseView.create(user_id, filtered_vehicles, method, user_travel_location)
+
+    description = (
+        "> You have multiple vehicles. Please choose one to travel with:"
+    )
+
+    if restricted:
+        description = (
+            "> Since you are currently away from home, you can only travel using the vehicle you started with.\n"
+            "> To switch vehicles, you must first return home."
+        )
+
+    embed = embed_message(
+        f"🚗 Your {method.title()}s",
+        description,
+        discord.Color.blue() if method == 'car' else discord.Color.green()
+    )
+
+    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+
 async def handle_travel(interaction: Interaction, method: str, user_travel_location: int):
     pool = globals.pool
     user_id = interaction.user.id
@@ -194,7 +229,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         if len(cars) == 1:
             await handle_travel_with_vehicle(interaction, cars[0], method, user_travel_location)
         else:
-            view = VehicleUseView(user_id=user_id, vehicles=cars, method=method, user_travel_location=user_travel_location)
+            view = await VehicleUseView.create(user_id=user_id, vehicles=cars, method=method, user_travel_location=user_travel_location)
             embed = embed_message(
                 "🚗 Your Cars",
                 "> You have multiple vehicles. Please choose one to travel with:",
@@ -223,7 +258,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         if len(bikes) == 1:
             await handle_travel_with_vehicle(interaction, bikes[0], method, user_travel_location)
         else:
-            view = VehicleUseView(user_id=user_id, vehicles=bikes, method=method, user_travel_location=user_travel_location)
+            view = await VehicleUseView.create(user_id=user_id, vehicles=bikes, method=method, user_travel_location=user_travel_location)
             embed = embed_message(
                 "🚴 Your Bikes",
                 "> You have multiple bikes. Please choose one to travel with:",
@@ -311,6 +346,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             ),
             ephemeral=True
         )
+
 async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location):
     pool = globals.pool
     user_id = interaction.user.id

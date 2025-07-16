@@ -534,8 +534,22 @@ class VehicleUseView(View):
         self.method = method
         self.user_travel_location = user_travel_location
         for vehicle in vehicles:
-            # Pass user_id and user_travel_location here correctly
             self.add_item(VehicleUseButton(vehicle, method, user_id, user_travel_location))
+
+    @classmethod
+    async def create(cls, user_id: int, vehicles: list, method: str, user_travel_location: int):
+        pool = globals.pool
+        user = await get_user(pool, user_id)
+        current_location = user.get("current_location")
+        current_vehicle_id = user.get("current_vehicle_id")
+        HOME_LOCATION_ID = 3  # set your actual home location ID
+
+        # Filter vehicles if user is away and has a locked vehicle
+        if current_location != HOME_LOCATION_ID and current_vehicle_id and method in ['car', 'bike']:
+            vehicles = [v for v in vehicles if v["id"] == current_vehicle_id]
+
+        view = cls(user_id, vehicles, method, user_travel_location)
+        return view
 
     def disable_all_buttons(self):
         for child in self.children:
@@ -551,7 +565,6 @@ class VehicleUseView(View):
                 )
             except Exception as e:
                 print(f"[ERROR] Failed to edit message on timeout: {e}")
-
 
 class GroceryCategoryView(View):
     def __init__(self):
