@@ -234,11 +234,18 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
             embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Balance Impact +/-: ${effect}"
 
-        # ✅ Update location in DB using user_travel_location
+        print(f"[DEBUG] user_travel_location: {user_travel_location} (type: {type(user_travel_location)})")
+        print(f"[DEBUG] user_id: {user_id} (type: {type(user_id)})")
+        location_id = user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id")
+
         await pool.execute(
             "UPDATE users SET current_location = $1 WHERE user_id = $2",
-            user_travel_location, user_id
+            location_id,
+            user_id
         )
+
+        user_after_update = await get_user(pool, user_id)
+        print(f"[DEBUG] After UPDATE, current_location in DB: {user_after_update.get('current_location')}")
 
         await interaction.followup.send(
             embed=embed_message(
@@ -299,11 +306,20 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
             embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Balance Impact +/-: ${effect}"
 
-       
+        print(f"[DEBUG] user_travel_location: {user_travel_location} (type: {type(user_travel_location)})")
+        print(f"[DEBUG] user_id: {user_id} (type: {type(user_id)})")
+            
+        location_id = user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id")
+
         await pool.execute(
             "UPDATE users SET current_location = $1 WHERE user_id = $2",
-            user_travel_location, user_id
+            location_id,
+            user_id
         )
+
+        user_after_update = await get_user(pool, user_id)
+        print(f"[DEBUG] After UPDATE, current_location in DB: {user_after_update.get('current_location')}")
+
 
         await interaction.followup.send(
             embed=embed_message(
@@ -420,10 +436,19 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
     user = await get_user(pool, user_id)
     old_location_id = user.get("current_location")
+    print(f"[DEBUG] user_travel_location: {user_travel_location} (type: {type(user_travel_location)})")
+    print(f"[DEBUG] user_id: {user_id} (type: {type(user_id)})")
+
+    location_id = user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id")
+
     await pool.execute(
         "UPDATE users SET current_location = $1 WHERE user_id = $2",
-        user_travel_location, user_id
+        location_id,
+        user_id
     )
+
+    user_after_update = await get_user(pool, user_id)
+    print(f"[DEBUG] After UPDATE, current_location in DB: {user_after_update.get('current_location')}")
 
     # Update last used vehicle and vehicle status#
     await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status)
