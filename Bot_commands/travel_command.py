@@ -57,30 +57,35 @@ class LocationSelect(discord.ui.Select):
         super().__init__(placeholder="Where to?", options=options, min_values=1, max_values=1)
 
     async def callback(self, interaction: discord.Interaction):
-        self.selected_location_id = int(self.values[0])
-        selected_location = next(
-            loc for loc in self.locations if int(loc["cd_location_id"]) == self.selected_location_id
-        )
+        try:
+            self.selected_location_id = int(self.values[0])
+            selected_location = next(
+                loc for loc in self.locations if int(loc["cd_location_id"]) == self.selected_location_id
+            )
 
-        # Store the selected location for this user globally
-        user_travel_location[self.user_id] = {
-            "cd_location_id": self.selected_location_id,
-            "location_name": selected_location["location_name"]
-        }
+            user_travel_location[self.user_id] = {
+                "cd_location_id": self.selected_location_id,
+                "location_name": selected_location["location_name"]
+            }
 
-        
-        view = TravelButtons(user_id=self.user_id, user_travel_location=self.selected_location_id)
+            view = TravelButtons(user_id=self.user_id, user_travel_location=self.selected_location_id)
 
+            await interaction.response.send_message(
+                embed=embed_message(
+                    "🧭 Choose Travel Method",
+                    f"You're heading to **{selected_location['location_name']}**.\nHow would you like to get there?",
+                    discord.Color.blurple()
+                ),
+                view=view,
+                ephemeral=True
+            )
+        except Exception as e:
+            print(f"[ERROR] Exception in LocationSelect callback: {e}")
+            import traceback
+            traceback.print_exc()
+            if not interaction.response.is_done():
+                await interaction.response.send_message("❌ Something went wrong. Try again.", ephemeral=True)
 
-        await interaction.response.send_message(
-            embed=embed_message(
-                "🧭 Choose Travel Method",
-                f"You're heading to **{selected_location['location_name']}**.\nHow would you like to get there?",
-                discord.Color.blurple()
-            ),
-            view=view,
-            ephemeral=True
-        )
 
 
 
