@@ -196,13 +196,12 @@ async def can_user_own_vehicle(user_id: int, vehicle_type_id: int, conn) -> bool
     class_type = row['class_type'].upper()
 
     # Step 2: Count how many vehicles of that class_type the user already owns
-    count = await conn.fetchval("""
+    counts = await conn.fetchval("""
         SELECT COUNT(*)
         FROM user_vehicle_inventory uvi
         JOIN cd_vehicle_type cvt ON uvi.vehicle_type_id = cvt.id
-        WHERE uvi.user_id = $1 AND cvt.class_type = $2
+        WHERE uvi.user_id = $1 AND LOWER(cvt.class_type) = LOWER($2)
     """, user_id, class_type)
-
     if count is None:
         count = 0
 
