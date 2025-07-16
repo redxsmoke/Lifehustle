@@ -264,6 +264,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         await charge_user(pool, user_id, cost)
+        
 
         print(f"Vehicle ID: {vehicle.get('id')}, User ID: {user_id}, Status: {vehicle_status}")
         await update_last_used_vehicle(pool, user_id, None)
@@ -353,6 +354,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     await charge_user(pool, user_id, cost)
     current_balance = finances.get("checking_account_balance", 0) - cost
     
+    vehicle_status = "stored" if user_travel_location == 3 else "in use"
     print(f"Vehicle ID: {vehicle.get('id')}, User ID: {user_id}, Status: {vehicle_status}")
     await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status)
 
@@ -427,8 +429,8 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     )
 
 
-    # Now decide vehicle status based on the NEW location
-    vehicle_status = "stored" if user_travel_location == 3 else "in use"
+    
+    
 
     # Update last used vehicle and vehicle status
     await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status)
