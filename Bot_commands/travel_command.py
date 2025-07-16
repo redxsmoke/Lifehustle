@@ -306,7 +306,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
                 embed_text,
                 COLOR_GREEN
             ),
-            ephemeral=True
+            ephemeral=False
         )
         return
 
@@ -444,7 +444,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         color=COLOR_GREEN
     )
 
-    await interaction.followup.send(embed=embed, ephemeral=True)
+    await interaction.followup.send(embed=embed, ephemeral=False)
 
 
 
