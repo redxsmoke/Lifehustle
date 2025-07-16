@@ -68,7 +68,7 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
                 await interaction.followup.send(
                     embed=embed_message(
                         "🚫 Vehicle Limit Reached",
-                        "You have reached your vehicle limit! Upgrade your garage to store more.",
+                        "You have reached your vehicle limit! Purchase garage space to store more.",
                         COLOR_RED
                     ),
                     ephemeral=True

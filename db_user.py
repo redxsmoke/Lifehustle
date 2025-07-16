@@ -182,27 +182,35 @@ async def get_user_achievements(pool, user_id: int):
     return rows
 
 async def can_user_own_vehicle(user_id: int, vehicle_type_id: int, conn) -> bool:
-    query = """
-        SELECT vehicle_type_id, COUNT(*) as count
-        FROM user_vehicle_inventory
-        WHERE user_id = $1
-        GROUP BY vehicle_type_id;
-    """
-    rows = await conn.fetch(query, user_id)
-    counts = {row['vehicle_type_id']: row['count'] for row in rows}
+    # Step 1: Get the class_type for the requested vehicle (e.g., 'CAR' or 'BIKE')
+    row = await conn.fetchrow("""
+        SELECT class_type
+        FROM cd_vehicle_type
+        WHERE id = $1
+    """, vehicle_type_id)
+
+    if not row or not row['class_type']:
+        return False  # Unknown or undefined class type
+
+    class_type = row['class_type'].upper()
+
+    
+    counts = await conn.fetchval("""
+        SELECT COUNT(*)
+        FROM user_vehicle_inventory uvi
+        JOIN cd_vehicle_type cvt ON uvi.vehicle_type_id = cvt.id
+        WHERE uvi.user_id = $1 AND cvt.class_type = $2
+    """, user_id, class_type)
 
     has_garage_row = await conn.fetchrow("SELECT has_garage FROM users WHERE user_id = $1", user_id)
     has_garage = has_garage_row['has_garage'] if has_garage_row else False
 
-    CAR_TYPE_ID = 1  # replace with your actual ID
-    BIKE_TYPE_ID = 2  # replace with your actual ID
-
     car_limit = 5 if has_garage else 1
-    bike_limit = 1
+    bike_limit = 5 if has_garage else 2
 
-    if vehicle_type_id == CAR_TYPE_ID:
-        return counts.get(CAR_TYPE_ID, 0) < car_limit
-    elif vehicle_type_id == BIKE_TYPE_ID:
-        return counts.get(BIKE_TYPE_ID, 0) < bike_limit
+    if class_type == "CAR":
+        return counts < car_limit
+    elif class_type == "BIKE":
+        return counts < bike_limit
     else:
-        return False  # Unknown vehicle type
+        return False  # Unsupported class type
