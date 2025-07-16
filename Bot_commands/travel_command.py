@@ -24,7 +24,7 @@ from utilities import (
 )
 from vehicle_logic import get_user_vehicles
 from embeds import embed_message, COLOR_GREEN
-from views import select_weighted_travel_outcome, VehicleUseView
+from views import select_weighted_travel_outcome, VehicleUseView, TravelButtons
 
 user_travel_location = {}
 
