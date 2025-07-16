@@ -175,7 +175,8 @@ async def get_user_vehicles(pool, user_id: int) -> list:
     WHERE uvi.user_id = $1
     ORDER BY uvi.id
     """
-    return await pool.fetch(query, user_id)
+    records = await pool.fetch(query, user_id)
+    return [dict(record) for record in records]
 
 
 async def remove_vehicle_by_id(pool, vehicle_id: int):
