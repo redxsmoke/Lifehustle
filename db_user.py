@@ -218,7 +218,7 @@ async def can_user_own_vehicle(user_id: int, vehicle_type_id: int, conn) -> bool
         return False  # Unsupported class type
 
 
-async def update_last_used_vehicle(pool, user_id: int, vehicle_id: int | None, vehicle_status: str | None = None):
+async def update_last_used_vehicle(pool, user_id: int, vehicle_id: int | None, vehicle_status: str | None = None, location_id: int | None = None):
     await pool.execute(
         """
         UPDATE users
@@ -229,14 +229,16 @@ async def update_last_used_vehicle(pool, user_id: int, vehicle_id: int | None, v
         user_id
     )
 
-    if vehicle_id is not None and vehicle_status:
+    if vehicle_id is not None and vehicle_status and location_id is not None:
         await pool.execute(
             """
             UPDATE user_vehicle_inventory
-            SET vehicle_status = $1
-            WHERE user_id = $2 AND id = $3
+            SET vehicle_status = $1,
+                location_id = $2
+            WHERE user_id = $3 AND id = $4
             """,
             vehicle_status,
+            location_id,
             user_id,
             vehicle_id
         )

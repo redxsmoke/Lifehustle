@@ -175,7 +175,11 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         if len(cars) == 1:
-            await handle_travel_with_vehicle(interaction, cars[0], method, user_travel_location)
+            vehicle = cars[0]
+            vehicle_status = "stored" if user_travel_location == 3 else "in use"
+            await handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location)
+            return
+
         else:
             view = VehicleUseView(user_id=user_id, vehicles=cars, method=method, user_travel_location=user_travel_location)
             embed = embed_message(
@@ -207,7 +211,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         if len(bikes) == 1:
-            await handle_travel_with_vehicle(interaction, bikes[0], method, user_travel_location)
+            await handle_travel_with_vehicle(interaction, bikes[0], method, user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id"))
         else:
             view = VehicleUseView(user_id=user_id, vehicles=bikes, method=method, user_travel_location=user_travel_location)
             embed = embed_message(
@@ -440,7 +444,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     print(f"[DEBUG] user_travel_location: {user_travel_location} (type: {type(user_travel_location)})")
     print(f"[DEBUG] user_id: {user_id} (type: {type(user_id)})")
 
-    location_id = user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id")
+    location_id = user_travel_location
 
     await pool.execute(
         "UPDATE users SET current_location = $1 WHERE user_id = $2",
