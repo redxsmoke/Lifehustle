@@ -350,7 +350,6 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
 
 async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location):
- 
     pool = globals.pool
     user_id = interaction.user.id
 
@@ -373,9 +372,6 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     
     vehicle_status = "stored" if user_travel_location == 3 else "in use"
 
-
-
-
     outcome = await select_weighted_travel_outcome(pool, method)
     outcome_desc = "No special events today."
     effect = 0
@@ -391,7 +387,6 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
             current_balance += effect
 
     async with pool.acquire() as conn:
-        # Increment travel count and fetch updated vehicle info including breakdown_threshold
         updated_vehicle = await conn.fetchrow(
             """
             UPDATE user_vehicle_inventory
@@ -429,12 +424,10 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
             view.message = msg
             return  # stop travel here
 
-        # Use updated info for embed
         travel_count = updated_info["travel_count"]
         condition_str = updated_info["condition"]
         appearance_desc = updated_info["description"]
     else:
-        # fallback if no updated vehicle info
         travel_count = vehicle.get("travel_count", 0) + 1
         condition_str = vehicle.get("condition", "Unknown")
         appearance_desc = vehicle.get("appearance_description", "No description available.")
@@ -455,20 +448,17 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     user_after_update = await get_user(pool, user_id)
     print(f"[DEBUG] After UPDATE, current_location in DB: {user_after_update.get('current_location')}")
 
-    print(f"vehicle_id: {vehicle_id} (type: {type(vehicle_id)})")
-    print(f"vehicle_status: {vehicle_status} (type: {type(vehicle_status)})")
-    print(f"location_id: {location_id} (type: {type(location_id)})")
-    await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status, user_travel_location)
+    # ======= HERE IS THE NEW FIXED PART: CALL update_last_used_vehicle =======
+    print(f"[DEBUG] Calling update_last_used_vehicle with vehicle_id={vehicle['id']}, vehicle_status={vehicle_status}, location_id={location_id}")
+    await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status, location_id)
+    print(f"[DEBUG] update_last_used_vehicle call completed")
+    # ==========================================================================
 
-
-    # Fetch old location name
     old_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", old_location_id)
     old_location_name = old_loc["location_name"] if old_loc else f"Location {old_location_id}"
 
-    # Fetch new location name
     new_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", user_travel_location)
     new_location_name = new_loc["location_name"] if new_loc else f"Location {user_travel_location}"
-
 
     embed = discord.Embed(
         title=f"{'🚗' if method == 'car' else '🚴'} Travel Summary",
