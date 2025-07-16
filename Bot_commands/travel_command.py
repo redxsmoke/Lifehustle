@@ -418,7 +418,8 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         condition_str = vehicle.get("condition", "Unknown")
         appearance_desc = vehicle.get("appearance_description", "No description available.")
 
-    # First, update to new location (outside else)
+    user = await get_user(pool, user_id)
+    old_location_id = user.get("current_location")
     await pool.execute(
         "UPDATE users SET current_location = $1 WHERE user_id = $2",
         user_travel_location, user_id
