@@ -53,55 +53,68 @@ class PurchaseVehicleView(discord.ui.View):
         return callback
 
 
-# Moved outside the class
+ 
 async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, cost: int):
     print(f"[handle_vehicle_purchase] Start purchase attempt: user={interaction.user.id}, item={item}, cost={cost}")
     pool = globals.pool
     try:
         await interaction.response.defer(ephemeral=True)
-
         user_id = interaction.user.id
 
-        finances = await get_user_finances(pool, user_id)
-        if finances is None:
-            finances = {
-                "checking_account_balance": 0,
-                "savings_account_balance": 0,
-                "debt_balance": 0,
-                "last_paycheck_claimed": datetime.fromtimestamp(0, tz=timezone.utc)
-            }
-
-        checking = finances.get("checking_account_balance", 0)
-        print(f"[handle_vehicle_purchase] Current checking balance: {checking}")
-
-        if checking < cost:
-            print(f"[handle_vehicle_purchase] Insufficient funds: need {cost}, have {checking}")
-            await interaction.followup.send(
-                embed=embed_message(
-                    "❌ Insufficient Funds",
-                    f"> You need ${cost:,} but only have ${checking:,} in checking.",
-                    COLOR_RED
-                ),
-                ephemeral=True
-            )
-            return
-
-        finances["checking_account_balance"] -= cost
-        await upsert_user_finances(pool, user_id, finances)
-
-        if item["type"] == "Beater Car":
-            condition = "4"
-            travel_count = random.randint(151, 195)
-            resale_percent = 0.3
-        else:
-            condition = "1"
-            travel_count = 0
-            resale_percent = 0.85
-
-        print(f"[handle_vehicle_purchase] Inserting vehicle with condition '{condition}', travel_count '{travel_count}', resale_percent {resale_percent}")
-
         async with pool.acquire() as conn:
-            # Get random color from code table
+            # 1. Ownership limit check
+            can_buy = await can_user_own_vehicle(user_id, item["vehicle_type_id"], conn)
+            if not can_buy:
+                await interaction.followup.send(
+                    embed=embed_message(
+                        "🚫 Vehicle Limit Reached",
+                        "You have reached your vehicle limit! Upgrade your garage to store more.",
+                        COLOR_RED
+                    ),
+                    ephemeral=True
+                )
+                return
+
+            # 2. Check finances
+            finances = await get_user_finances(pool, user_id)
+            if finances is None:
+                finances = {
+                    "checking_account_balance": 0,
+                    "savings_account_balance": 0,
+                    "debt_balance": 0,
+                    "last_paycheck_claimed": datetime.fromtimestamp(0, tz=timezone.utc)
+                }
+            checking = finances.get("checking_account_balance", 0)
+            print(f"[handle_vehicle_purchase] Current checking balance: {checking}")
+            if checking < cost:
+                print(f"[handle_vehicle_purchase] Insufficient funds: need {cost}, have {checking}")
+                await interaction.followup.send(
+                    embed=embed_message(
+                        "❌ Insufficient Funds",
+                        f"> You need ${cost:,} but only have ${checking:,} in checking.",
+                        COLOR_RED
+                    ),
+                    ephemeral=True
+                )
+                return
+
+            # Deduct cost
+            finances["checking_account_balance"] -= cost
+            await upsert_user_finances(pool, user_id, finances)
+
+            # 3. Prepare vehicle info (your existing logic)
+            if item["type"] == "Beater Car":
+                condition = "4"
+                travel_count = random.randint(151, 195)
+                resale_percent = 0.3
+            else:
+                condition = "1"
+                travel_count = 0
+                resale_percent = 0.85
+
+            print(f"[handle_vehicle_purchase] Inserting vehicle with condition '{condition}', travel_count '{travel_count}', resale_percent {resale_percent}")
+
+            # 4. Get random color and plate number
             color_row = await conn.fetchrow("SELECT description FROM cd_vehicle_colors ORDER BY random() LIMIT 1")
             color = color_row["description"] if color_row else "Unknown"
             if item["type"] == "Bike":
@@ -109,20 +122,15 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
                 plate_number = random.choice(funny_suffixes)
             else:
                 plate_number = generate_random_plate()
-            # Convert condition to int
+
             condition_int = int(condition)
 
-            # Fetch condition description from cd_vehicle_condition by condition_id
             condition_desc_row = await conn.fetchrow(
                 "SELECT description FROM cd_vehicle_condition WHERE condition_id = $1",
                 condition_int
             )
-            if not condition_desc_row:
-                condition_desc = "Unknown"  # fallback if not found
-            else:
-                condition_desc = condition_desc_row["description"]
+            condition_desc = condition_desc_row["description"] if condition_desc_row else "Unknown"
 
-            # Get random appearance description for vehicle_type + condition_id
             appearance_row = await conn.fetchrow("""
                 SELECT description
                 FROM cd_vehicle_appearance
@@ -133,14 +141,24 @@ async def handle_vehicle_purchase(interaction: discord.Interaction, item: dict, 
 
             appearance_description = appearance_row["description"] if appearance_row else "No description available"
 
-            # Insert new vehicle record with condition description string
-            await conn.execute("""
+            # 5. Insert new vehicle and get vehicle_id
+            insert_query = """
                 INSERT INTO user_vehicle_inventory (
                     user_id, vehicle_type_id, color, appearance_description, plate_number, condition, travel_count, created_at, resale_percent
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(),$8)
-            """, user_id, item["vehicle_type_id"], color, appearance_description, plate_number, condition_desc, travel_count, resale_percent)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)
+                RETURNING vehicle_id
+            """
+            vehicle_id = await conn.fetchval(
+                insert_query,
+                user_id, item["vehicle_type_id"], color, appearance_description, plate_number, condition_desc, travel_count, resale_percent
+            )
 
+            # 6. Update user's last_used_vehicle
+            await conn.execute(
+                "UPDATE users SET last_used_vehicle = $1 WHERE user_id = $2",
+                vehicle_id, user_id
+            )
 
         await interaction.followup.send(
             embed=embed_message(

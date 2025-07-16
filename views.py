@@ -498,7 +498,7 @@ class VehicleUseButton(Button):
                 f"Condition: {self.vehicle.get('condition', 'Unknown')}\n"
                 f"Appearance: {self.vehicle.get('appearance_description', 'No description')}\n\n"
                 f"🎲 Outcome: {outcome_desc}\n"
-                f"💰 Balance Impact: ${effect}\n\n"
+                f"💰 Balance Impact +/-: ${effect}\n\n"
                 f"Your current balance is: **${updated_balance:,}**."
             )
 

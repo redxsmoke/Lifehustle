@@ -233,7 +233,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
                 await reward_user(pool, user_id, effect)
                 updated_balance += effect
 
-            embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Balance: ${effect}"
+            embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Balance Impact +/-: ${effect}"
 
         # ✅ Update location in DB using user_travel_location
         await pool.execute(
@@ -298,7 +298,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
                 await reward_user(pool, user_id, effect)
                 updated_balance += effect
 
-            embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Balance: ${effect}"
+            embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Balance Impact +/-: ${effect}"
 
        
         await pool.execute(
@@ -444,7 +444,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
             f"- Condition: {condition_str}\n"
             f"- Appearance: {appearance_desc}\n\n"
             f"🎲 Outcome: {outcome_desc}\n"
-            f"💰 Balance: ${effect}\n\n"
+            f"💰 Balance Impact +/-: ${effect}\n\n"
             f"Your current balance is: ${current_balance:,}."
         ),
         color=COLOR_GREEN

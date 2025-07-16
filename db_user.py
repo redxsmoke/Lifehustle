@@ -180,3 +180,29 @@ async def get_user_achievements(pool, user_id: int):
     async with pool.acquire() as conn:
         rows = await conn.fetch(query, user_id)
     return rows
+
+async def can_user_own_vehicle(user_id: int, vehicle_type_id: int, conn) -> bool:
+    query = """
+        SELECT vehicle_type_id, COUNT(*) as count
+        FROM user_vehicle_inventory
+        WHERE user_id = $1
+        GROUP BY vehicle_type_id;
+    """
+    rows = await conn.fetch(query, user_id)
+    counts = {row['vehicle_type_id']: row['count'] for row in rows}
+
+    has_garage_row = await conn.fetchrow("SELECT has_garage FROM users WHERE user_id = $1", user_id)
+    has_garage = has_garage_row['has_garage'] if has_garage_row else False
+
+    CAR_TYPE_ID = 1  # replace with your actual ID
+    BIKE_TYPE_ID = 2  # replace with your actual ID
+
+    car_limit = 5 if has_garage else 1
+    bike_limit = 1
+
+    if vehicle_type_id == CAR_TYPE_ID:
+        return counts.get(CAR_TYPE_ID, 0) < car_limit
+    elif vehicle_type_id == BIKE_TYPE_ID:
+        return counts.get(BIKE_TYPE_ID, 0) < bike_limit
+    else:
+        return False  # Unknown vehicle type
