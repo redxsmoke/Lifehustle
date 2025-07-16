@@ -153,8 +153,7 @@ def register_commands(tree: app_commands.CommandTree):
             ephemeral=True
         )
 
-async def handle_travel(interaction: Interaction, method: str, destination_id: int):
-
+async def handle_travel(interaction: Interaction, method: str, user_travel_location: int):
     pool = globals.pool
     user_id = interaction.user.id
 
@@ -177,9 +176,10 @@ async def handle_travel(interaction: Interaction, method: str, destination_id: i
             return
 
         if len(cars) == 1:
-            await handle_travel_with_vehicle(interaction, cars[0], method)
+            await handle_travel_with_vehicle(interaction, cars[0], method, user_travel_location)
         else:
             view = VehicleUseView(user_id=user_id, vehicles=cars, method=method)
+            view.user_travel_location = user_travel_location  # 👈 Make sure this is passed along
             embed = embed_message(
                 "🚗 Your Cars",
                 "> You have multiple vehicles. Please choose one to travel with:",
@@ -203,9 +203,10 @@ async def handle_travel(interaction: Interaction, method: str, destination_id: i
             return
 
         if len(bikes) == 1:
-            await handle_travel_with_vehicle(interaction, bikes[0], method)
+            await handle_travel_with_vehicle(interaction, bikes[0], method, user_travel_location)
         else:
             view = VehicleUseView(user_id=user_id, vehicles=bikes, method=method)
+            view.user_travel_location = user_travel_location  # 👈 Pass it down
             embed = embed_message(
                 "🚴 Your Bikes",
                 "> You have multiple bikes. Please choose one to travel with:",
@@ -213,6 +214,8 @@ async def handle_travel(interaction: Interaction, method: str, destination_id: i
             )
             msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
             view.message = msg
+        return
+
     elif method in ('subway', 'bus'):
         cost = 10 if method == 'subway' else 5
         finances = await get_user_finances(pool, user_id)
@@ -252,6 +255,12 @@ async def handle_travel(interaction: Interaction, method: str, destination_id: i
 
             embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Balance: ${effect}"
 
+        # ✅ Update location in DB using user_travel_location
+        await pool.execute(
+            "UPDATE users SET current_location = $1 WHERE user_id = $2",
+            user_travel_location, user_id
+        )
+
         await interaction.followup.send(
             embed=embed_message(
                 f"{'🚇' if method == 'subway' else '🚌'} Travel Summary",
@@ -271,6 +280,9 @@ async def handle_travel(interaction: Interaction, method: str, destination_id: i
             ),
             ephemeral=True
         )
+
+
+
 async def handle_travel_with_vehicle(interaction: Interaction, vehicle: dict, method: str):
     pool = globals.pool
     user_id = interaction.user.id

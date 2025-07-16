@@ -62,6 +62,22 @@ class TheftLocationDropdown(discord.ui.Select):
         print(f"[DEBUG][TheftLocationDropdown] User {interaction.user} selected location: {location}")
 
         if location == "Rob your job":
+            pool = self.parent_view.bot.pool  # or use globals.pool if needed
+            user_id = interaction.user.id
+
+            async with pool.acquire() as conn:
+                row = await conn.fetchrow("SELECT current_location FROM users WHERE user_id = $1", user_id)
+
+            if not row or row["current_location"] != 1:
+                embed = discord.Embed(
+                    title="📍 Wrong Location",
+                    description="❌ You need to travel to **Work** before you can rob your job.",
+                    color=discord.Color.red()
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+                return
+
+            # Proceed if user is at work
             cog = self.parent_view.bot.get_cog("CrimeCommands")
             if cog:
                 try:
@@ -71,16 +87,35 @@ class TheftLocationDropdown(discord.ui.Select):
                     print(f"❌ Error in handle_rob_job: {e}")
                     try:
                         if not interaction.response.is_done():
-                            await interaction.response.send_message("❌ Something went wrong during the robbery attempt.", ephemeral=True)
+                            await interaction.response.send_message(
+                                embed=discord.Embed(
+                                    title="❌ Robbery Failed",
+                                    description="Something went wrong during the robbery attempt.",
+                                    color=discord.Color.red()
+                                ),
+                                ephemeral=True
+                            )
                         else:
-                            await interaction.followup.send("❌ Something went wrong during the robbery attempt.", ephemeral=True)
+                            await interaction.followup.send(
+                                embed=discord.Embed(
+                                    title="❌ Robbery Failed",
+                                    description="Something went wrong during the robbery attempt.",
+                                    color=discord.Color.red()
+                                ),
+                                ephemeral=True
+                            )
                     except Exception as inner_e:
                         print(f"❌ Failed to send error message: {inner_e}")
             else:
                 print("❌ CrimeCommands cog not found!")
-                await interaction.response.send_message("⚠️ Crime system not available. (Cog missing)", ephemeral=True)
-        else:
-            await interaction.response.send_message("Location not implemented yet.", ephemeral=True)
+                await interaction.response.send_message(
+                    embed=discord.Embed(
+                        title="⚠️ Crime System Unavailable",
+                        description="Crime system is not available right now. Please try again later.",
+                        color=discord.Color.orange()
+                    ),
+                    ephemeral=True
+                )
 
 class ConfirmRobberyView(discord.ui.View):
     def __init__(self, user_id):
