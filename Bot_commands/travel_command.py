@@ -184,7 +184,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
                 "> You have multiple vehicles. Please choose one to travel with:",
                 discord.Color.blue()
             )
-            msg = await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+            msg = await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
             view.message = msg
         return
 
@@ -269,6 +269,8 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
 
 async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location):
+    await interaction.response.defer(ephemeral=True)
+
 
     pool = globals.pool
     user_id = interaction.user.id
