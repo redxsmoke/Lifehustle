@@ -390,10 +390,26 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
             return
 
         if vehicle["id"] != last_used_vehicle:
+            # Fetch last used vehicle details
+            last_vehicle = next((v for v in vehicles if v["id"] == last_used_vehicle), None)
+
+            if last_vehicle:
+                vehicle_info = (
+                    f"{last_vehicle.get('vehicle_type', 'Unknown type').title()} - "
+                    f"Color: {last_vehicle.get('color', 'Unknown')}, "
+                    f"Plate: {last_vehicle.get('plate_number', 'N/A')}"
+                )
+            else:
+                vehicle_info = "Unknown vehicle (details not found)"
+
             await interaction.followup.send(
                 embed=embed_message(
                     "🚫 Wrong Vehicle",
-                    "You are away from home and must travel with your last used vehicle. Return 🏠 home before switching vehicles.",
+                    (
+                        "You are away from home and must travel with your last used vehicle. "
+                        "Return 🏠 home before switching vehicles.\n\n"
+                        f"Your last used vehicle is:\n{vehicle_info}"
+                    ),
                     COLOR_RED
                 ),
                 ephemeral=True
