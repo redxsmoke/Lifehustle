@@ -368,6 +368,8 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
     # 🚫 Step 2: Vehicle isn't physically at user's location
     vehicle_location_id = vehicle.get("location_id")
+    print(f"[DEBUG] vehicle_location_id: {vehicle_location_id} ({type(vehicle_location_id)})")
+    print(f"[DEBUG] current_location: {current_location} ({type(current_location)})")
     if vehicle_location_id != current_location:
         retrieve_button = discord.ui.Button(
             label="🚚 Retrieve Vehicle ($20)",
