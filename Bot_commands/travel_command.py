@@ -390,38 +390,60 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
             @discord.ui.button(label="🚚 Retrieve Vehicle ($200)", style=discord.ButtonStyle.red)
             async def retrieve_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-                balance = (await get_user_finances(globals.pool, self.user_id)).get("checking_account_balance", 0)
-                if balance < 20:
+                try:
+                    print(f"[DEBUG] retrieve_button clicked by user {interaction.user.id}")
+
+                    balance = (await get_user_finances(globals.pool, self.user_id)).get("checking_account_balance", 0)
+                    print(f"[DEBUG] User balance: {balance}")
+
+                    if balance < 20:
+                        await interaction.response.send_message(
+                            embed=embed_message(
+                                "❌ Not Enough Funds",
+                                "You need $200 to retrieve your vehicle.",
+                                COLOR_RED
+                            ),
+                            ephemeral=True
+                        )
+                        self.value = False
+                        self.stop()
+                        print(f"[DEBUG] Not enough funds, stopping interaction")
+                        return
+
+                    await charge_user(globals.pool, self.user_id, 200)
+                    print(f"[DEBUG] Charged $200 from user {self.user_id}")
+
+                    await globals.pool.execute(
+                        "UPDATE user_vehicle_inventory SET current_location = $1 WHERE id = $2",
+                        self.destination_location,
+                        self.vehicle_id
+                    )
+                    print(f"[DEBUG] Updated vehicle {self.vehicle_id} location to {self.destination_location}")
+
                     await interaction.response.send_message(
                         embed=embed_message(
-                            "❌ Not Enough Funds",
-                            "You need $200 to retrieve your vehicle.",
-                            COLOR_RED
+                            "📦 Vehicle Retrieved",
+                            f"Your vehicle has been delivered to your destination location for $200.",
+                            COLOR_GREEN
                         ),
                         ephemeral=True
                     )
+                    self.value = True
+                    self.stop()
+                    print(f"[DEBUG] Retrieval success, stopping interaction")
+
+                except Exception as e:
+                    print(f"[ERROR] Exception in retrieve_button handler: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    if not interaction.response.is_done():
+                        await interaction.response.send_message(
+                            "❌ Something went wrong while retrieving your vehicle.",
+                            ephemeral=True
+                        )
                     self.value = False
                     self.stop()
-                    return
 
-                await charge_user(globals.pool, self.user_id, 20)
-
-                await globals.pool.execute(
-                    "UPDATE user_vehicle_inventory SET current_location = $1 WHERE id = $2",
-                    self.destination_location,
-                    self.vehicle_id
-                )
-
-                await interaction.response.send_message(
-                    embed=embed_message(
-                        "📦 Vehicle Retrieved",
-                        f"Your vehicle has been delivered to your destination location for $200.",
-                        COLOR_GREEN
-                    ),
-                    ephemeral=True
-                )
-                self.value = True
-                self.stop()
             
       
         view = RetrieveView(user_id, vehicle['id'], current_location)
