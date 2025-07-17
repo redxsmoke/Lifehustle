@@ -371,18 +371,6 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             ephemeral=True
         )
 
-    else:
-        print(f"[DEBUG] Invalid travel method received: {method}")
-        await interaction.followup.send(
-            embed=embed_message(
-                "❌ Invalid Travel Method",
-                "> Are you hacking us?! How did you select this as a travel option 🤔? Pick one of these: drive, bike, subway, or bus.",
-                discord.Color.red()
-            ),
-            ephemeral=True
-        )
-
-
 async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location):
     pool = globals.pool
     user_id = interaction.user.id
