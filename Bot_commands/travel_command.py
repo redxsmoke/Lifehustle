@@ -159,7 +159,18 @@ async def show_vehicle_selection(interaction, user_id, vehicles, method, user_tr
     user = await get_user(pool, user_id)
     current_location = user.get("current_location")
     current_vehicle_id = user.get("current_vehicle_id")
-    
+
+    # Set cost based on method
+    if method == "subway":
+        cost = 10
+    elif method == "bus":
+        cost = 5
+    elif method == "car":
+        cost = 10  # user pays $10
+    elif method == "bike":
+        cost = -10  # user gets $10 reward (negative cost)
+    else:
+        cost = 0  # default
 
     restricted = False
     filtered_vehicles = vehicles
