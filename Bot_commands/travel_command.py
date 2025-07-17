@@ -496,11 +496,10 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         view = RetrieveView(user_id, vehicle['id'], current_location, vehicle_location_name)
         await interaction.followup.send(
             embed=embed_message(
-                "🚫 Vehicle Not Here",
-                f"Your {vehicle.get('vehicle_type', 'vehicle')} is not at your current location — it’s currently at **{vehicle_location_name}**.\n\nWould you like to retrieve it for $200? Otherwise, you can take public transit (bus or subway) back to work to pick it up"
+                "Vehicle Location",
+                f"Your {vehicle.get('vehicle_type', 'vehicle')} is not at your current location — it’s currently at **{vehicle_location_name}**.\n\nWould you like to retrieve it for $200? Otherwise, you can take public transit (bus or subway) back to work to pick it up",
                 COLOR_RED
             ),
-            view=view,
             ephemeral=True
         )
         await view.wait()
