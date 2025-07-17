@@ -163,6 +163,7 @@ async def show_vehicle_selection(interaction, user_id, vehicles, method, user_tr
 
     restricted = False
     filtered_vehicles = vehicles
+    #
 
     
     # ENFORCE VEHICLE LOCK REGARDLESS OF METHOD
