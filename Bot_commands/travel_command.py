@@ -26,6 +26,7 @@ from embeds import embed_message, COLOR_GREEN
 from views import select_weighted_travel_outcome, VehicleUseView, TravelButtons
 
 user_travel_location = {}
+HOME_LOCATION_ID = 3
 
 def condition_from_usage(travel_count: int, breakdown_threshold: int = 200) -> str:
     if 0 <= travel_count < 50:
@@ -152,13 +153,13 @@ def register_commands(tree: app_commands.CommandTree):
             ephemeral=True
         )
 
-async def show_vehicle_selection(interaction, user_id, vehicles, method, user_travel_location):
+async def show_vehicle_selection(interaction, user_id, vehicles, method, user_travel_location, previous_location):
     print(f"[DEBUG] show_vehicle_selection called with method={method} and {len(vehicles)} vehicles")
     pool = globals.pool
     user = await get_user(pool, user_id)
     current_location = user.get("current_location")
     current_vehicle_id = user.get("current_vehicle_id")
-    HOME_LOCATION_ID = 3
+    
 
     restricted = False
     filtered_vehicles = vehicles
@@ -169,7 +170,7 @@ async def show_vehicle_selection(interaction, user_id, vehicles, method, user_tr
         filtered_vehicles = [v for v in vehicles if v["id"] == current_vehicle_id]
         restricted = True
 
-    view = await VehicleUseView.create(user_id, filtered_vehicles, method, user_travel_location)
+    view = await VehicleUseView.create(user_id, filtered_vehicles, method, user_travel_location, previous_location)
 
     description = (
         "> You have multiple vehicles. Please choose one to travel with:"
@@ -197,7 +198,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
     user = await get_user(pool, user_id)
     current_location = user.get("current_location")
     current_vehicle_id = user.get("current_vehicle_id")
-    HOME_LOCATION_ID = 3  # Replace with actual home ID if different
+    previous_location = current_location  
 
     vehicles = await get_user_vehicles(pool, user_id)
     working_vehicles = [v for v in vehicles if v.get("condition") != "Broken Down"]
@@ -242,10 +243,10 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
         if len(cars) == 1:
             print("[DEBUG] Exactly one car available, proceeding to travel")
-            await handle_travel_with_vehicle(interaction, cars[0], method, user_travel_location)
+            await handle_travel_with_vehicle(interaction, cars[0], method, user_travel_location, previous_location)
         else:
             print("[DEBUG] Multiple cars available, prompting user to select")
-            await show_vehicle_selection(interaction, user_id, cars, method, user_travel_location)
+            await show_vehicle_selection(interaction, user_id, cars, method, user_travel_location, previous_location)
         return
 
     elif method == 'bike':
@@ -265,10 +266,11 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
         if len(bikes) == 1:
             print("[DEBUG] Exactly one bike available, proceeding to travel")
-            await handle_travel_with_vehicle(interaction, bikes[0], method, user_travel_location)
+            await handle_travel_with_vehicle(interaction, bikes[0], method, user_travel_location, previous_location)   
+
         else:
             print("[DEBUG] Multiple bikes available, prompting user to select")
-            await show_vehicle_selection(interaction, user_id, bikes, method, user_travel_location)
+            await show_vehicle_selection(interaction, user_id, bikes, method, user_travel_location, previous_location)
         return
 
     elif method in ['subway', 'bus']:
@@ -320,25 +322,23 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         # Determine vehicle_id_used for car/bike; for subway/bus this is None
         vehicle_id_used = None
         if method in ['car', 'bike']:
-            # Try to find the actual vehicle used from working vehicles matching last_used_vehicle or current_vehicle_id
-            # If last_used_vehicle is set, use it; else fallback to current_vehicle_id
             vehicle_id_used = last_used_vehicle or current_vehicle_id
 
-        # Update last_used_vehicle ONLY if leaving home
-        if current_location == HOME_LOCATION_ID and user_travel_location != HOME_LOCATION_ID and vehicle_id_used:
+      
+        if previous_location == HOME_LOCATION_ID and user_travel_location != HOME_LOCATION_ID and vehicle_id_used:
             print(f"[DEBUG] Leaving home: setting last_used_vehicle to {vehicle_id_used}")
             await pool.execute(
                 "UPDATE users SET last_used_vehicle = $1 WHERE user_id = $2",
                 vehicle_id_used,
                 user_id
             )
-        # Clear last_used_vehicle when returning home
         elif user_travel_location == HOME_LOCATION_ID:
             print("[DEBUG] Returning home: clearing last_used_vehicle")
             await pool.execute(
                 "UPDATE users SET last_used_vehicle = NULL WHERE user_id = $1",
                 user_id
             )
+
 
         location_id = user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id")
 
@@ -371,7 +371,8 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             ephemeral=True
         )
 
-async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location):
+async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location, previous_location):
+
     pool = globals.pool
     user_id = interaction.user.id
 
