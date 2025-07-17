@@ -359,8 +359,6 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
 
 async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location, previous_location):
-    # Defer the response once at the start
-
     pool = globals.pool
     user_id = interaction.user.id
 
@@ -427,6 +425,18 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         )
         return
 
+    # 🚫 Step 3: Vehicle is stuck at a remote location, user is at home
+    if current_location == HOME_LOCATION_ID and vehicle.get("location_id") != HOME_LOCATION_ID:
+        await interaction.followup.send(
+            embed=embed_message(
+                "🚗 Vehicle Left Behind",
+                f"Your {vehicle.get('vehicle_type', 'vehicle')} is still parked elsewhere.\nUse the retrieve option to bring it home before using it.",
+                COLOR_RED
+            ),
+            ephemeral=True
+        )
+        return
+
     if current_location != HOME_LOCATION_ID and method in ['car', 'bike']:
         if last_used_vehicle is None:
             await interaction.followup.send(
@@ -449,7 +459,6 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
                 ephemeral=True
             )
             return
-
     cost = 10 if method == "car" else -10 if method == "bike" else 0
     finances = await get_user_finances(pool, user_id)
 
