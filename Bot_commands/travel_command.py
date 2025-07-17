@@ -398,7 +398,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
             await charge_user(pool, user_id, 20)
             await pool.execute(
-                "UPDATE user_vehicle_inventory SET location_id = $1 WHERE id = $2",
+                "UPDATE user_vehicle_inventory SET current_location = $1 WHERE id = $2",
                 current_location,
                 vehicle["id"]
             )
