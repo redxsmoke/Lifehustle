@@ -425,6 +425,55 @@ async def select_weighted_travel_outcome(pool, travel_type):
 from discord.ui import View, Button
 import discord
 
+class RetrieveVehicleView(View):
+    def __init__(self, user_id: int, vehicle_id: int, user_location: int, fee: int = 20):
+        super().__init__(timeout=60)
+        self.user_id = user_id
+        self.vehicle_id = vehicle_id
+        self.user_location = user_location
+        self.fee = fee
+        self.value = None
+
+        self.add_item(Button(label=f"Retrieve Vehicle for ${fee}", style=discord.ButtonStyle.success, custom_id="retrieve_confirm"))
+        self.add_item(Button(label="Cancel", style=discord.ButtonStyle.secondary, custom_id="retrieve_cancel"))
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.user_id
+
+    @discord.ui.button(label="Retrieve Vehicle for $20", style=discord.ButtonStyle.success, custom_id="retrieve_confirm")
+    async def confirm_button(self, interaction: discord.Interaction, button: Button):
+        pool = globals.pool
+        user_id = interaction.user.id
+
+        finances = await get_user_finances(pool, user_id)
+        balance = finances.get("checking_account_balance", 0)
+
+        if balance < self.fee:
+            await interaction.response.send_message("❌ You don't have enough money to retrieve your vehicle.", ephemeral=True)
+            self.value = False
+            self.stop()
+            return
+
+        # Charge user
+        await charge_user(pool, user_id, self.fee)
+
+        # Update vehicle location to user's current location
+        await pool.execute(
+            "UPDATE user_vehicle_inventory SET location_id = $1 WHERE id = $2 AND user_id = $3",
+            self.user_location, self.vehicle_id, user_id
+        )
+
+        await interaction.response.send_message(f"✅ Vehicle retrieved to your current location for ${self.fee}. You can now use it.", ephemeral=True)
+        self.value = True
+        self.stop()
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, custom_id="retrieve_cancel")
+    async def cancel_button(self, interaction: discord.Interaction, button: Button):
+        await interaction.response.send_message("Retrieve vehicle cancelled.", ephemeral=True)
+        self.value = False
+        self.stop()
+
+
 class VehicleUseButton(Button):
     def __init__(self, vehicle: dict, method: str, user_id: int, user_travel_location: int):
         label = f"{vehicle.get('vehicle_type', 'Vehicle')} - Plate: {vehicle.get('plate_number', 'N/A')} - Color: {vehicle.get('color', 'Unknown')}"
@@ -442,16 +491,38 @@ class VehicleUseButton(Button):
                 await interaction.followup.send("❌ This isn't your vehicle menu.", ephemeral=True)
                 return
 
-            self.view.disable_all_buttons()
-            if hasattr(self.view, "message") and self.view.message:
-                await self.view.message.edit(view=self.view)
-
             pool = globals.pool
             user_id = interaction.user.id
 
-            async with pool.acquire() as conn:
-                user_row = await conn.fetchrow("SELECT current_location FROM users WHERE user_id = $1", user_id)
-                old_location_id = user_row["current_location"] if user_row else None
+            # Get vehicle's current location
+            vehicle_location_row = await pool.fetchrow(
+                "SELECT location_id FROM user_vehicle_inventory WHERE id = $1 AND user_id = $2",
+                self.vehicle['id'], user_id
+            )
+            vehicle_location = vehicle_location_row["location_id"] if vehicle_location_row else None
+
+            # Get user's current location
+            user_row = await pool.fetchrow("SELECT current_location FROM users WHERE user_id = $1", user_id)
+            user_location = user_row["current_location"] if user_row else None
+
+            if vehicle_location != user_location:
+                # Vehicle not at user location, prompt retrieval
+                retrieve_view = RetrieveVehicleView(user_id, self.vehicle['id'], user_location)
+                await interaction.followup.send(
+                    f"🚨 Your {self.vehicle.get('vehicle_type', 'vehicle')} is currently at a different location. You must retrieve it first.",
+                    view=retrieve_view,
+                    ephemeral=True
+                )
+                await retrieve_view.wait()
+                if not retrieve_view.value:
+                    return  # retrieval cancelled or failed
+                # After retrieval, update vehicle_location variable
+                vehicle_location = user_location
+
+            # Proceed with travel logic as before
+            self.view.disable_all_buttons()
+            if hasattr(self.view, "message") and self.view.message:
+                await self.view.message.edit(view=self.view)
 
             async def get_location_name(pool, location_id):
                 if location_id is None:
@@ -459,20 +530,19 @@ class VehicleUseButton(Button):
                 row = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", location_id)
                 return row["location_name"] if row else "Unknown"
 
-            old_location_name = await get_location_name(pool, old_location_id)
+            old_location_name = await get_location_name(pool, user_location)
             new_location_name = await get_location_name(pool, self.user_travel_location)
 
             # Update travel count
-            async with pool.acquire() as conn:
-                await conn.execute(
-                    "UPDATE user_vehicle_inventory SET travel_count = travel_count + 1 WHERE id = $1 AND user_id = $2",
-                    self.vehicle['id'], user_id
-                )
-                travel_count_row = await conn.fetchrow(
-                    "SELECT travel_count FROM user_vehicle_inventory WHERE id = $1 AND user_id = $2",
-                    self.vehicle['id'], user_id
-                )
-                travel_count = travel_count_row['travel_count'] if travel_count_row else 0
+            await pool.execute(
+                "UPDATE user_vehicle_inventory SET travel_count = travel_count + 1 WHERE id = $1 AND user_id = $2",
+                self.vehicle['id'], user_id
+            )
+            travel_count_row = await pool.fetchrow(
+                "SELECT travel_count FROM user_vehicle_inventory WHERE id = $1 AND user_id = $2",
+                self.vehicle['id'], user_id
+            )
+            travel_count = travel_count_row['travel_count'] if travel_count_row else 0
 
             finances = await get_user_finances(pool, user_id)
 
