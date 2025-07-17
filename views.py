@@ -528,6 +528,14 @@ class VehicleUseButton(Button):
                 previous_location=user_location
             )
 
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            if not interaction.response.is_done():
+                await interaction.followup.send(
+                    "❌ Something went wrong while processing your vehicle travel.",
+                    ephemeral=True
+                )
 
 
 class VehicleUseView(View):
