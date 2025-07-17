@@ -366,12 +366,31 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     current_location = user.get("current_location")
     last_used_vehicle = user.get("last_used_vehicle")
 
-    # 🚫 Step 2: Vehicle isn't physically at user's location
+    if current_location != HOME_LOCATION_ID and method in ['car', 'bike']:
+        if last_used_vehicle is None:
+            await interaction.followup.send(
+                embed=embed_message(
+                    "🚫 No Vehicle Allowed",
+                    "You don't have a vehicle locked for use away from home. Return 🏠 home first to select one.",
+                    COLOR_RED
+                ),
+                ephemeral=True
+            )
+            return
+
+        if vehicle["id"] != last_used_vehicle:
+            await interaction.followup.send(
+                embed=embed_message(
+                    "🚫 Wrong Vehicle",
+                    "You are away from home and must travel with your last used vehicle. Return 🏠 home before switching vehicles.",
+                    COLOR_RED
+                ),
+                ephemeral=True
+            )
+            return
+
     vehicle_location_id = vehicle.get("location_id")
-    print(f"[DEBUG] vehicle_location_id: {vehicle_location_id} ({type(vehicle_location_id)})")
-    print(f"[DEBUG] current_location: {current_location} ({type(current_location)})")
     if vehicle_location_id != current_location:
-        # Fetch vehicle location name to display
         vehicle_loc_row = await pool.fetchrow(
             "SELECT location_name FROM cd_locations WHERE cd_location_id = $1",
             vehicle_location_id
@@ -385,7 +404,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
                 self.vehicle_id = vehicle_id
                 self.destination_location = destination_location
                 self.vehicle_location_name = vehicle_location_name
-                self.value = None  # None means no choice yet
+                self.value = None
 
             async def interaction_check(self, interaction: discord.Interaction) -> bool:
                 return interaction.user.id == self.user_id
@@ -447,9 +466,8 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         await view.wait()
 
         if not getattr(view, "value", False):
-            return  # user cancelled or retrieval failed
+            return
 
-    # 🚫 Step 3: Vehicle is stuck at a remote location, user is at home
     if current_location == HOME_LOCATION_ID and vehicle.get("location_id") != HOME_LOCATION_ID:
         await interaction.followup.send(
             embed=embed_message(
@@ -461,42 +479,8 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         )
         return
 
-    if current_location != HOME_LOCATION_ID and method in ['car', 'bike']:
-        if last_used_vehicle is None:
-            await interaction.followup.send(
-                embed=embed_message(
-                    "🚫 No Vehicle Allowed",
-                    "You don't have a vehicle locked for use away from home. Return 🏠 home first to select one.",
-                    COLOR_RED
-                ),
-                ephemeral=True
-            )
-            return
+    # The rest of your travel logic continues here...
 
-        if vehicle["id"] != last_used_vehicle:
-            await interaction.followup.send(
-                embed=embed_message(
-                    "🚫 Wrong Vehicle",
-                    "You are away from home and must travel with your last used vehicle. Return 🏠 home before switching vehicles.",
-                    COLOR_RED
-                ),
-                ephemeral=True
-            )
-            return
-
-    cost = 10 if method == "car" else -10 if method == "bike" else 0
-    finances = await get_user_finances(pool, user_id)
-
-    if finances.get("checking_account_balance", 0) < cost:
-        await interaction.followup.send(
-            embed=embed_message(
-                "❌ Insufficient Funds",
-                f"> You need ${cost} to {method} your {vehicle.get('vehicle_type', 'vehicle')}, but your balance is ${finances.get('checking_account_balance', 0)}.",
-                discord.Color.red()
-            ),
-            ephemeral=True
-        )
-        return
 
     await charge_user(pool, user_id, cost)
     current_balance = finances.get("checking_account_balance", 0) - cost
