@@ -86,16 +86,10 @@ class LocationSelect(discord.ui.Select):
             if not interaction.response.is_done():
                 await interaction.response.send_message("❌ Something went wrong. Try again.", ephemeral=True)
 
-
-
-
-
-
 class LocationTravelView(discord.ui.View):
     def __init__(self, locations, user_id, pool):
         super().__init__(timeout=60)
         self.add_item(LocationSelect(locations, user_id, pool))
-
 
 def register_commands(tree: app_commands.CommandTree):
     @tree.command(name="travel", description="Travel to a different location")
@@ -141,7 +135,6 @@ def register_commands(tree: app_commands.CommandTree):
         for loc in results:
             print(f"[DEBUG] Location: {loc['location_name']} (ID: {loc['cd_location_id']})")
 
-
         view = LocationTravelView(results, user_id, pool)
         await interaction.response.send_message(
             embed=embed_message(
@@ -160,10 +153,8 @@ async def show_vehicle_selection(interaction, user_id, vehicles, method, user_tr
     current_location = user.get("current_location")
     current_vehicle_id = user.get("current_vehicle_id")
     
-
     restricted = False
     filtered_vehicles = vehicles
-
     
     # ENFORCE VEHICLE LOCK REGARDLESS OF METHOD
     if current_location != HOME_LOCATION_ID and current_vehicle_id:
@@ -189,7 +180,6 @@ async def show_vehicle_selection(interaction, user_id, vehicles, method, user_tr
     )
 
     await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-
 
 async def handle_travel(interaction: Interaction, method: str, user_travel_location: int):
     pool = globals.pool
@@ -267,7 +257,6 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         if len(bikes) == 1:
             print("[DEBUG] Exactly one bike available, proceeding to travel")
             await handle_travel_with_vehicle(interaction, bikes[0], method, user_travel_location, previous_location)   
-
         else:
             print("[DEBUG] Multiple bikes available, prompting user to select")
             await show_vehicle_selection(interaction, user_id, bikes, method, user_travel_location, previous_location)
@@ -324,7 +313,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         if method in ['car', 'bike']:
             vehicle_id_used = last_used_vehicle or current_vehicle_id
 
-      
+        # Strict enforcement: only set last_used_vehicle when leaving home, clear when returning home
         if previous_location == HOME_LOCATION_ID and user_travel_location != HOME_LOCATION_ID and vehicle_id_used:
             print(f"[DEBUG] Leaving home: setting last_used_vehicle to {vehicle_id_used}")
             await pool.execute(
@@ -338,7 +327,6 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
                 "UPDATE users SET last_used_vehicle = NULL WHERE user_id = $1",
                 user_id
             )
-
 
         location_id = user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id")
 
@@ -393,7 +381,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     await charge_user(pool, user_id, cost)
     current_balance = finances.get("checking_account_balance", 0) - cost
     
-    vehicle_status = "stored" if user_travel_location == 3 else "in use"
+    vehicle_status = "stored" if user_travel_location == HOME_LOCATION_ID else "in use"
 
     outcome = await select_weighted_travel_outcome(pool, method)
     outcome_desc = "No special events today."
@@ -455,22 +443,12 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         condition_str = vehicle.get("condition", "Unknown")
         appearance_desc = vehicle.get("appearance_description", "No description available.")
 
-    # IMPORTANT: Use the passed previous_location directly here (do NOT fetch user again)
+    user = await get_user(pool, user_id)
+    old_location_id = user.get("current_location")
     print(f"[DEBUG] user_travel_location: {user_travel_location} (type: {type(user_travel_location)})")
     print(f"[DEBUG] user_id: {user_id} (type: {type(user_id)})")
-    print(f"[DEBUG] previous_location (type {type(previous_location)}): {previous_location}")
-    print(f"[DEBUG] HOME_LOCATION_ID (type {type(HOME_LOCATION_ID)}): {HOME_LOCATION_ID}")
 
-    # Update last_used_vehicle based on previous_location and destination BEFORE changing current_location
-    if previous_location == HOME_LOCATION_ID and user_travel_location != HOME_LOCATION_ID:
-        print(f"[DEBUG] Leaving home: setting last_used_vehicle to {vehicle['id']}")
-        await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status, user_travel_location)
-    elif user_travel_location == HOME_LOCATION_ID:
-        print("[DEBUG] Returning home: clearing last_used_vehicle")
-        await update_last_used_vehicle(pool, user_id, None, None, user_travel_location)
-
-    # Now update current_location in DB
-    location_id = user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id")
+    location_id = user_travel_location
 
     await pool.execute(
         "UPDATE users SET current_location = $1 WHERE user_id = $2",
@@ -480,32 +458,40 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
     user_after_update = await get_user(pool, user_id)
     print(f"[DEBUG] After UPDATE, current_location in DB: {user_after_update.get('current_location')}")
+    print(f"[DEBUG] previous_location (type {type(previous_location)}): {previous_location}")
+    print(f"[DEBUG] location_id (type {type(location_id)}): {location_id}")
+    print(f"[DEBUG] HOME_LOCATION_ID (type {type(HOME_LOCATION_ID)}): {HOME_LOCATION_ID}")
 
-    old_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", previous_location)
-    old_location_name = old_loc["location_name"] if old_loc else f"Location {previous_location}"
+    # ======= HERE IS THE NEW FIXED PART: CALL update_last_used_vehicle =======
+    if previous_location == HOME_LOCATION_ID and location_id != HOME_LOCATION_ID:
+        print(f"[DEBUG] Leaving home, setting last_used_vehicle to vehicle id {vehicle['id']}")
+        await pool.execute(
+            "UPDATE users SET last_used_vehicle = $1 WHERE user_id = $2",
+            vehicle["id"],
+            user_id
+        )
+    elif location_id == HOME_LOCATION_ID:
+        print("[DEBUG] Returning home, clearing last_used_vehicle")
+        await pool.execute(
+            "UPDATE users SET last_used_vehicle = NULL WHERE user_id = $1",
+            user_id
+        )
 
-    new_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", user_travel_location)
-    new_location_name = new_loc["location_name"] if new_loc else f"Location {user_travel_location}"
-
-    embed = discord.Embed(
-        title=f"{'🚗' if method == 'car' else '🚴'} Travel Summary",
-        description=(
-            f"You traveled **from `{old_location_name}` to `{new_location_name}`** using your "
-            f"{vehicle.get('vehicle_type', 'vehicle')} (Color: {vehicle.get('color', 'Unknown')}, "
-            f"Plate: {vehicle.get('plate_number', 'N/A')}).\n"
-            f"- Travel Count: {travel_count}\n"
-            f"- Condition: {condition_str}\n"
-            f"- Appearance: {appearance_desc}\n\n"
-            f"🎲 Outcome: {outcome_desc}\n"
-            f"💰 Balance Impact +/-: ${effect}\n\n"
-            f"Your current balance is: ${current_balance:,}."
-        ),
-        color=COLOR_GREEN
+    text = (
+        f"> You traveled from **{previous_location}** to **{location_id}** by **{method.title()}**.\n"
+        f"> Your vehicle ({appearance_desc}) is now in **{condition_str}** condition.\n"
+        f"> Travel count for this vehicle: **{travel_count}**.\n\n"
+        f"🎲 Outcome: {outcome_desc}\n"
+        f"💰 Balance change: ${effect}\n"
+        f"🚗 Vehicle status: {vehicle_status}"
     )
 
+    embed = embed_message(
+        f"🚗 Travel Summary - {method.title()}",
+        text,
+        COLOR_GREEN
+    )
     await interaction.followup.send(embed=embed, ephemeral=False)
-
-
 
 async def on_sell_all_button_click(interaction: discord.Interaction, user_id, vehicles):
     confirm_view = ConfirmSellView(user_id, vehicles)
