@@ -480,6 +480,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         ),
         color=COLOR_GREEN
     )
+    await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status, location_id)
 
     await interaction.followup.send(embed=embed, ephemeral=False)
 
