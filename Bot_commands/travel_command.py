@@ -472,9 +472,11 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     print(f"[DEBUG] After UPDATE, current_location in DB: {user_after_update.get('current_location')}")
 
     # ======= HERE IS THE NEW FIXED PART: CALL update_last_used_vehicle =======
-    print(f"[DEBUG] Calling update_last_used_vehicle with vehicle_id={vehicle['id']}, vehicle_status={vehicle_status}, location_id={location_id}")
-    await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status, location_id)
-    print(f"[DEBUG] update_last_used_vehicle call completed")
+    if previous_location == HOME_LOCATION_ID and location_id != HOME_LOCATION_ID:
+        await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status, location_id)
+    elif location_id == HOME_LOCATION_ID:
+        await update_last_used_vehicle(pool, user_id, None, None, location_id)
+
     # ==========================================================================
 
     old_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", old_location_id)
