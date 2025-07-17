@@ -357,9 +357,39 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         )
 
 async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location, previous_location):
-
     pool = globals.pool
     user_id = interaction.user.id
+
+    user = await get_user(pool, user_id)
+    current_location = user.get("current_location")
+    last_used_vehicle = user.get("last_used_vehicle")
+
+    # Enforce vehicle lock when away from home and method is car or bike
+    if current_location != HOME_LOCATION_ID and method in ['car', 'bike']:
+        if last_used_vehicle is None:
+            # No allowed vehicle locked
+            await interaction.response.send_message(
+                embed=embed_message(
+                    "🚫 No Vehicle Allowed",
+                    "You don't have a vehicle locked for use away from home. Return 🏠 home first to select one.",
+                    COLOR_RED
+                ),
+                ephemeral=True
+            )
+            return
+
+        # This is the key check: does the chosen vehicle match last_used_vehicle?
+        if vehicle["id"] != last_used_vehicle:
+            await interaction.response.send_message(
+                embed=embed_message(
+                    "🚫 Wrong Vehicle",
+                    "You are away from home and must travel with your last used vehicle. Return 🏠 home before switching vehicles.",
+                    COLOR_RED
+                ),
+                ephemeral=True
+            )
+            return
+
 
     cost = 10 if method == "car" else -10 if method == "bike" else 0
     finances = await get_user_finances(pool, user_id)
