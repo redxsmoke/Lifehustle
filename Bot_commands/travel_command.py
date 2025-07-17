@@ -361,13 +361,71 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location, previous_location):
     # Defer the response once at the start
 
-
     pool = globals.pool
     user_id = interaction.user.id
 
     user = await get_user(pool, user_id)
     current_location = user.get("current_location")
     last_used_vehicle = user.get("last_used_vehicle")
+
+    # 🚫 Step 2: Vehicle isn't physically at user's location
+    vehicle_location_id = vehicle.get("location_id")
+    if vehicle_location_id != current_location:
+        retrieve_button = discord.ui.Button(
+            label="🚚 Retrieve Vehicle ($20)",
+            style=discord.ButtonStyle.red,
+            custom_id=f"retrieve_vehicle_{vehicle['id']}"
+        )
+
+        class RetrieveView(discord.ui.View):
+            def __init__(self):
+                super().__init__(timeout=60)
+                self.add_item(retrieve_button)
+
+            async def interaction_check(self, interaction: discord.Interaction) -> bool:
+                return interaction.user.id == user_id
+
+        async def handle_retrieve_button(i: discord.Interaction):
+            balance = (await get_user_finances(pool, user_id)).get("checking_account_balance", 0)
+            if balance < 20:
+                await i.response.send_message(
+                    embed=embed_message(
+                        "❌ Not Enough Funds",
+                        "You need $20 to retrieve your vehicle.",
+                        COLOR_RED
+                    ),
+                    ephemeral=True
+                )
+                return
+
+            await charge_user(pool, user_id, 20)
+            await pool.execute(
+                "UPDATE user_vehicle_inventory SET location_id = $1 WHERE id = $2",
+                current_location,
+                vehicle["id"]
+            )
+
+            await i.response.send_message(
+                embed=embed_message(
+                    "📦 Vehicle Retrieved",
+                    f"Your {vehicle.get('vehicle_type', 'vehicle')} has been delivered to your current location for $20.",
+                    COLOR_GREEN
+                ),
+                ephemeral=True
+            )
+
+        retrieve_button.callback = handle_retrieve_button
+
+        await interaction.followup.send(
+            embed=embed_message(
+                "🚫 Vehicle Not Here",
+                f"Your {vehicle.get('vehicle_type', 'vehicle')} is not at your current location.\n\nWould you like to retrieve it for $20?",
+                COLOR_RED
+            ),
+            view=RetrieveView(),
+            ephemeral=True
+        )
+        return
 
     if current_location != HOME_LOCATION_ID and method in ['car', 'bike']:
         if last_used_vehicle is None:
@@ -392,7 +450,6 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
             )
             return
 
-
     cost = 10 if method == "car" else -10 if method == "bike" else 0
     finances = await get_user_finances(pool, user_id)
 
@@ -409,7 +466,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
     await charge_user(pool, user_id, cost)
     current_balance = finances.get("checking_account_balance", 0) - cost
-    
+
     vehicle_status = "stored" if user_travel_location == 3 else "in use"
 
     outcome = await select_weighted_travel_outcome(pool, method)
@@ -477,7 +534,6 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     print(f"[DEBUG] user_id: {user_id} (type: {type(user_id)})")
     print(f"[DEBUG] previous_location (type {type(previous_location)}): {previous_location}")
     print(f"[DEBUG] HOME_LOCATION_ID (type {type(HOME_LOCATION_ID)}): {HOME_LOCATION_ID}")
-
 
     # Now update current_location in DB
     location_id = user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id")
