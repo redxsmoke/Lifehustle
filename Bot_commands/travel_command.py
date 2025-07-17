@@ -436,7 +436,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
             ephemeral=True
         )
         return
-
+#
     if current_location != HOME_LOCATION_ID and method in ['car', 'bike']:
         if last_used_vehicle is None:
             await interaction.followup.send(
