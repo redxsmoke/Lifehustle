@@ -207,10 +207,13 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
     print(f"[DEBUG] Current location: {current_location}, Current vehicle ID: {current_vehicle_id}")
 
     # 🚫 Enforce same vehicle usage if away from home
-    if current_location != HOME_LOCATION_ID and current_vehicle_id and method in ['car', 'bike']:
-        # Combine all working vehicles, regardless of class
-        allowed_vehicle = next((v for v in working_vehicles if v["id"] == current_vehicle_id), None)
+    last_used_vehicle = user.get("last_used_vehicle")
+
+    if current_location != HOME_LOCATION_ID and last_used_vehicle and method in ['car', 'bike']:
+        allowed_vehicle = next((v for v in working_vehicles if v["id"] == last_used_vehicle), None)
         if not allowed_vehicle:
+            # block travel
+
             print("[DEBUG] User trying to use a vehicle not allowed away from home")
             await interaction.response.send_message(
                 embed=embed_message(
