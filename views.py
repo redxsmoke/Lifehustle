@@ -12,6 +12,7 @@ from datetime import datetime, time
 from vehicle_logic import ConfirmSellView, sell_all_vehicles
 from Bot_commands.lifecheck_command import get_mock_weather_dynamic
 from utilities import charge_user, reward_user
+from db_user import get_user_finances
 
 
 # Fixed base prices by vehicle type
