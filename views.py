@@ -517,81 +517,17 @@ class VehicleUseButton(Button):
                 # After retrieval, update vehicle_location variable
                 vehicle_location = user_location
 
-            # Proceed with travel logic as before
-            self.view.disable_all_buttons()
-            if hasattr(self.view, "message") and self.view.message:
-                await self.view.message.edit(view=self.view)
+            # ✅ Use proper travel handler (enforces last_used_vehicle, breakdowns, updates)
+            from Bot_commands.travel_command import handle_travel_with_vehicle
 
-            async def get_location_name(pool, location_id):
-                if location_id is None:
-                    return "Unknown"
-                row = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", location_id)
-                return row["location_name"] if row else "Unknown"
-
-            old_location_name = await get_location_name(pool, user_location)
-            new_location_name = await get_location_name(pool, self.user_travel_location)
-
-            # Update travel count
-            await pool.execute(
-                "UPDATE user_vehicle_inventory SET travel_count = travel_count + 1 WHERE id = $1 AND user_id = $2",
-                self.vehicle['id'], user_id
-            )
-            travel_count_row = await pool.fetchrow(
-                "SELECT travel_count FROM user_vehicle_inventory WHERE id = $1 AND user_id = $2",
-                self.vehicle['id'], user_id
-            )
-            travel_count = travel_count_row['travel_count'] if travel_count_row else 0
-
-            finances = await get_user_finances(pool, user_id)
-
-            outcome = await select_weighted_travel_outcome(pool, self.method)
-            updated_finances = await get_user_finances(pool, user_id)
-            updated_balance = updated_finances.get("checking_account_balance", 0)
-
-            outcome_desc = "Nothing happened, and that's... okay."
-            effect = 0
-            if outcome:
-                desc = outcome.get("description", "")
-                effect = outcome.get("effect_amount", 0)
-                if effect < 0 and updated_balance >= -effect:
-                    await charge_user(pool, user_id, -effect)
-                    updated_balance -= -effect
-                elif effect > 0:
-                    await reward_user(pool, user_id, effect)
-                    updated_balance += effect
-                outcome_desc = desc
-
-            embed_text = (
-                f"You traveled from **{old_location_name}** to **{new_location_name}** "
-                f"using your {self.vehicle.get('vehicle_type', 'vehicle')} "
-                f"(Color: {self.vehicle.get('color', 'Unknown')}, Plate: {self.vehicle.get('plate_number', 'N/A')}).\n"
-                f"Travel Count: {travel_count}\n"
-                f"Condition: {self.vehicle.get('condition', 'Unknown')}\n"
-                f"Appearance: {self.vehicle.get('appearance_description', 'No description')}\n\n"
-                f"🎲 Outcome: {outcome_desc}\n"
-                f"💰 Balance Impact +/-: ${effect}\n\n"
-                f"Your current balance is: **${updated_balance:,}**."
+            await handle_travel_with_vehicle(
+                interaction=interaction,
+                vehicle=self.vehicle,
+                method=self.method,
+                user_travel_location=self.user_travel_location,
+                previous_location=user_location
             )
 
-            await interaction.followup.send(
-                embed=embed_message("🚗 Travel Summary", embed_text, COLOR_GREEN),
-                ephemeral=True
-            )
-
-            # Update user's location in DB
-            await pool.execute(
-                "UPDATE users SET current_location = $1 WHERE user_id = $2",
-                self.user_travel_location, user_id
-            )
-
-        except Exception:
-            import traceback
-            traceback.print_exc()
-            if not interaction.response.is_done():
-                await interaction.followup.send(
-                    "❌ Something went wrong while processing your vehicle travel.",
-                    ephemeral=True
-                )
 
 
 class VehicleUseView(View):
