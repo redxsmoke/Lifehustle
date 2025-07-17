@@ -399,7 +399,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
                     await interaction.response.send_message(
                         embed=embed_message(
                             "❌ Not Enough Funds",
-                            "You need $20 to retrieve your vehicle.",
+                            "You need $200 to retrieve your vehicle.",
                             COLOR_RED
                         ),
                         ephemeral=True
