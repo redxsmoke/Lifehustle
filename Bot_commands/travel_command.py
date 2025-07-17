@@ -386,7 +386,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
     user = await get_user(pool, user_id)
     finances = await get_user_finances(pool, user_id) 
-    
+
     current_location = user.get("current_location")
     last_used_vehicle = user.get("last_used_vehicle")
 
@@ -497,7 +497,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         await interaction.followup.send(
             embed=embed_message(
                 "🚫 Vehicle Not Here",
-                f"Your {vehicle.get('vehicle_type', 'vehicle')} is not at your current location — it’s currently at **{vehicle_location_name}**.\n\nWould you like to retrieve it for $200?",
+                f"Your {vehicle.get('vehicle_type', 'vehicle')} is not at your current location — it’s currently at **{vehicle_location_name}**.\n\nWould you like to retrieve it for $200? Otherwise, you can take public transit (bus or subway) back to work to pick it up"
                 COLOR_RED
             ),
             view=view,
