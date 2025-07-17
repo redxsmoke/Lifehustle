@@ -385,6 +385,8 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         cost = 0  # default cost if needed
 
     user = await get_user(pool, user_id)
+    finances = await get_user_finances(pool, user_id) 
+    
     current_location = user.get("current_location")
     last_used_vehicle = user.get("last_used_vehicle")
 
