@@ -482,9 +482,10 @@ class VehicleUseButton(Button):
         self.user_travel_location = user_travel_location
 
     async def callback(self, interaction: discord.Interaction):
-        vehicles = await get_user_vehicles(globals.pool, interaction.user.id)
+        
         try:
             await interaction.response.defer(ephemeral=True)
+            vehicles = await get_user_vehicles(globals.pool, interaction.user.id)
 
             if interaction.user.id != self.user_id:
                 await interaction.followup.send("❌ This isn't your vehicle menu.", ephemeral=True)
