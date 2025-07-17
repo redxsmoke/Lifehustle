@@ -376,41 +376,52 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         )
 
         class RetrieveView(discord.ui.View):
-            def __init__(self):
+            def __init__(self, user_id, vehicle_id, destination_location):
                 super().__init__(timeout=60)
-                self.add_item(retrieve_button)
+                self.user_id = user_id
+                self.vehicle_id = vehicle_id
+                self.destination_location = destination_location
+                self.retrieve_button = discord.ui.Button(
+                    label="🚚 Retrieve Vehicle ($20)",
+                    style=discord.ButtonStyle.red,
+                )
+                self.retrieve_button.callback = self.handle_retrieve_button
+                self.add_item(self.retrieve_button)
 
             async def interaction_check(self, interaction: discord.Interaction) -> bool:
-                return interaction.user.id == user_id
+                return interaction.user.id == self.user_id
 
-        async def handle_retrieve_button(i: discord.Interaction):
-            balance = (await get_user_finances(pool, user_id)).get("checking_account_balance", 0)
-            if balance < 20:
-                await i.response.send_message(
+            async def handle_retrieve_button(self, interaction: discord.Interaction):
+                balance = (await get_user_finances(globals.pool, self.user_id)).get("checking_account_balance", 0)
+                if balance < 20:
+                    await interaction.response.send_message(
+                        embed=embed_message(
+                            "❌ Not Enough Funds",
+                            "You need $20 to retrieve your vehicle.",
+                            COLOR_RED
+                        ),
+                        ephemeral=True
+                    )
+                    return
+
+                await charge_user(globals.pool, self.user_id, 20)
+
+                # UPDATE TO DESTINATION LOCATION, NOT OLD LOCATION
+                await globals.pool.execute(
+                    "UPDATE user_vehicle_inventory SET current_location = $1 WHERE id = $2",
+                    self.destination_location,
+                    self.vehicle_id
+                )
+
+                await interaction.response.send_message(
                     embed=embed_message(
-                        "❌ Not Enough Funds",
-                        "You need $20 to retrieve your vehicle.",
-                        COLOR_RED
+                        "📦 Vehicle Retrieved",
+                        f"Your vehicle has been delivered to your destination location for $20.",
+                        COLOR_GREEN
                     ),
                     ephemeral=True
                 )
-                return
 
-            await charge_user(pool, user_id, 20)
-            await pool.execute(
-                "UPDATE user_vehicle_inventory SET current_location = $1 WHERE id = $2",
-                current_location,
-                vehicle["id"]
-            )
-
-            await i.response.send_message(
-                embed=embed_message(
-                    "📦 Vehicle Retrieved",
-                    f"Your {vehicle.get('vehicle_type', 'vehicle')} has been delivered to your current location for $20.",
-                    COLOR_GREEN
-                ),
-                ephemeral=True
-            )
 
         retrieve_button.callback = handle_retrieve_button
 
@@ -577,7 +588,18 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         ),
         color=COLOR_GREEN
     )
-    await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status, location_id)
+        # Determine the correct vehicle location to set
+    if method in ['car', 'bike']:
+        # Update vehicle location to user's new location
+        vehicle_location_to_set = location_id  # user_travel_location
+        vehicle_status_to_set = "in use"
+    else:
+        # Bus or subway: don't update vehicle location (leave as-is)
+        vehicle_location_to_set = vehicle.get("location_id")
+        vehicle_status_to_set = "stored"
+
+    await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status_to_set, vehicle_location_to_set)
+
 
     await interaction.followup.send(embed=embed, ephemeral=False)
 
