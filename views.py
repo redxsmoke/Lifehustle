@@ -482,7 +482,7 @@ class VehicleUseButton(Button):
         self.user_travel_location = user_travel_location
 
     async def callback(self, interaction: discord.Interaction):
-    vehicles = await get_user_vehicles(globals.pool, interaction.user.id)
+        vehicles = await get_user_vehicles(globals.pool, interaction.user.id)
         try:
             await interaction.response.defer(ephemeral=True)
 
