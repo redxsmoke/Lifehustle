@@ -434,8 +434,6 @@ class RetrieveVehicleView(View):
         self.fee = fee
         self.value = None
 
-        self.add_item(Button(label=f"Retrieve Vehicle for ${fee}", style=discord.ButtonStyle.success, custom_id="retrieve_confirm"))
-        self.add_item(Button(label="Cancel", style=discord.ButtonStyle.secondary, custom_id="retrieve_cancel"))
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
