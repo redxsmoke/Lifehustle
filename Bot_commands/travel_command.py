@@ -266,7 +266,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         if len(bikes) == 1:
-            view = await VehicleUseView.create(user_id, cars, "bike", user_travel_location)
+            view = await VehicleUseView.create(user_id, bike, "bike", user_travel_location)
             msg = await interaction.followup.send("Choose your bike for travel:", view=view, ephemeral=True)
             view.message = msg
         else:
