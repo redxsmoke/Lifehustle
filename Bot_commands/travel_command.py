@@ -153,6 +153,7 @@ def register_commands(tree: app_commands.CommandTree):
         )
 
 async def show_vehicle_selection(interaction, user_id, vehicles, method, user_travel_location):
+    print(f"[DEBUG] show_vehicle_selection called with method={method} and {len(vehicles)} vehicles")
     pool = globals.pool
     user = await get_user(pool, user_id)
     current_location = user.get("current_location")
@@ -162,6 +163,7 @@ async def show_vehicle_selection(interaction, user_id, vehicles, method, user_tr
     restricted = False
     filtered_vehicles = vehicles
 
+    
     # ENFORCE VEHICLE LOCK REGARDLESS OF METHOD
     if current_location != HOME_LOCATION_ID and current_vehicle_id:
         filtered_vehicles = [v for v in vehicles if v["id"] == current_vehicle_id]
@@ -200,11 +202,16 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
     vehicles = await get_user_vehicles(pool, user_id)
     working_vehicles = [v for v in vehicles if v.get("condition") != "Broken Down"]
 
+    print(f"[DEBUG] Total vehicles: {len(vehicles)}")
+    print(f"[DEBUG] Working vehicles: {len(working_vehicles)}")
+    print(f"[DEBUG] Current location: {current_location}, Current vehicle ID: {current_vehicle_id}")
+
     # 🚫 Enforce same vehicle usage if away from home
     if current_location != HOME_LOCATION_ID and current_vehicle_id and method in ['car', 'bike']:
         # Combine all working vehicles, regardless of class
         allowed_vehicle = next((v for v in working_vehicles if v["id"] == current_vehicle_id), None)
         if not allowed_vehicle:
+            print("[DEBUG] User trying to use a vehicle not allowed away from home")
             await interaction.response.send_message(
                 embed=embed_message(
                     "🚫 Wrong Vehicle",
@@ -214,9 +221,13 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
                 ephemeral=True
             )
             return
+        else:
+            print(f"[DEBUG] Allowed vehicle found: {allowed_vehicle.get('plate_number', 'N/A')}")
 
     if method == 'car':
         cars = [v for v in working_vehicles if v.get("class_type") == "car"]
+        print(f"[DEBUG] Cars available for travel: {len(cars)}")
+
         if not cars:
             await interaction.followup.send(
                 embed=embed_message(
@@ -229,14 +240,17 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         if len(cars) == 1:
+            print("[DEBUG] Exactly one car available, proceeding to travel")
             await handle_travel_with_vehicle(interaction, cars[0], method, user_travel_location)
         else:
+            print("[DEBUG] Multiple cars available, prompting user to select")
             await show_vehicle_selection(interaction, user_id, cars, method, user_travel_location)
         return
 
-
     elif method == 'bike':
         bikes = [v for v in working_vehicles if v.get("class_type") == "bike"]
+        print(f"[DEBUG] Bikes available for travel: {len(bikes)}")
+
         if not bikes:
             await interaction.followup.send(
                 embed=embed_message(
@@ -249,15 +263,17 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         if len(bikes) == 1:
+            print("[DEBUG] Exactly one bike available, proceeding to travel")
             await handle_travel_with_vehicle(interaction, bikes[0], method, user_travel_location)
         else:
+            print("[DEBUG] Multiple bikes available, prompting user to select")
             await show_vehicle_selection(interaction, user_id, bikes, method, user_travel_location)
         return
-
 
     elif method in ['subway', 'bus']:
         cost = 10 if method == 'subway' else 5
         finances = await get_user_finances(pool, user_id)
+        print(f"[DEBUG] User finances: {finances.get('checking_account_balance', 0)}")
         if finances.get("checking_account_balance", 0) < cost:
             await interaction.followup.send(
                 embed=embed_message(
@@ -322,6 +338,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         return
 
     else:
+        print(f"[DEBUG] Invalid travel method received: {method}")
         await interaction.followup.send(
             embed=embed_message(
                 "❌ Invalid Travel Method",
@@ -330,6 +347,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             ),
             ephemeral=True
         )
+
 
 async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location):
     pool = globals.pool
