@@ -611,12 +611,10 @@ class VehicleUseView(View):
         pool = globals.pool
         user = await get_user(pool, user_id)
         current_location = user.get("current_location")
-        current_vehicle_id = user.get("current_vehicle_id")
-        HOME_LOCATION_ID = 3  # set your actual home location ID
 
-        # Filter vehicles if user is away and has a locked vehicle
-        if current_location != HOME_LOCATION_ID and current_vehicle_id and method in ['car', 'bike']:
-            vehicles = [v for v in vehicles if v["id"] == current_vehicle_id]
+        # Only show vehicles that are at the user's current location
+        if method in ['car', 'bike']:
+            vehicles = [v for v in vehicles if v.get("location_id") == current_location]
 
         view = cls(user_id, vehicles, method, user_travel_location)
         return view
