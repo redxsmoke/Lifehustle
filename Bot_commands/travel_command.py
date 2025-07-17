@@ -404,11 +404,12 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
                         ),
                         ephemeral=True
                     )
+                    self.value = False   
+                    self.stop()
                     return
 
-                await charge_user(globals.pool, self.user_id, 20)
+                await charge_user(globals.pool, self.user_id, 200)
 
-                # UPDATE TO DESTINATION LOCATION, NOT OLD LOCATION
                 await globals.pool.execute(
                     "UPDATE user_vehicle_inventory SET current_location = $1 WHERE id = $2",
                     self.destination_location,
@@ -423,6 +424,10 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
                     ),
                     ephemeral=True
                 )
+
+                self.value = True   
+                self.stop()        
+
 
       
         await interaction.followup.send(
