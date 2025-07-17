@@ -414,7 +414,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
                     print(f"[DEBUG] Charged $200 from user {self.user_id}")
 
                     await globals.pool.execute(
-                        "UPDATE user_vehicle_inventory SET current_location = $1 WHERE id = $2",
+                        "UPDATE user_vehicle_inventory SET location_id = $1 WHERE id = $2",
                         self.destination_location,
                         self.vehicle_id
                     )
