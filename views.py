@@ -3,7 +3,7 @@ from discord.ui import View, Button, Select
 from discord import Interaction, Embed, Color
 from embeds import embed_message, COLOR_GREEN, COLOR_RED
 import traceback
-from db_user import get_user, upsert_user, get_user_finances, upsert_user_finances
+from db_user import get_user, upsert_user, get_user_finances, upsert_user_finances, get_user_vehicles
 import utilities
 import vehicle_logic
 import globals  # Make sure pool is initialized here
