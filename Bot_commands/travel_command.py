@@ -455,12 +455,22 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         condition_str = vehicle.get("condition", "Unknown")
         appearance_desc = vehicle.get("appearance_description", "No description available.")
 
-    user = await get_user(pool, user_id)
-    old_location_id = user.get("current_location")
+    # IMPORTANT: Use the passed previous_location directly here (do NOT fetch user again)
     print(f"[DEBUG] user_travel_location: {user_travel_location} (type: {type(user_travel_location)})")
     print(f"[DEBUG] user_id: {user_id} (type: {type(user_id)})")
+    print(f"[DEBUG] previous_location (type {type(previous_location)}): {previous_location}")
+    print(f"[DEBUG] HOME_LOCATION_ID (type {type(HOME_LOCATION_ID)}): {HOME_LOCATION_ID}")
 
-    location_id = user_travel_location
+    # Update last_used_vehicle based on previous_location and destination BEFORE changing current_location
+    if previous_location == HOME_LOCATION_ID and user_travel_location != HOME_LOCATION_ID:
+        print(f"[DEBUG] Leaving home: setting last_used_vehicle to {vehicle['id']}")
+        await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status, user_travel_location)
+    elif user_travel_location == HOME_LOCATION_ID:
+        print("[DEBUG] Returning home: clearing last_used_vehicle")
+        await update_last_used_vehicle(pool, user_id, None, None, user_travel_location)
+
+    # Now update current_location in DB
+    location_id = user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id")
 
     await pool.execute(
         "UPDATE users SET current_location = $1 WHERE user_id = $2",
@@ -470,20 +480,9 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
     user_after_update = await get_user(pool, user_id)
     print(f"[DEBUG] After UPDATE, current_location in DB: {user_after_update.get('current_location')}")
-    print(f"[DEBUG] previous_location (type {type(previous_location)}): {previous_location}")
-    print(f"[DEBUG] location_id (type {type(location_id)}): {location_id}")
-    print(f"[DEBUG] HOME_LOCATION_ID (type {type(HOME_LOCATION_ID)}): {HOME_LOCATION_ID}")
 
-    # ======= HERE IS THE NEW FIXED PART: CALL update_last_used_vehicle =======
-    if previous_location == HOME_LOCATION_ID and location_id != HOME_LOCATION_ID:
-        await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status, location_id)
-    elif location_id == HOME_LOCATION_ID:
-        await update_last_used_vehicle(pool, user_id, None, None, location_id)
-
-    # ==========================================================================
-
-    old_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", old_location_id)
-    old_location_name = old_loc["location_name"] if old_loc else f"Location {old_location_id}"
+    old_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", previous_location)
+    old_location_name = old_loc["location_name"] if old_loc else f"Location {previous_location}"
 
     new_loc = await pool.fetchrow("SELECT location_name FROM cd_locations WHERE cd_location_id = $1", user_travel_location)
     new_location_name = new_loc["location_name"] if new_loc else f"Location {user_travel_location}"
@@ -553,4 +552,3 @@ class Travel(commands.Cog):
 
 def setup(bot):
     bot.add_cog(Travel(bot))
-#
