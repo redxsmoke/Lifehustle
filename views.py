@@ -503,20 +503,6 @@ class VehicleUseButton(Button):
             user_row = await pool.fetchrow("SELECT current_location FROM users WHERE user_id = $1", user_id)
             user_location = user_row["current_location"] if user_row else None
 
-            if vehicle_location != user_location:
-                # Vehicle not at user location, prompt retrieval
-                retrieve_view = RetrieveVehicleView(user_id, self.vehicle['id'], user_location)
-                await interaction.followup.send(
-                    f"🚨 Your {self.vehicle.get('vehicle_type', 'vehicle')} is currently at a different location. You must retrieve it first.",
-                    view=retrieve_view,
-                    ephemeral=True
-                )
-                await retrieve_view.wait()
-                if not retrieve_view.value:
-                    return  # retrieval cancelled or failed
-                # After retrieval, update vehicle_location variable
-                vehicle_location = user_location
-
             # ✅ Use proper travel handler (enforces last_used_vehicle, breakdowns, updates)
             from Bot_commands.travel_command import handle_travel_with_vehicle
 
