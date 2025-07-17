@@ -372,7 +372,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     print(f"[DEBUG] current_location: {current_location} ({type(current_location)})")
     if vehicle_location_id != current_location:
         retrieve_button = discord.ui.Button(
-            label="🚚 Retrieve Vehicle ($20)",
+            label="🚚 Retrieve Vehicle ($200)",
             style=discord.ButtonStyle.red,
             custom_id=f"retrieve_vehicle_{vehicle['id']}"
         )
@@ -383,17 +383,13 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
                 self.user_id = user_id
                 self.vehicle_id = vehicle_id
                 self.destination_location = destination_location
-                self.retrieve_button = discord.ui.Button(
-                    label="🚚 Retrieve Vehicle ($20)",
-                    style=discord.ButtonStyle.red,
-                )
-                self.retrieve_button.callback = self.handle_retrieve_button
-                self.add_item(self.retrieve_button)
+                self.value = False  # default to not retrieved
 
             async def interaction_check(self, interaction: discord.Interaction) -> bool:
                 return interaction.user.id == self.user_id
 
-            async def handle_retrieve_button(self, interaction: discord.Interaction):
+            @discord.ui.button(label="🚚 Retrieve Vehicle ($200)", style=discord.ButtonStyle.red)
+            async def retrieve_button(self, interaction: discord.Interaction, button: discord.ui.Button):
                 balance = (await get_user_finances(globals.pool, self.user_id)).get("checking_account_balance", 0)
                 if balance < 20:
                     await interaction.response.send_message(
@@ -404,11 +400,11 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
                         ),
                         ephemeral=True
                     )
-                    self.value = False   
+                    self.value = False
                     self.stop()
                     return
 
-                await charge_user(globals.pool, self.user_id, 200)
+                await charge_user(globals.pool, self.user_id, 20)
 
                 await globals.pool.execute(
                     "UPDATE user_vehicle_inventory SET current_location = $1 WHERE id = $2",
@@ -419,22 +415,20 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
                 await interaction.response.send_message(
                     embed=embed_message(
                         "📦 Vehicle Retrieved",
-                        f"Your vehicle has been delivered to your destination location for $20.",
+                        f"Your vehicle has been delivered to your destination location for $200.",
                         COLOR_GREEN
                     ),
                     ephemeral=True
                 )
-
-                self.value = True   
-                self.stop()        
-
-
+                self.value = True
+                self.stop()
+            
       
         view = RetrieveView(user_id, vehicle['id'], current_location)
         await interaction.followup.send(
             embed=embed_message(
                 "🚫 Vehicle Not Here",
-                f"Your {vehicle.get('vehicle_type', 'vehicle')} is not at your current location.\n\nWould you like to retrieve it for $20?",
+                f"Your {vehicle.get('vehicle_type', 'vehicle')} is not at your current location.\n\nWould you like to retrieve it for $200?",
                 COLOR_RED
             ),
             view=view,
