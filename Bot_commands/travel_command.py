@@ -371,86 +371,74 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     print(f"[DEBUG] vehicle_location_id: {vehicle_location_id} ({type(vehicle_location_id)})")
     print(f"[DEBUG] current_location: {current_location} ({type(current_location)})")
     if vehicle_location_id != current_location:
-        retrieve_button = discord.ui.Button(
-            label="🚚 Retrieve Vehicle ($200)",
-            style=discord.ButtonStyle.red,
-            custom_id=f"retrieve_vehicle_{vehicle['id']}"
+        # Fetch vehicle location name to display
+        vehicle_loc_row = await pool.fetchrow(
+            "SELECT location_name FROM cd_locations WHERE cd_location_id = $1",
+            vehicle_location_id
         )
+        vehicle_location_name = vehicle_loc_row["location_name"] if vehicle_loc_row else "an unknown location"
 
         class RetrieveView(discord.ui.View):
-            def __init__(self, user_id, vehicle_id, destination_location):
+            def __init__(self, user_id, vehicle_id, destination_location, vehicle_location_name):
                 super().__init__(timeout=60)
                 self.user_id = user_id
                 self.vehicle_id = vehicle_id
                 self.destination_location = destination_location
-                self.value = False  # default to not retrieved
+                self.vehicle_location_name = vehicle_location_name
+                self.value = None  # None means no choice yet
 
             async def interaction_check(self, interaction: discord.Interaction) -> bool:
                 return interaction.user.id == self.user_id
 
             @discord.ui.button(label="🚚 Retrieve Vehicle ($200)", style=discord.ButtonStyle.red)
             async def retrieve_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-                try:
-                    print(f"[DEBUG] retrieve_button clicked by user {interaction.user.id}")
-
-                    balance = (await get_user_finances(globals.pool, self.user_id)).get("checking_account_balance", 0)
-                    print(f"[DEBUG] User balance: {balance}")
-
-                    if balance < 20:
-                        await interaction.response.send_message(
-                            embed=embed_message(
-                                "❌ Not Enough Funds",
-                                "You need $200 to retrieve your vehicle.",
-                                COLOR_RED
-                            ),
-                            ephemeral=True
-                        )
-                        self.value = False
-                        self.stop()
-                        print(f"[DEBUG] Not enough funds, stopping interaction")
-                        return
-
-                    await charge_user(globals.pool, self.user_id, 200)
-                    print(f"[DEBUG] Charged $200 from user {self.user_id}")
-
-                    await globals.pool.execute(
-                        "UPDATE user_vehicle_inventory SET location_id = $1 WHERE id = $2",
-                        self.destination_location,
-                        self.vehicle_id
-                    )
-                    print(f"[DEBUG] Updated vehicle {self.vehicle_id} location to {self.destination_location}")
-
+                balance = (await get_user_finances(globals.pool, self.user_id)).get("checking_account_balance", 0)
+                if balance < 200:
                     await interaction.response.send_message(
                         embed=embed_message(
-                            "📦 Vehicle Retrieved",
-                            f"Your vehicle has been delivered to your destination location for $200.",
-                            COLOR_GREEN
+                            "❌ Not Enough Funds",
+                            "You need $200 to retrieve your vehicle.",
+                            COLOR_RED
                         ),
                         ephemeral=True
                     )
-                    self.value = True
-                    self.stop()
-                    print(f"[DEBUG] Retrieval success, stopping interaction")
-
-                except Exception as e:
-                    print(f"[ERROR] Exception in retrieve_button handler: {e}")
-                    import traceback
-                    traceback.print_exc()
-                    if not interaction.response.is_done():
-                        await interaction.response.send_message(
-                            "❌ Something went wrong while retrieving your vehicle.",
-                            ephemeral=True
-                        )
                     self.value = False
                     self.stop()
+                    return
 
-            
-      
-        view = RetrieveView(user_id, vehicle['id'], current_location)
+                await charge_user(globals.pool, self.user_id, 200)
+
+                await globals.pool.execute(
+                    "UPDATE user_vehicle_inventory SET location_id = $1 WHERE id = $2",
+                    self.destination_location,
+                    self.vehicle_id
+                )
+
+                await interaction.response.send_message(
+                    embed=embed_message(
+                        "📦 Vehicle Retrieved",
+                        f"Your vehicle has been delivered to your destination location for $200.",
+                        COLOR_GREEN
+                    ),
+                    ephemeral=True
+                )
+                self.value = True
+                self.stop()
+
+            @discord.ui.button(label="❌ Cancel", style=discord.ButtonStyle.gray)
+            async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+                await interaction.response.send_message(
+                    "Vehicle retrieval cancelled.",
+                    ephemeral=True
+                )
+                self.value = False
+                self.stop()
+
+        view = RetrieveView(user_id, vehicle['id'], current_location, vehicle_location_name)
         await interaction.followup.send(
             embed=embed_message(
                 "🚫 Vehicle Not Here",
-                f"Your {vehicle.get('vehicle_type', 'vehicle')} is not at your current location.\n\nWould you like to retrieve it for $200?",
+                f"Your {vehicle.get('vehicle_type', 'vehicle')} is not at your current location — it’s currently at **{vehicle_location_name}**.\n\nWould you like to retrieve it for $200?",
                 COLOR_RED
             ),
             view=view,
@@ -460,7 +448,6 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
         if not getattr(view, "value", False):
             return  # user cancelled or retrieval failed
-
 
     # 🚫 Step 3: Vehicle is stuck at a remote location, user is at home
     if current_location == HOME_LOCATION_ID and vehicle.get("location_id") != HOME_LOCATION_ID:
@@ -473,7 +460,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
             ephemeral=True
         )
         return
-#
+
     if current_location != HOME_LOCATION_ID and method in ['car', 'bike']:
         if last_used_vehicle is None:
             await interaction.followup.send(
@@ -496,6 +483,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
                 ephemeral=True
             )
             return
+
     cost = 10 if method == "car" else -10 if method == "bike" else 0
     finances = await get_user_finances(pool, user_id)
 
@@ -614,7 +602,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         ),
         color=COLOR_GREEN
     )
-        # Determine the correct vehicle location to set
+    # Determine the correct vehicle location to set
     if method in ['car', 'bike']:
         # Update vehicle location to user's new location
         vehicle_location_to_set = location_id  # user_travel_location
@@ -626,9 +614,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
     await update_last_used_vehicle(pool, user_id, vehicle["id"], vehicle_status_to_set, vehicle_location_to_set)
 
-
     await interaction.followup.send(embed=embed, ephemeral=False)
-
 
 
 async def on_sell_all_button_click(interaction: discord.Interaction, user_id, vehicles):
