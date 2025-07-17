@@ -373,6 +373,17 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     pool = globals.pool
     user_id = interaction.user.id
 
+    if method == "car":
+        cost = 10
+    elif method == "bike":
+        cost = -10  # negative cost means reward user
+    elif method == "subway":
+        cost = 10
+    elif method == "bus":
+        cost = 5
+    else:
+        cost = 0  # default cost if needed
+
     user = await get_user(pool, user_id)
     current_location = user.get("current_location")
     last_used_vehicle = user.get("last_used_vehicle")
