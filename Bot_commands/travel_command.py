@@ -212,8 +212,6 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
     if current_location != HOME_LOCATION_ID and last_used_vehicle and method in ['car', 'bike']:
         allowed_vehicle = next((v for v in working_vehicles if v["id"] == last_used_vehicle), None)
         if not allowed_vehicle:
-            # block travel
-
             print("[DEBUG] User trying to use a vehicle not allowed away from home")
             await interaction.response.send_message(
                 embed=embed_message(
@@ -319,6 +317,29 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
             embed_text += f"\n\n🎲 Outcome: {desc}\n💰 Balance Impact +/-: ${effect}"
 
+        # Determine vehicle_id_used for car/bike; for subway/bus this is None
+        vehicle_id_used = None
+        if method in ['car', 'bike']:
+            # Try to find the actual vehicle used from working vehicles matching last_used_vehicle or current_vehicle_id
+            # If last_used_vehicle is set, use it; else fallback to current_vehicle_id
+            vehicle_id_used = last_used_vehicle or current_vehicle_id
+
+        # Update last_used_vehicle ONLY if leaving home
+        if current_location == HOME_LOCATION_ID and user_travel_location != HOME_LOCATION_ID and vehicle_id_used:
+            print(f"[DEBUG] Leaving home: setting last_used_vehicle to {vehicle_id_used}")
+            await pool.execute(
+                "UPDATE users SET last_used_vehicle = $1 WHERE user_id = $2",
+                vehicle_id_used,
+                user_id
+            )
+        # Clear last_used_vehicle when returning home
+        elif user_travel_location == HOME_LOCATION_ID:
+            print("[DEBUG] Returning home: clearing last_used_vehicle")
+            await pool.execute(
+                "UPDATE users SET last_used_vehicle = NULL WHERE user_id = $1",
+                user_id
+            )
+
         location_id = user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id")
 
         await pool.execute(
@@ -339,6 +360,16 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             ephemeral=False
         )
         return
+
+    else:
+        await interaction.followup.send(
+            embed=embed_message(
+                "❌ Invalid Travel Method",
+                "> Are you hacking us?! How did you select this as a travel option 🤔? Pick one of these: drive, bike, subway, or bus.",
+                discord.Color.red()
+            ),
+            ephemeral=True
+        )
 
     else:
         print(f"[DEBUG] Invalid travel method received: {method}")
