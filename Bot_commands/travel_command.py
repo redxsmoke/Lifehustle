@@ -242,8 +242,9 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         if len(cars) == 1:
-            print("[DEBUG] Exactly one car available, proceeding to travel")
-            await handle_travel_with_vehicle(interaction, cars[0], method, user_travel_location, previous_location)
+            view = await VehicleUseView.create(user_id, cars, "car", user_travel_location, previous_location)
+            msg = await interaction.followup.send("Choose your car for travel:", view=view, ephemeral=True)
+            view.message = msg
         else:
             print("[DEBUG] Multiple cars available, prompting user to select")
             await show_vehicle_selection(interaction, user_id, cars, method, user_travel_location, previous_location)
@@ -265,9 +266,9 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         if len(bikes) == 1:
-            print("[DEBUG] Exactly one bike available, proceeding to travel")
-            await handle_travel_with_vehicle(interaction, bikes[0], method, user_travel_location, previous_location)   
-
+            view = await VehicleUseView.create(user_id, bikes, "bike", user_travel_location, previous_location)
+            msg = await interaction.followup.send("Choose your bike for travel:", view=view, ephemeral=True)
+            view.message = msg
         else:
             print("[DEBUG] Multiple bikes available, prompting user to select")
             await show_vehicle_selection(interaction, user_id, bikes, method, user_travel_location, previous_location)
@@ -324,7 +325,6 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
         if method in ['car', 'bike']:
             vehicle_id_used = last_used_vehicle or current_vehicle_id
 
-
         location_id = user_travel_location if isinstance(user_travel_location, int) else user_travel_location.get("cd_location_id")
 
         await pool.execute(
@@ -355,6 +355,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             ),
             ephemeral=True
         )
+
 
 async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_location, previous_location):
     # Defer the response once at the start
