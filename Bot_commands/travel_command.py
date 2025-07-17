@@ -422,19 +422,18 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
                     ephemeral=True
                 )
 
-
-        retrieve_button.callback = handle_retrieve_button
-
+      
         await interaction.followup.send(
             embed=embed_message(
                 "🚫 Vehicle Not Here",
                 f"Your {vehicle.get('vehicle_type', 'vehicle')} is not at your current location.\n\nWould you like to retrieve it for $20?",
                 COLOR_RED
             ),
-            view=RetrieveView(),
+            view=RetrieveView(user_id, vehicle['id'], current_location),
             ephemeral=True
         )
         return
+
 
     # 🚫 Step 3: Vehicle is stuck at a remote location, user is at home
     if current_location == HOME_LOCATION_ID and vehicle.get("location_id") != HOME_LOCATION_ID:
