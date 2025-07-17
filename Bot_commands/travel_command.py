@@ -170,7 +170,7 @@ async def show_vehicle_selection(interaction, user_id, vehicles, method, user_tr
         filtered_vehicles = [v for v in vehicles if v["id"] == current_vehicle_id]
         restricted = True
 
-    view = await VehicleUseView.create(user_id, filtered_vehicles, method, user_travel_location, previous_location)
+    view = await VehicleUseView.create(user_id, filtered_vehicles, method, user_travel_location)
 
     description = (
         "> You have multiple vehicles. Please choose one to travel with:"
@@ -242,7 +242,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         if len(cars) == 1:
-            view = await VehicleUseView.create(user_id, cars, "car", user_travel_location, previous_location)
+            view = await VehicleUseView.create(user_id, cars, "car", user_travel_location)
             msg = await interaction.followup.send("Choose your car for travel:", view=view, ephemeral=True)
             view.message = msg
         else:
@@ -266,7 +266,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
             return
 
         if len(bikes) == 1:
-            view = await VehicleUseView.create(user_id, bikes, "bike", user_travel_location, previous_location)
+            view = await VehicleUseView.create(user_id, cars, "bike", user_travel_location)
             msg = await interaction.followup.send("Choose your bike for travel:", view=view, ephemeral=True)
             view.message = msg
         else:

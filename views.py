@@ -612,12 +612,12 @@ class VehicleUseView(View):
         user = await get_user(pool, user_id)
         current_location = user.get("current_location")
 
-        # Only show vehicles that are at the user's current location
         if method in ['car', 'bike']:
             vehicles = [v for v in vehicles if v.get("location_id") == current_location]
 
         view = cls(user_id, vehicles, method, user_travel_location)
         return view
+
 
     def disable_all_buttons(self):
         for child in self.children:
