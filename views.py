@@ -3,7 +3,7 @@ from discord.ui import View, Button, Select
 from discord import Interaction, Embed, Color
 from embeds import embed_message, COLOR_GREEN, COLOR_RED
 import traceback
-from db_user import get_user, upsert_user, get_user_finances, upsert_user_finances, get_user_vehicles
+from db_user import get_user, upsert_user, get_user_finances, upsert_user_finances
 import utilities
 import vehicle_logic
 import globals  # Make sure pool is initialized here
@@ -12,7 +12,7 @@ from datetime import datetime, time
 from vehicle_logic import ConfirmSellView, sell_all_vehicles
 from Bot_commands.lifecheck_command import get_mock_weather_dynamic
 from utilities import charge_user, reward_user
-from db_user import get_user_finances
+from vehicle_logic import get_user_vehicles
 
 
 # Fixed base prices by vehicle type
