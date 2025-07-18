@@ -316,7 +316,7 @@ async def handle_travel(interaction: Interaction, method: str, user_travel_locat
 
         embed_text = (
             f"> You traveled from **{old_location_name}** to **{new_location_name}** by **{method.title()}** for ${cost}.\n"
-            f"> Your updated balance is: **${updated_balance}**."
+            f"> Your updated balance is: **${updated_balance:,}**."
         )
 
         if outcome:
@@ -621,7 +621,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
             f"- Appearance: {appearance_desc}\n\n"
             f"🎲 Outcome: {outcome_desc}\n"
             f"💰 Balance Impact +/-: ${effect}\n\n"
-            f"Your current balance is: ${current_balance:,}."
+            f"Your current balance is: **${current_balance:,}**."
         ),
         color=COLOR_GREEN
     )
