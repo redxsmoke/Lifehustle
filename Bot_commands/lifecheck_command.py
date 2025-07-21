@@ -190,7 +190,7 @@ async def register_commands(bot: discord.Client):
         
         embed.add_field(name="\u200b🏢 Occupation", value=occupation_name, inline=True)
         if occupation_name == "Unemployed":
-            embed.add_field(name="\u200b🛠 Today's Shifts", value="Unemployed", inline=True)
+            embed.add_field(name="\u200b🕜 Today's Shifts", value="Unemployed", inline=True)
         elif required_shifts > 0:
             emoji = "✅" if shifts_worked == required_shifts else "⚠️"
             embed.add_field(
