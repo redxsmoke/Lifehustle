@@ -173,24 +173,23 @@ async def register_commands(bot: discord.Client):
         )
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
 
-        embed.add_field(name="🕒 Time", value=f"{time_emoji} {time_str}", inline=False)
-        embed.add_field(name="📅 Date", value=f"{date_str}", inline=False)
-
-        embed.add_field(name="📍 Current Location", value=location_name, inline=False)
-        embed.add_field(name="🚗 Current Vehicle", value=vehicle_str, inline=False)
-
-        embed.add_field(name="💵 Cash on Hand", value=f"{checking_account_balance:,}", inline=False)
-        embed.add_field(name="🌤 Weather", value=f"{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C", inline=False)
-
-        embed.add_field(name="🏢 Occupation", value=occupation_name, inline=False)
+        info_text = (
+            f"Time:             {time_emoji} {time_str}\n"
+            f"Date:             {date_str}\n"
+            f"Weather:          {weather_emoji} {weather_desc} | {temp_f}°F | {temp_c}°C\n\n"
+            f"Current Location: {location_name}\n"
+            f"Current Vehicle:  {vehicle_str}\n\n"
+            f"Occupation:       {occupation_name}\n"
+        )
 
         if occupation_name == "Unemployed":
-            embed.add_field(name="🕜 Today's Shifts", value="Unemployed", inline=False)
-        elif required_shifts > 0:
-            emoji = "✅" if shifts_worked == required_shifts else "⚠️"
-            embed.add_field(name="🛠 Today's Shifts", value=f"{emoji} {shifts_worked} / {required_shifts}", inline=False)
+            info_text += "Shifts Worked:    Unemployed\n\n"
+        else:
+            info_text += f"Shifts Worked:    {shifts_worked} / {required_shifts}\n\n"
 
-            
+        info_text += f"Cash on Hand:     ${checking_account_balance:,}\n"
+
+        embed.add_field(name="Overview", value=f"```ansi\n{info_text}```", inline=False)
 
         embed.set_footer(text="LifeHustle Bot | Stay healthy and safe!")
         await interaction.response.send_message(embed=embed)
