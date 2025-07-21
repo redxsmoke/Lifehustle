@@ -117,6 +117,7 @@ async def register_commands(bot: discord.Client):
 
         pool = globals.pool
         async with pool.acquire() as conn:
+            # Get occupation and shift info
             user_job = await conn.fetchrow('''
                 SELECT u.occupation_id, o.required_shifts_per_day, o.description AS job_title
                 FROM users u
@@ -140,6 +141,30 @@ async def register_commands(bot: discord.Client):
                 ''', interaction.user.id)
                 shifts_worked = shifts_worked or 0
 
+            # ✅ Current Location
+            location_name = await conn.fetchval('''
+                SELECT cl.location_name
+                FROM users u
+                LEFT JOIN cd_locations cl ON u.current_location = cl.cd_locations_id
+                WHERE u.user_id = $1
+            ''', interaction.user.id)
+            location_name = location_name or "Unknown"
+
+            # ✅ Current Vehicle
+            vehicle_result = await conn.fetchrow('''
+                SELECT vt.name AS vehicle_name, uvi.color, uvi.plate_number
+                FROM user_vehicle_inventory uvi
+                JOIN cd_vehicle_type vt ON vt.id = uvi.vehicle_type_id
+                WHERE uvi.user_id = $1 AND uvi.vehicle_status = 'in use'
+                LIMIT 1
+            ''', interaction.user.id)
+
+            if vehicle_result:
+                vehicle_str = f"{vehicle_result['color']} {vehicle_result['vehicle_name']} (Plate: `{vehicle_result['plate_number']}`)"
+            else:
+                vehicle_str = "None assigned"
+
+        # ✅ Build Embed
         embed = discord.Embed(
             title="⚕️ Lifecheck Overview",
             description=f"> Current Lifecheck and weather report, {interaction.user.display_name}!",
@@ -157,10 +182,12 @@ async def register_commands(bot: discord.Client):
         embed.add_field(name="\u200b🌤 Weather", value=f"{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C", inline=True)
 
         embed.add_field(name="\u200b", value="\u200b", inline=False)
-        embed.add_field(name="\u200b🏢 Occupation", value=f"{occupation_name}", inline=True)
+        embed.add_field(name="\u200b🏢 Occupation", value=occupation_name, inline=True)
+        embed.add_field(name="📍 Current Location", value=location_name, inline=True)
+        embed.add_field(name="🚗 Current Vehicle", value=vehicle_str, inline=True)
 
         if occupation_name == "Unemployed":
-            embed.add_field(name="\u200b🛠 Today's Shifts", value=f"Unemployed", inline=True)
+            embed.add_field(name="\u200b🛠 Today's Shifts", value="Unemployed", inline=True)
         elif required_shifts > 0:
             emoji = "✅" if shifts_worked == required_shifts else "⚠️"
             embed.add_field(
@@ -170,5 +197,4 @@ async def register_commands(bot: discord.Client):
             )
 
         embed.set_footer(text="LifeHustle Bot | Stay healthy and safe!")
-
         await interaction.response.send_message(embed=embed)
