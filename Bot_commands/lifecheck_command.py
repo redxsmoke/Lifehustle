@@ -174,22 +174,22 @@ async def register_commands(bot: discord.Client):
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
 
         info_text = (
-            f"Time:             {time_emoji} {time_str}\n"
-            f"Date:             {date_str}\n"
-            f"Weather:          {weather_emoji} {weather_desc} | {temp_f}°F | {temp_c}°C\n\n"
-            f"Current Location: {location_name}\n"
-            f"Current Vehicle:  {vehicle_str}\n\n"
-            f"Occupation:       {occupation_name}\n"
+            f"🕒 Time:             {time_emoji} {time_str}\n"
+            f"📅 Date:             {date_str}\n"
+            f"🌤 Weather:          {weather_emoji} {weather_desc} | {temp_f}°F | {temp_c}°C\n\n"
+            f"📍 Current Location: {location_name}\n"
+            f"🚗 Current Vehicle:  {vehicle_str}\n\n"
+            f"🏢 Occupation:       {occupation_name}\n"
         )
 
         if occupation_name == "Unemployed":
-            info_text += "Shifts Worked:    Unemployed\n\n"
+            info_text += "🕜 Shifts Worked:    Unemployed\n\n"
         else:
-            info_text += f"Shifts Worked:    {shifts_worked} / {required_shifts}\n\n"
+            info_text += f"🕜 Shifts Worked:    {shifts_worked} / {required_shifts}\n\n"
 
-        info_text += f"Cash on Hand:     ${checking_account_balance:,}\n"
+        info_text += f"💵 Cash on Hand:     ${checking_account_balance:,}\n"
 
-        embed.add_field(name="Overview", value=f"```ansi\n{info_text}```", inline=False)
+        embed.add_field(name="Overview", value=info_text, inline=False)
 
         embed.set_footer(text="LifeHustle Bot | Stay healthy and safe!")
         await interaction.response.send_message(embed=embed)
