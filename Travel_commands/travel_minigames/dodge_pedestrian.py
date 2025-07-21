@@ -33,9 +33,8 @@ class TravelMiniGameView(View):
 
         self.obstacle_lanes = [None] * len(self.predicaments)
 
-    async def start_game(self):
-        # Await first predicament to populate obstacle lanes before starting
-        await self.predicaments[0](self.current_lane, 0)
+        # Pre-populate the first obstacle so it shows in the embed
+        asyncio.create_task(self.predicaments[0](self.current_lane, 0))
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
@@ -57,7 +56,7 @@ class TravelMiniGameView(View):
         elif move == "right" and idx < 2:
             new_lane = lane_order[idx + 1]
         else:
-            new_lane = self.current_lane
+            new_lane = self.current_lane  # no change if at edges
 
         result, msg = await self.predicaments[self.step](new_lane, self.step)
 
@@ -65,6 +64,7 @@ class TravelMiniGameView(View):
             self.failed = True
             self.result_message = msg
             self.stop()
+            await interaction.response.edit_message(embed=self.get_embed(), view=None)
             return
         else:
             self.current_lane = new_lane
@@ -74,6 +74,7 @@ class TravelMiniGameView(View):
                 self.passed = True
                 self.result_message = "You safely navigated all obstacles! 🎉"
                 self.stop()
+                await interaction.response.edit_message(embed=self.get_embed(), view=None)
                 return
             else:
                 await interaction.response.edit_message(embed=self.get_embed(), view=self)
@@ -111,7 +112,7 @@ class TravelMiniGameView(View):
     def build_obstacle_scene(self, step):
         road = "🛣️"
         car = "🚗"
-        spacing = "     "
+        lane_width = 5  # fixed width per lane segment
         lanes = ["left", "middle", "right"]
 
         obstacles = self.obstacle_lanes[step]
@@ -132,10 +133,13 @@ class TravelMiniGameView(View):
         for lane in lanes:
             top += obstacle_char if lane in obstacles else road
 
-        # Bottom row: car position
+        # Bottom row: car position with fixed-width segments
         bottom = ""
         for lane in lanes:
-            bottom += car if lane == self.current_lane else spacing
+            if lane == self.current_lane:
+                bottom += car + " " * (lane_width - 1)  # car + padding
+            else:
+                bottom += " " * lane_width  # empty lane segment
 
         return f"{top}\n{bottom}"
 
