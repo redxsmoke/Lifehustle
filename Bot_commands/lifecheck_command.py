@@ -178,8 +178,8 @@ async def register_commands(bot: discord.Client):
 
         embed.add_field(name="\u200b", value="\u200b", inline=False)
 
-        embed.add_field(name="📍 Current Location", value=location_name, inline=True)
-        embed.add_field(name="🚗 Current Vehicle", value=vehicle_str, inline=True)
+        embed.add_field(name="\u200b📍 Current Location", value=location_name, inline=True)
+        embed.add_field(name="\u200b🚗 Current Vehicle", value=vehicle_str, inline=True)
 
         embed.add_field(name="\u200b", value="\u200b", inline=False)
 
