@@ -33,8 +33,13 @@ class TravelMiniGameView(View):
 
         self.obstacle_lanes = [None] * len(self.predicaments)
 
-        # Pre-populate the first obstacle so it shows in the embed
-        asyncio.create_task(self.predicaments[0](self.current_lane, 0))
+        # Generate obstacles for all predicaments at start to keep consistency
+        asyncio.create_task(self._initialize_obstacles())
+
+    async def _initialize_obstacles(self):
+        for idx, predicament in enumerate(self.predicaments):
+            # For initial obstacle generation, pass current_lane but ignore result
+            await predicament(self.current_lane, idx)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
@@ -56,15 +61,16 @@ class TravelMiniGameView(View):
         elif move == "right" and idx < 2:
             new_lane = lane_order[idx + 1]
         else:
-            new_lane = self.current_lane  # no change if at edges
+            new_lane = self.current_lane  # no change if at edge lane
 
+        # Evaluate current predicament with the new lane
         result, msg = await self.predicaments[self.step](new_lane, self.step)
 
         if not result:
             self.failed = True
             self.result_message = msg
-            self.stop()
             await interaction.response.edit_message(embed=self.get_embed(), view=None)
+            self.stop()
             return
         else:
             self.current_lane = new_lane
@@ -73,8 +79,8 @@ class TravelMiniGameView(View):
             if self.step >= len(self.predicaments):
                 self.passed = True
                 self.result_message = "You safely navigated all obstacles! 🎉"
-                self.stop()
                 await interaction.response.edit_message(embed=self.get_embed(), view=None)
+                self.stop()
                 return
             else:
                 await interaction.response.edit_message(embed=self.get_embed(), view=self)
@@ -89,7 +95,8 @@ class TravelMiniGameView(View):
             desc = self.result_message
         else:
             title = "🕹️ Avoid the Obstacles"
-            desc = self.build_obstacle_scene(self.step)
+            # Combine text description + emoji scene
+            desc = self.predicament_text(self.step, self.current_lane) + "\n\n" + self.build_obstacle_scene(self.step)
 
         embed = discord.Embed(title=title, description=desc, color=discord.Color.blurple())
         embed.set_footer(text=f"Current lane: {self.current_lane.capitalize()} | You have 10 seconds to respond")
@@ -112,7 +119,7 @@ class TravelMiniGameView(View):
     def build_obstacle_scene(self, step):
         road = "🛣️"
         car = "🚗"
-        lane_width = 5  # fixed width per lane segment
+        spacing = "     "
         lanes = ["left", "middle", "right"]
 
         obstacles = self.obstacle_lanes[step]
@@ -128,18 +135,15 @@ class TravelMiniGameView(View):
 
         obstacle_char = icons.get(step, "🧱")
 
-        # Top row: road with obstacles
+        # Top row: road with obstacles or roads
         top = ""
         for lane in lanes:
             top += obstacle_char if lane in obstacles else road
 
-        # Bottom row: car position with fixed-width segments
+        # Bottom row: car position or spacing
         bottom = ""
         for lane in lanes:
-            if lane == self.current_lane:
-                bottom += car + " " * (lane_width - 1)  # car + padding
-            else:
-                bottom += " " * lane_width  # empty lane segment
+            bottom += car if lane == self.current_lane else spacing
 
         return f"{top}\n{bottom}"
 
