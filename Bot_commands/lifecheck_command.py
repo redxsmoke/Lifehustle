@@ -145,7 +145,7 @@ async def register_commands(bot: discord.Client):
             location_name = await conn.fetchval('''
                 SELECT cl.location_name
                 FROM users u
-                LEFT JOIN cd_locations cl ON u.current_location = cl.cd_locations_id
+                LEFT JOIN cd_locations cl ON u.current_location = cl.cd_location_id
                 WHERE u.user_id = $1
             ''', interaction.user.id)
             location_name = location_name or "Unknown"
