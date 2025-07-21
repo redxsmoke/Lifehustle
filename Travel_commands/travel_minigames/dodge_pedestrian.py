@@ -100,8 +100,13 @@ class TravelMiniGameView(View):
         return embed
 
     def reset_timeout(self):
-        self.stop()  # Cancel existing timeout task if any
+        # Cancel the existing timeout task if it exists and isn't done
+        if hasattr(self, "_timeout_task") and not self._timeout_task.done():
+            self._timeout_task.cancel()
+
+        # Create a new timeout task
         self._timeout_task = asyncio.create_task(self._timeout())
+
 
     async def _timeout(self):
         await asyncio.sleep(3)
