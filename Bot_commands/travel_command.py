@@ -14,6 +14,7 @@ from db_user import get_user, upsert_user, get_user_finances, fetch_vehicle_with
 from vehicle_logic import ConfirmSellView, sell_all_vehicles
 from .lifecheck_command import get_mock_weather_dynamic
 from Travel_commands.Repair_options import RepairOptionsView
+from Travel_commands.travel_minigames.dodge_pedestrian import TravelMiniGameView
 
 
 from utilities import (
@@ -519,6 +520,44 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         return
 
     # The rest of your travel logic continues here...
+
+
+    # Only trigger mini game 50% of the time for car method
+    if method == "car" and random.random() < 0.5:
+        multiplier = random.uniform(1.0, 5.0)
+        mini_game_view = TravelMiniGameView(user_id, multiplier=multiplier)
+        embed = mini_game_view.get_embed()
+        await interaction.followup.send(embed=embed, view=mini_game_view, ephemeral=False)
+        await mini_game_view.wait()
+
+        if mini_game_view.failed:
+            penalty_amount = 1000 * multiplier
+            await charge_user(pool, user_id, penalty_amount)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="❌ Mini-Game Failed",
+                    description=f"You hit an obstacle and lost **${penalty_amount:,.2f}**!",
+                    color=discord.Color.red(),
+                ),
+                ephemeral=False,
+            )
+            return  # Stop travel outcome
+
+        elif mini_game_view.passed:
+            reward_amount = 1000 * multiplier
+            await reward_user(pool, user_id, reward_amount)
+            await interaction.followup.send(
+                embed=discord.Embed(
+                    title="🎉 Mini-Game Passed!",
+                    description=f"You navigated safely and earned **${reward_amount:,.2f}**!",
+                    color=discord.Color.green(),
+                ),
+                ephemeral=False,
+            )
+            # Continue with normal travel outcome or you can skip it if you want
+            # Here per your instruction, mini game outcome is the final outcome, so return here
+            return
+
 
 
     await charge_user(pool, user_id, cost)
