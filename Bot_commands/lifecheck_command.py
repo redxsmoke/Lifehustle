@@ -173,31 +173,24 @@ async def register_commands(bot: discord.Client):
         )
         embed.set_thumbnail(url=interaction.user.display_avatar.url)
 
-        embed.add_field(name="\u200b🕒 Time", value=f"{time_emoji} {time_str}", inline=True)
-        embed.add_field(name="\u200b📅 Date", value=f"{date_str}", inline=True)
+        embed.add_field(name="🕒 Time", value=f"{time_emoji} {time_str}", inline=False)
+        embed.add_field(name="📅 Date", value=f"{date_str}", inline=False)
 
-        embed.add_field(name="\u200b", value="\u200b", inline=False)
+        embed.add_field(name="📍 Current Location", value=location_name, inline=False)
+        embed.add_field(name="🚗 Current Vehicle", value=vehicle_str, inline=False)
 
-        embed.add_field(name="\u200b📍 Current Location", value=location_name, inline=True)
-        embed.add_field(name="\u200b🚗 Current Vehicle", value=vehicle_str, inline=True)
+        embed.add_field(name="💵 Cash on Hand", value=f"{checking_account_balance:,}", inline=False)
+        embed.add_field(name="🌤 Weather", value=f"{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C", inline=False)
 
-        embed.add_field(name="\u200b", value="\u200b", inline=False)
+        embed.add_field(name="🏢 Occupation", value=occupation_name, inline=False)
 
-        embed.add_field(name="\u200b💵 Cash on Hand", value=f"{checking_account_balance:,}", inline=True)
-        embed.add_field(name="\u200b🌤 Weather", value=f"{weather_emoji} {weather_desc} | {temp_f}°F / {temp_c}°C", inline=True)
-
-        embed.add_field(name="\u200b", value="\u200b", inline=False)
-        
-        embed.add_field(name="\u200b🏢 Occupation", value=occupation_name, inline=True)
         if occupation_name == "Unemployed":
-            embed.add_field(name="\u200b🕜 Today's Shifts", value="Unemployed", inline=True)
+            embed.add_field(name="🕜 Today's Shifts", value="Unemployed", inline=False)
         elif required_shifts > 0:
             emoji = "✅" if shifts_worked == required_shifts else "⚠️"
-            embed.add_field(
-                name="\u200b🛠 Today's Shifts",
-                value=f"{emoji} {shifts_worked} / {required_shifts}",
-                inline=True
-            )
+            embed.add_field(name="🛠 Today's Shifts", value=f"{emoji} {shifts_worked} / {required_shifts}", inline=False)
+
+            
 
         embed.set_footer(text="LifeHustle Bot | Stay healthy and safe!")
         await interaction.response.send_message(embed=embed)
