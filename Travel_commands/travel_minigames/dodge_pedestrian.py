@@ -33,8 +33,9 @@ class TravelMiniGameView(View):
 
         self.obstacle_lanes = [None] * len(self.predicaments)
 
-        # Pre-populate the first obstacle so it shows in the embed
-        asyncio.create_task(self.predicaments[0](self.current_lane, 0))
+    async def start_game(self):
+        # Await first predicament to populate obstacle lanes before starting
+        await self.predicaments[0](self.current_lane, 0)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
@@ -159,7 +160,6 @@ class TravelMiniGameView(View):
         self.obstacle_lanes[idx] = obstacles
         safe_lane = next(l for l in ["left", "middle", "right"] if l not in obstacles)
         return (user_lane == safe_lane), f"You hit obstacles in lanes {obstacles[0]} and {obstacles[1]}! 💥"
-
 
     def predicament_text(self, step, current_lane):
         lanes = self.obstacle_lanes[step]
