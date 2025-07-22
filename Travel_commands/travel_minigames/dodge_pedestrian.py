@@ -47,10 +47,20 @@ class TravelMiniGameView(View):
             return [random.choice(self.lanes)]
 
     async def start_step(self, message: discord.Message):
+        if self._timeout_task and not self._timeout_task.done():
+            self._timeout_task.cancel()
+            try:
+                await self._timeout_task
+            except asyncio.CancelledError:
+                pass
+
         if self.step >= len(self.predicaments):
             self.passed = True
             reward_amount = 1000 * self.multiplier
-            await reward_user(self.pool, self.user_id, reward_amount)
+            try:
+                await reward_user(self.pool, self.user_id, reward_amount)
+            except Exception as e:
+                print(f"[ERROR] reward_user failed: {e}")
             self.result_message = "You safely navigated all obstacles! 🎉"
             await message.edit(embed=self.get_embed(), view=None)
             self.stop()
@@ -59,6 +69,7 @@ class TravelMiniGameView(View):
         self._message = message
         await message.edit(embed=self.get_embed(), view=self)
         self._timeout_task = asyncio.create_task(self._timeout())
+
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
@@ -94,7 +105,11 @@ class TravelMiniGameView(View):
             if self.step >= len(self.predicaments):
                 self.passed = True
                 reward_amount = 1000 * self.multiplier
-                await reward_user(self.pool, self.user_id, reward_amount)
+                try:
+                    await reward_user(self.pool, self.user_id, reward_amount)
+                except Exception as e:
+                    print(f"[ERROR] reward_user failed: {e}")
+
                 self.result_message = "You safely navigated all obstacles! 🎉"
                 await self._message.edit(embed=self.get_embed(), view=None)
                 self.stop()
@@ -103,7 +118,11 @@ class TravelMiniGameView(View):
         else:
             self.failed = True
             penalty_amount = 1000 * self.multiplier
-            await charge_user(self.pool, self.user_id, penalty_amount)
+            try:
+                await charge_user(self.pool, self.user_id, penalty_amount)
+            except Exception as e:
+                print(f"[ERROR] charge_user failed: {e}")
+
             obstacle_name, fine_reason = self.get_failure_details(self.step, obstacles)
             self.result_message = (
                 f"You hit {obstacle_name} in the {', '.join(obstacles)} lane{'s' if len(obstacles) > 1 else ''}! 💥\n"
@@ -112,6 +131,7 @@ class TravelMiniGameView(View):
 
             await self._message.edit(embed=self.get_embed(), view=None)
             self.stop()
+
 
     def get_failure_details(self, step, obstacles):
         obstacle_names = {
