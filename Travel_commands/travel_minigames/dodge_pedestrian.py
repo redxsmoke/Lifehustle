@@ -101,16 +101,13 @@ class TravelMiniGameView(View):
         else:
             self.failed = True
 
-            # Get obstacle name and funny fine reason for this predicament and lane hit
+            penalty_amount = 1000 * self.multiplier
+            await charge_user(pool, self.user_id, penalty_amount)  # Add this line here
+
             obstacle_name, fine_reason = self.get_failure_details(self.step, obstacles)
-
-            fine_amount = 2203 * self.multiplier  # Example multiplier
-            fine_str = f"You were fined ${fine_amount:,.2f} for {fine_reason}"
-
-            # Build combined failure message
             self.result_message = (
                 f"You hit {obstacle_name} in the {', '.join(obstacles)} lane{'s' if len(obstacles) > 1 else ''}! 💥\n"
-                f"{fine_str}"
+                f"You were fined ${penalty_amount:,.2f} for {fine_reason}"
             )
 
             await self._message.edit(embed=self.get_embed(), view=None)

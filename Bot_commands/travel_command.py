@@ -515,30 +515,16 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         )
         return
 
-    # The rest of your travel logic continues here...
-
-
     if method == "car" and random.random() < 0.99:
         multiplier = random.uniform(1.0, 5.0)
-        mini_game_view = TravelMiniGameView(user_id=interaction.user.id)
+        mini_game_view = TravelMiniGameView(user_id=interaction.user.id, multiplier=multiplier)
         msg = await interaction.followup.send(embed=mini_game_view.get_embed(), view=mini_game_view)
         await mini_game_view.start_step(msg)
-        await mini_game_view.wait()  # Waits for game to finish (pass/fail)
-
+        await mini_game_view.wait()  # Wait for mini-game to finish (pass/fail)
 
         if mini_game_view.failed:
-            penalty_amount = 1000 * multiplier
-            await charge_user(pool, user_id, penalty_amount)
-            await interaction.followup.send(
-                embed=discord.Embed(
-                    title="❌ Mini-Game Failed",
-                    description=f"You hit an obstacle and lost **${penalty_amount:,.2f}**!",
-                    color=discord.Color.red(),
-                ),
-                ephemeral=False,
-            )
-            return  # Stop travel outcome
-
+            # Penalty already charged inside mini-game, do nothing here
+            return
 
         elif mini_game_view.passed:
             reward_amount = 1000 * multiplier
@@ -551,11 +537,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
                 ),
                 ephemeral=False,
             )
-            # Continue with normal travel outcome or you can skip it if you want
-            # Here per your instruction, mini game outcome is the final outcome, so return here
             return
-
-
 
     await charge_user(pool, user_id, cost)
     current_balance = finances.get("checking_account_balance", 0) - cost
