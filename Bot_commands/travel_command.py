@@ -535,7 +535,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
             await interaction.followup.send(
                 embed=discord.Embed(
                     title="🎉 Mini-Game Passed!",
-                    description=f"You navigated safely and earned **${reward_amount:,.2f}**!",
+                    description=f"You survived the chaos and pocketed ${reward_amount:,.2f} — guess you’re not terrible at this after all!",
                     color=discord.Color.green(),
                 ),
                 ephemeral=False,

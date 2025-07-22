@@ -61,9 +61,10 @@ class TravelMiniGameView(View):
                 await reward_user(self.pool, self.user_id, reward_amount)
             except Exception as e:
                 print(f"[ERROR] reward_user failed: {e}")
-            self.result_message = "You safely navigated all obstacles! 🎉"
-            await message.edit(embed=self.get_embed(), view=None)
+            self.result_message = f"You safely navigated all obstacles and earned ${reward_amount:,.2f}! 🎉"
+            await self._message.edit(embed=self.get_embed(), view=None)
             self.stop()
+
             return
 
         self._message = message
