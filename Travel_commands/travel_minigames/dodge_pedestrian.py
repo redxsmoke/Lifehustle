@@ -157,10 +157,13 @@ class TravelMiniGameView(View):
         desc = self.result_message if (self.failed or self.passed) else self.build_obstacle_scene(self.step)
         page = f"{self.step+1}/4" if not (self.failed or self.passed) else ""
 
-        embed = discord.Embed(title=title, description=desc, color=discord.Color.blurple())
+        color = discord.Color.green() if self.passed else (discord.Color.red() if self.failed else discord.Color.blurple())
+
+        embed = discord.Embed(title=title, description=desc, color=color)
         if page:
             embed.set_footer(text=page)
         return embed
+
 
     def is_finished(self):
         return self.failed or self.passed or self.step >= len(self.predicaments)

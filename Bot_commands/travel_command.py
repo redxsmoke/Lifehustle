@@ -515,7 +515,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         )
         return
 
-    if method == "car" and random.random() < 0.99:
+    if method == "car" and random.random() < 0.5:
         multiplier = random.uniform(1.0, 5.0)
         mini_game_view = TravelMiniGameView(
             user_id=interaction.user.id,
@@ -538,7 +538,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
             # Combine success text into the mini-game embed result message
             mini_game_view.result_message = (
-                f"You safely navigated all obstacles and earned **${reward_amount:,.2f}**! 🎉"
+                f"You safely navigated all obstacles like a caffeinated squirrel on roller skates and earned **${reward_amount:,.2f}**! 🎉"
             )
             await mini_game_view._message.edit(embed=mini_game_view.get_embed(), view=None)
 
