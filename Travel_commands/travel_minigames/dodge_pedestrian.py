@@ -9,6 +9,7 @@ class TravelMiniGameView(View):
         super().__init__(timeout=None)
         self.user_id = user_id
         self.multiplier = multiplier
+        self.pool = pool
         self.lanes = ["left", "middle", "right"]
         self.current_lane = random.choice(self.lanes)
         self.step = 0
@@ -104,7 +105,7 @@ class TravelMiniGameView(View):
 
             # Remove penalty charging here — just set message and state
             penalty_amount = 1000 * self.multiplier
-            await charge_user(pool, self.user_id, penalty_amount)
+            await charge_user(self.pool, self.user_id, penalty_amount)
             obstacle_name, fine_reason = self.get_failure_details(self.step, obstacles)
             self.result_message = (
                 f"You hit {obstacle_name} in the {', '.join(obstacles)} lane{'s' if len(obstacles) > 1 else ''}! 💥\n"
