@@ -522,13 +522,13 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     # The rest of your travel logic continues here...
 
 
-    # Only trigger mini game 50% of the time for car method
     if method == "car" and random.random() < 0.5:
         multiplier = random.uniform(1.0, 5.0)
         mini_game_view = TravelMiniGameView(user_id, multiplier=multiplier)
-        await mini_game_view.start_game()  # <<-- ADD THIS LINE HERE
-        embed = mini_game_view.get_embed()
-        await interaction.followup.send(embed=embed, view=mini_game_view, ephemeral=False)
+        # You need to send the initial message first
+        initial_message = await interaction.followup.send(embed=mini_game_view.get_embed(), view=mini_game_view, ephemeral=False)
+        # Then call start_step with the message
+        await mini_game_view.start_step(initial_message)
         await mini_game_view.wait()
 
 

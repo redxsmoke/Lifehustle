@@ -33,13 +33,25 @@ class TravelMiniGameView(View):
 
         self.obstacle_lanes = [None] * len(self.predicaments)
 
-        # Generate obstacles for all predicaments at start to keep consistency
-        asyncio.create_task(self._initialize_obstacles())
-
     async def _initialize_obstacles(self):
+        # Initialize obstacles once for each predicament to keep consistency
         for idx, predicament in enumerate(self.predicaments):
-            # For initial obstacle generation, pass current_lane but ignore result
             await predicament(self.current_lane, idx)
+
+    async def start_step(self, message: discord.Message):
+        # Initialize obstacles on first step
+        if self.step == 0:
+            await self._initialize_obstacles()
+
+        if self.step >= len(self.predicaments):
+            self.passed = True
+            self.result_message = "You safely navigated all obstacles! 🎉"
+            await message.edit(embed=self.get_embed(), view=None)
+            self.stop()
+            return
+
+        await message.edit(embed=self.get_embed(), view=self)
+        self.reset_timeout()
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
@@ -61,9 +73,8 @@ class TravelMiniGameView(View):
         elif move == "right" and idx < 2:
             new_lane = lane_order[idx + 1]
         else:
-            new_lane = self.current_lane  # no change if at edge lane
+            new_lane = self.current_lane
 
-        # Evaluate current predicament with the new lane
         result, msg = await self.predicaments[self.step](new_lane, self.step)
 
         if not result:
@@ -95,7 +106,6 @@ class TravelMiniGameView(View):
             desc = self.result_message
         else:
             title = "🕹️ Avoid the Obstacles"
-            # Combine text description + emoji scene
             desc = self.predicament_text(self.step, self.current_lane) + "\n\n" + self.build_obstacle_scene(self.step)
 
         embed = discord.Embed(title=title, description=desc, color=discord.Color.blurple())
@@ -103,18 +113,34 @@ class TravelMiniGameView(View):
         return embed
 
     def reset_timeout(self):
-        if hasattr(self, "_timeout_task") and self._timeout_task and not self._timeout_task.done():
+        if self._timeout_task and not self._timeout_task.done():
             self._timeout_task.cancel()
         self._timeout_task = asyncio.create_task(self._timeout())
 
     async def _timeout(self):
         await asyncio.sleep(10)
         if not self.is_finished():
-            self.failed = True
-            self.result_message = "⏰ Timeout! You didn’t respond in time and hit an obstacle."
+            result, msg = await self.predicaments[self.step](self.current_lane, self.step)
+            if not result:
+                self.failed = True
+                self.result_message = "⏰ Timeout! You didn’t respond in time and hit an obstacle."
+                if self._interaction:
+                    await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
+                self.stop()
+                return
+            self.step += 1
+            if self.step >= len(self.predicaments):
+                self.passed = True
+                self.result_message = "You safely navigated all obstacles! 🎉"
+                if self._interaction:
+                    await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
+                self.stop()
+                return
             if self._interaction:
-                await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
-            self.stop()
+                await self.start_step(await self._interaction.original_response())
+
+    def is_finished(self):
+        return self.failed or self.passed or self.step >= len(self.predicaments)
 
     def build_obstacle_scene(self, step):
         road = "🛣️"
@@ -127,20 +153,18 @@ class TravelMiniGameView(View):
             return f"{road}{road}{road}\n{car}"
 
         icons = {
-            0: "🧒",  # kid
-            1: "👵",  # grandma
-            2: "⚽",  # ball
-            3: "🚧",  # roadwork cones
+            0: "🧒",
+            1: "👵",
+            2: "⚽",
+            3: "🚧",
         }
 
         obstacle_char = icons.get(step, "🧱")
 
-        # Top row: road with obstacles or roads
         top = ""
         for lane in lanes:
             top += obstacle_char if lane in obstacles else road
 
-        # Bottom row: car position or spacing
         bottom = ""
         for lane in lanes:
             bottom += car if lane == self.current_lane else spacing
@@ -174,7 +198,6 @@ class TravelMiniGameView(View):
         if lanes is None:
             return "Loading..."
 
-        # Format lane(s) for description
         if len(lanes) == 1:
             lane_desc = lanes[0]
             if step == 0:
@@ -200,3 +223,13 @@ class TravelMiniGameView(View):
             )
         else:
             return "Unknown predicament..."
+
+    async def on_timeout(self):
+        if self._timeout_task and not self._timeout_task.done():
+            self._timeout_task.cancel()
+        if not self.is_finished():
+            self.failed = True
+            self.result_message = "⏰ Timeout! You didn’t respond in time and lost the game."
+            if self._interaction:
+                await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
+            self.stop()
