@@ -2,6 +2,7 @@ import random
 from discord.ui import View, Button
 import discord
 import asyncio
+from utilities import reward_user, charge_user
 
 class TravelMiniGameView(View):
     def __init__(self, user_id, multiplier=1.0):
