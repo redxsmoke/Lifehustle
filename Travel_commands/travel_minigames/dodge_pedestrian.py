@@ -3,6 +3,7 @@ from discord.ui import View, Button
 import discord
 import asyncio
 from utilities import reward_user, charge_user
+from globals import pool
 
 class TravelMiniGameView(View):
     def __init__(self, user_id, multiplier=1.0):
@@ -26,7 +27,6 @@ class TravelMiniGameView(View):
         self.add_item(self.left_button)
         self.add_item(self.right_button)
 
-        # Predicament functions list, shuffled
         self.predicaments = [
             self.predicament_1,
             self.predicament_2,
@@ -35,13 +35,12 @@ class TravelMiniGameView(View):
         ]
         random.shuffle(self.predicaments)
 
-        # Initialize obstacles once per predicament
         self.obstacle_lanes = []
         for idx in range(len(self.predicaments)):
             self.obstacle_lanes.append(self.generate_obstacles_for_predicament(idx))
 
     def generate_obstacles_for_predicament(self, idx):
-        if idx == 3:  # predicament 4 has two obstacles
+        if idx == 3:
             pairs = [["left", "middle"], ["left", "right"], ["middle", "right"]]
             return random.choice(pairs)
         else:
@@ -50,6 +49,8 @@ class TravelMiniGameView(View):
     async def start_step(self, message: discord.Message):
         if self.step >= len(self.predicaments):
             self.passed = True
+            reward_amount = 1000 * self.multiplier
+            await reward_user(self.pool, self.user_id, reward_amount)
             self.result_message = "You safely navigated all obstacles! 🎉"
             await message.edit(embed=self.get_embed(), view=None)
             self.stop()
@@ -57,7 +58,6 @@ class TravelMiniGameView(View):
 
         self._message = message
         await message.edit(embed=self.get_embed(), view=self)
-        # Start the fixed 10-second timer only once per predicament
         self._timeout_task = asyncio.create_task(self._timeout())
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -79,11 +79,9 @@ class TravelMiniGameView(View):
         elif move == "right" and idx < 2:
             self.current_lane = self.lanes[idx + 1]
 
-        # Update embed with new lane, DO NOT reset timer
         await interaction.response.edit_message(embed=self.get_embed(), view=self)
 
     async def _timeout(self):
-        # Wait 10 seconds uninterrupted
         await asyncio.sleep(10)
         if self.is_finished():
             return
@@ -95,6 +93,8 @@ class TravelMiniGameView(View):
             self.step += 1
             if self.step >= len(self.predicaments):
                 self.passed = True
+                reward_amount = 1000 * self.multiplier
+                await reward_user(self.pool, self.user_id, reward_amount)
                 self.result_message = "You safely navigated all obstacles! 🎉"
                 await self._message.edit(embed=self.get_embed(), view=None)
                 self.stop()
@@ -102,8 +102,6 @@ class TravelMiniGameView(View):
                 await self.start_step(self._message)
         else:
             self.failed = True
-
-            # Remove penalty charging here — just set message and state
             penalty_amount = 1000 * self.multiplier
             await charge_user(self.pool, self.user_id, penalty_amount)
             obstacle_name, fine_reason = self.get_failure_details(self.step, obstacles)
@@ -168,7 +166,6 @@ class TravelMiniGameView(View):
 
         return f"{top}\n{bottom}"
 
-    # These predicament functions are no longer called except to provide messages; obstacles generated once
     async def predicament_1(self, user_lane, idx):
         lane = self.obstacle_lanes[idx][0]
         safe = user_lane != lane
