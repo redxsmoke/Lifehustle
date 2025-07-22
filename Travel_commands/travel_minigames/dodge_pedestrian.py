@@ -33,10 +33,8 @@ class TravelMiniGameView(View):
 
         self.obstacle_lanes = [None] * len(self.predicaments)
 
-
-    async def initialize(self):
-        for idx, predicament in enumerate(self.predicaments):
-            await predicament(self.current_lane, idx)
+        # Generate obstacles for all predicaments at start to keep consistency
+        asyncio.create_task(self._initialize_obstacles())
 
     async def _initialize_obstacles(self):
         for idx, predicament in enumerate(self.predicaments):

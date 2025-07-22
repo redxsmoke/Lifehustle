@@ -88,6 +88,10 @@ class LocationSelect(discord.ui.Select):
                 await interaction.response.send_message("❌ Something went wrong. Try again.", ephemeral=True)
 
 
+
+
+
+
 class LocationTravelView(discord.ui.View):
     def __init__(self, locations, user_id, pool):
         super().__init__(timeout=60)
@@ -138,14 +142,17 @@ def register_commands(tree: app_commands.CommandTree):
         for loc in results:
             print(f"[DEBUG] Location: {loc['location_name']} (ID: {loc['cd_location_id']})")
 
-        mini_game_view = TravelMiniGameView(user_id=user_id)
 
-        await interaction.response.send_message(embed=mini_game_view.get_embed(), view=mini_game_view, ephemeral=True)
-
-        message = await interaction.original_response()
-
-        await mini_game_view.start_step(message)
-
+        view = LocationTravelView(results, user_id, pool)
+        await interaction.response.send_message(
+            embed=embed_message(
+                "🌍 Where to?",
+                "Pick a destination from the list below.",
+                discord.Color.blue()
+            ),
+            view=view,
+            ephemeral=True
+        )
 
 async def show_vehicle_selection(interaction, user_id, vehicles, method, user_travel_location, previous_location):
     print(f"[DEBUG] show_vehicle_selection called with method={method} and {len(vehicles)} vehicles")
@@ -519,7 +526,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     if method == "car" and random.random() < 0.5:
         multiplier = random.uniform(1.0, 5.0)
         mini_game_view = TravelMiniGameView(user_id, multiplier=multiplier)
-        await mini_game_view.initialize()
+        await mini_game_view.start_game()  # <<-- ADD THIS LINE HERE
         embed = mini_game_view.get_embed()
         await interaction.followup.send(embed=embed, view=mini_game_view, ephemeral=False)
         await mini_game_view.wait()
