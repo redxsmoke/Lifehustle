@@ -97,12 +97,23 @@ class TravelMiniGameView(View):
                 await interaction.response.edit_message(embed=self.get_embed(), view=self)
                 self.reset_timeout()
     def get_embed(self):
+        total = len(self.predicaments)
+        current = min(self.step + 1, total) if not (self.failed or self.passed) else total
+
         title = "❌ Avoid the Obstacles" if self.failed else (
             "✅ Avoid the Obstacles" if self.passed else "🕹️ Avoid the Obstacles"
         )
+        
+        progress = f"Obstacle {current}/{total}\n"
+        
         desc = self.result_message if (self.failed or self.passed) else self.build_obstacle_scene(self.step)
-
-        return discord.Embed(title=title, description=desc, color=discord.Color.blurple())
+        
+        embed = discord.Embed(
+            title=title,
+            description=progress + desc,
+            color=discord.Color.blurple()
+        )
+        return embed
 
 
 
@@ -115,25 +126,30 @@ class TravelMiniGameView(View):
 
     async def _timeout(self):
         await asyncio.sleep(10)
-        if not self.is_finished():
-            result, _ = await self.predicaments[self.step](self.current_lane, self.step)
-            if result:
-                self.step += 1
-                if self.step >= len(self.predicaments):
-                    self.passed = True
-                    self.result_message = "You safely navigated all obstacles! 🎉"
-                    if self._interaction:
-                        await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
-                    self.stop()
-                else:
-                    if self._interaction:
-                        await self.start_step(await self._interaction.original_response())
-            else:
-                self.failed = True
-                self.result_message = "⏰ Timeout! You didn’t respond in time and hit an obstacle."
+        if self.is_finished():
+            return
+
+        # Check if current lane is safe for current step
+        result, _ = await self.predicaments[self.step](self.current_lane, self.step)
+        if result:
+            # Safe - move to next step
+            self.step += 1
+            if self.step >= len(self.predicaments):
+                self.passed = True
+                self.result_message = "You safely navigated all obstacles! 🎉"
                 if self._interaction:
                     await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
                 self.stop()
+            else:
+                if self._interaction:
+                    await self.start_step(await self._interaction.original_response())
+        else:
+            # Unsafe - fail due to timeout
+            self.failed = True
+            self.result_message = "⏰ Timeout! You didn’t respond in time and hit an obstacle."
+            if self._interaction:
+                await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
+            self.stop()
 
 
 
