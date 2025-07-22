@@ -94,7 +94,7 @@ class TravelMiniGameView(View):
         await interaction.response.edit_message(embed=self.get_embed(), view=self)
 
     async def _timeout(self):
-        await asyncio.sleep(10)
+        await asyncio.sleep(3)
         if self.is_finished():
             return
 
@@ -105,17 +105,13 @@ class TravelMiniGameView(View):
             self.step += 1
             if self.step >= len(self.predicaments):
                 self.passed = True
-                reward_amount = 1000 * self.multiplier
-                try:
-                    await reward_user(self.pool, self.user_id, reward_amount)
-                except Exception as e:
-                    print(f"[ERROR] reward_user failed: {e}")
-
+                # Removed reward_user call here to avoid double rewards/messages
                 self.result_message = "You safely navigated all obstacles! 🎉"
                 await self._message.edit(embed=self.get_embed(), view=None)
                 self.stop()
             else:
                 await self.start_step(self._message)
+
         else:
             self.failed = True
             penalty_amount = 1000 * self.multiplier

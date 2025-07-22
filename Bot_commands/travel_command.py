@@ -531,16 +531,19 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
         elif mini_game_view.passed:
             reward_amount = 1000 * multiplier
-            await reward_user(pool, user_id, reward_amount)
-            await interaction.followup.send(
-                embed=discord.Embed(
-                    title="🎉 Mini-Game Passed!",
-                    description=f"You survived the chaos and pocketed ${reward_amount:,.2f} — guess you’re not terrible at this after all!",
-                    color=discord.Color.green(),
-                ),
-                ephemeral=False,
+            try:
+                await reward_user(pool, user_id, reward_amount)
+            except Exception as e:
+                print(f"[ERROR] reward_user failed: {e}")
+
+            # Combine success text into the mini-game embed result message
+            mini_game_view.result_message = (
+                f"You safely navigated all obstacles and earned **${reward_amount:,.2f}**! 🎉"
             )
+            await mini_game_view._message.edit(embed=mini_game_view.get_embed(), view=None)
+
             return
+
 
     # If not car or mini-game not triggered, charge normal cost
     await charge_user(pool, user_id, cost)
