@@ -520,12 +520,12 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
     if method == "car" and random.random() < 0.99:
         multiplier = random.uniform(1.0, 5.0)
-        mini_game_view = TravelMiniGameView(user_id, multiplier=multiplier)
-        # You need to send the initial message first
-        initial_message = await interaction.followup.send(embed=mini_game_view.get_embed(), view=mini_game_view, ephemeral=False)
-        # Then call start_step with the message
-        await mini_game_view.start_step(initial_message)
-        await mini_game_view.wait()
+        mini_game_view = TravelMiniGameView(user_id=interaction.user.id, multiplier=multiplier)
+
+        msg = await interaction.followup.send(embed=mini_game_view.get_embed(), view=mini_game_view)
+        mini_game_view._interaction = interaction  # ✅ Needed for timeouts to edit correctly
+        await mini_game_view.start_step(msg)
+
 
 
         if mini_game_view.failed:

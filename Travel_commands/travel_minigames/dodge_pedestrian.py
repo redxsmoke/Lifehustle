@@ -1,11 +1,11 @@
 import random
-from discord.ui import View, Button
-import discord
 import asyncio
+import discord
+from discord.ui import View, Button
 
 class TravelMiniGameView(View):
     def __init__(self, user_id, multiplier=1.0):
-        super().__init__(timeout=10)
+        super().__init__(timeout=None)
         self.user_id = user_id
         self.multiplier = multiplier
         self.current_lane = random.choice(["left", "middle", "right"])
@@ -16,6 +16,7 @@ class TravelMiniGameView(View):
         self._interaction = None
         self._timeout_task = None
 
+        # Buttons
         self.left_button = Button(label="⬅️ Left", style=discord.ButtonStyle.primary)
         self.right_button = Button(label="➡️ Right", style=discord.ButtonStyle.primary)
         self.left_button.callback = self.on_left_click
@@ -23,14 +24,14 @@ class TravelMiniGameView(View):
         self.add_item(self.left_button)
         self.add_item(self.right_button)
 
+        # Predicaments and obstacles
         self.predicaments = [
             self.predicament_1,
             self.predicament_2,
             self.predicament_3,
-            self.predicament_4
+            self.predicament_4,
         ]
         random.shuffle(self.predicaments)
-
         self.obstacle_lanes = [None] * len(self.predicaments)
 
     async def _initialize_obstacles(self):
@@ -43,7 +44,7 @@ class TravelMiniGameView(View):
 
         if self.step >= len(self.predicaments):
             self.passed = True
-            self.result_message = "You safely navigated all obstacles! 🎉"
+            self.result_message = "🎉 You safely navigated all obstacles!"
             await message.edit(embed=self.get_embed(), view=None)
             self.stop()
             return
@@ -62,16 +63,14 @@ class TravelMiniGameView(View):
 
     async def handle_move(self, interaction: discord.Interaction, move: str):
         self._interaction = interaction
-
         lane_order = ["left", "middle", "right"]
         idx = lane_order.index(self.current_lane)
 
+        new_lane = self.current_lane
         if move == "left" and idx > 0:
             new_lane = lane_order[idx - 1]
         elif move == "right" and idx < 2:
             new_lane = lane_order[idx + 1]
-        else:
-            new_lane = self.current_lane
 
         result, msg = await self.predicaments[self.step](new_lane, self.step)
 
@@ -80,30 +79,11 @@ class TravelMiniGameView(View):
             self.result_message = msg
             await interaction.response.edit_message(embed=self.get_embed(), view=None)
             self.stop()
-            return
         else:
             self.current_lane = new_lane
             self.step += 1
-
-            if self.step >= len(self.predicaments):
-                self.passed = True
-                self.result_message = "You safely navigated all obstacles! 🎉"
-                await interaction.response.edit_message(embed=self.get_embed(), view=None)
-                self.stop()
-                return
-            else:
-                await interaction.response.edit_message(embed=self.get_embed(), view=self)
-                self.reset_timeout()
-
-    def get_embed(self):
-        title = "❌ Avoid the Obstacles" if self.failed else (
-            "✅ Avoid the Obstacles" if self.passed else "🕹️ Avoid the Obstacles"
-        )
-        desc = self.result_message if (self.failed or self.passed) else self.build_obstacle_scene(self.step)
-        footer_text = f"Step {min(self.step + 1, len(self.predicaments))} / {len(self.predicaments)}"
-        embed = discord.Embed(title=title, description=desc, color=discord.Color.blurple())
-        embed.set_footer(text=footer_text)
-        return embed
+            await interaction.response.edit_message(embed=self.get_embed(), view=self)
+            self.reset_timeout()
 
     def reset_timeout(self):
         if self._timeout_task and not self._timeout_task.done():
@@ -113,35 +93,37 @@ class TravelMiniGameView(View):
     async def _timeout(self):
         await asyncio.sleep(10)
         if self.is_finished():
-            return  # Already finished, do nothing
+            return
 
-        # Check if current lane is safe for this predicament
-        is_safe, _ = await self.predicaments[self.step](self.current_lane, self.step)
+        result, msg = await self.predicaments[self.step](self.current_lane, self.step)
 
-        if is_safe:
-            # Move to next step automatically without failing
+        if result:
             self.step += 1
-
             if self.step >= len(self.predicaments):
                 self.passed = True
-                self.result_message = "You safely navigated all obstacles! 🎉"
+                self.result_message = "🎉 You safely navigated all obstacles!"
                 if self._interaction:
                     await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
                 self.stop()
             else:
                 if self._interaction:
-                    # Use start_step to update message and reset timeout
                     await self.start_step(await self._interaction.original_response())
         else:
-            # Lane unsafe and user timed out → fail game
             self.failed = True
-            self.result_message = "⏰ Timeout! You didn’t respond in time and hit an obstacle."
+            self.result_message = "⏰ Timeout! You didn’t respond and hit an obstacle."
             if self._interaction:
                 await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
             self.stop()
 
     def is_finished(self):
         return self.failed or self.passed or self.step >= len(self.predicaments)
+
+    def get_embed(self):
+        title = "❌ Avoid the Obstacles" if self.failed else (
+            "✅ Avoid the Obstacles" if self.passed else f"🕹️ Avoid the Obstacles ({self.step + 1}/4)"
+        )
+        desc = self.result_message if (self.failed or self.passed) else self.build_obstacle_scene(self.step)
+        return discord.Embed(title=title, description=desc, color=discord.Color.blurple())
 
     def build_obstacle_scene(self, step):
         road = "🛣️"
@@ -159,37 +141,31 @@ class TravelMiniGameView(View):
             2: "⚽",
             3: "🚧",
         }
-
         obstacle_char = icons.get(step, "🧱")
 
-        top = ""
-        for lane in lanes:
-            top += obstacle_char if lane in obstacles else road
-
-        bottom = ""
-        for lane in lanes:
-            bottom += car if lane == self.current_lane else spacing
+        top = "".join(obstacle_char if lane in obstacles else road for lane in lanes)
+        bottom = "".join(car if lane == self.current_lane else spacing for lane in lanes)
 
         return f"{top}\n{bottom}"
 
+    # Predicaments
     async def predicament_1(self, user_lane, idx):
-        kid_lane = random.choice(["left", "middle", "right"])
-        self.obstacle_lanes[idx] = [kid_lane]
-        return (user_lane != kid_lane), f"You hit the kid in the {kid_lane} lane! 💥"
+        lane = random.choice(["left", "middle", "right"])
+        self.obstacle_lanes[idx] = [lane]
+        return (user_lane != lane), f"You hit a kid in the {lane} lane! 💥"
 
     async def predicament_2(self, user_lane, idx):
-        grandma_lane = random.choice(["left", "middle", "right"])
-        self.obstacle_lanes[idx] = [grandma_lane]
-        return (user_lane != grandma_lane), f"You hit grandma in the {grandma_lane} lane! 💥"
+        lane = random.choice(["left", "middle", "right"])
+        self.obstacle_lanes[idx] = [lane]
+        return (user_lane != lane), f"You hit grandma in the {lane} lane! 💥"
 
     async def predicament_3(self, user_lane, idx):
-        ball_lane = random.choice(["left", "middle", "right"])
-        self.obstacle_lanes[idx] = [ball_lane]
-        return (user_lane != ball_lane), f"You ran over the ball in the {ball_lane} lane! 💥"
+        lane = random.choice(["left", "middle", "right"])
+        self.obstacle_lanes[idx] = [lane]
+        return (user_lane != lane), f"You hit a ball in the {lane} lane! 💥"
 
     async def predicament_4(self, user_lane, idx):
-        possible_pairs = [["left", "middle"], ["left", "right"], ["middle", "right"]]
-        obstacles = random.choice(possible_pairs)
-        self.obstacle_lanes[idx] = obstacles
-        safe_lane = next(l for l in ["left", "middle", "right"] if l not in obstacles)
-        return (user_lane == safe_lane), f"You hit obstacles in lanes {obstacles[0]} and {obstacles[1]}! 💥"
+        blocked = random.choice([["left", "middle"], ["middle", "right"], ["left", "right"]])
+        self.obstacle_lanes[idx] = blocked
+        safe_lane = next(l for l in ["left", "middle", "right"] if l not in blocked)
+        return (user_lane == safe_lane), f"You hit obstacles in {blocked[0]} and {blocked[1]} lanes! 💥"
