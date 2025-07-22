@@ -88,10 +88,6 @@ class LocationSelect(discord.ui.Select):
                 await interaction.response.send_message("❌ Something went wrong. Try again.", ephemeral=True)
 
 
-
-
-
-
 class LocationTravelView(discord.ui.View):
     def __init__(self, locations, user_id, pool):
         super().__init__(timeout=60)
@@ -142,17 +138,14 @@ def register_commands(tree: app_commands.CommandTree):
         for loc in results:
             print(f"[DEBUG] Location: {loc['location_name']} (ID: {loc['cd_location_id']})")
 
+        mini_game_view = TravelMiniGameView(user_id=user_id)
 
-        view = LocationTravelView(results, user_id, pool)
-        await interaction.response.send_message(
-            embed=embed_message(
-                "🌍 Where to?",
-                "Pick a destination from the list below.",
-                discord.Color.blue()
-            ),
-            view=view,
-            ephemeral=True
-        )
+        await interaction.response.send_message(embed=mini_game_view.get_embed(), view=mini_game_view, ephemeral=True)
+
+        message = await interaction.original_response()
+
+        await mini_game_view.start_step(message)
+
 
 async def show_vehicle_selection(interaction, user_id, vehicles, method, user_travel_location, previous_location):
     print(f"[DEBUG] show_vehicle_selection called with method={method} and {len(vehicles)} vehicles")
