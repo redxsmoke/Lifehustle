@@ -6,7 +6,7 @@ from utilities import reward_user, charge_user
 from globals import pool
 
 class TravelMiniGameView(View):
-    def __init__(self, user_id, multiplier=1.0):
+    def __init__(self, user_id, multiplier=1.0, pool=None):
         super().__init__(timeout=None)
         self.user_id = user_id
         self.multiplier = multiplier
