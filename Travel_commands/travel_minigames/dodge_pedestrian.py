@@ -101,8 +101,8 @@ class TravelMiniGameView(View):
         else:
             self.failed = True
 
+            # Remove penalty charging here — just set message and state
             penalty_amount = 1000 * self.multiplier
-            await charge_user(pool, self.user_id, penalty_amount)  # Add this line here
 
             obstacle_name, fine_reason = self.get_failure_details(self.step, obstacles)
             self.result_message = (
@@ -114,7 +114,6 @@ class TravelMiniGameView(View):
             self.stop()
 
     def get_failure_details(self, step, obstacles):
-        # Return obstacle name string and funny fine reason string based on step or obstacles
         obstacle_names = {
             0: "the kid",
             1: "grandma",
@@ -152,7 +151,7 @@ class TravelMiniGameView(View):
     def build_obstacle_scene(self, step):
         road = "🛣️"
         car = "🚗"
-        empty = "⬛"  # Black square for empty lane to keep alignment
+        empty = "⬛"
 
         obstacles = self.obstacle_lanes[step]
         icons = {
