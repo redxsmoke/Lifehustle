@@ -117,27 +117,29 @@ class TravelMiniGameView(View):
             self._timeout_task.cancel()
         self._timeout_task = asyncio.create_task(self._timeout())
 
+
     async def _timeout(self):
         await asyncio.sleep(10)
         if not self.is_finished():
-            result, msg = await self.predicaments[self.step](self.current_lane, self.step)
-            if not result:
+            lanes = self.obstacle_lanes[self.step]
+            if self.current_lane in lanes:
                 self.failed = True
                 self.result_message = "⏰ Timeout! You didn’t respond in time and hit an obstacle."
                 if self._interaction:
                     await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
                 self.stop()
                 return
-            self.step += 1
-            if self.step >= len(self.predicaments):
-                self.passed = True
-                self.result_message = "You safely navigated all obstacles! 🎉"
+            else:
+                self.step += 1
+                if self.step >= len(self.predicaments):
+                    self.passed = True
+                    self.result_message = "You safely navigated all obstacles! 🎉"
+                    if self._interaction:
+                        await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
+                    self.stop()
+                    return
                 if self._interaction:
-                    await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
-                self.stop()
-                return
-            if self._interaction:
-                await self.start_step(await self._interaction.original_response())
+                    await self.start_step(await self._interaction.original_response())
 
     def is_finished(self):
         return self.failed or self.passed or self.step >= len(self.predicaments)
