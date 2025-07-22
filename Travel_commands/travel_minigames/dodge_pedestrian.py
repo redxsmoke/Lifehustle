@@ -39,7 +39,7 @@ class TravelMiniGameView(View):
             await predicament(self.current_lane, idx)
 
     async def start_step(self, message: discord.Message):
-        # Initialize obstacles on first step
+        # Initialize obstacles once on first step
         if self.step == 0:
             await self._initialize_obstacles()
 
@@ -51,7 +51,7 @@ class TravelMiniGameView(View):
             return
 
         await message.edit(embed=self.get_embed(), view=self)
-        self.reset_timeout()
+        self.reset_timeout()  # Reset timeout timer each step
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
@@ -95,43 +95,23 @@ class TravelMiniGameView(View):
                 return
             else:
                 await interaction.response.edit_message(embed=self.get_embed(), view=self)
-                self.reset_timeout()
-    def get_embed(self):
-        total = len(self.predicaments)
-        current = min(self.step + 1, total) if not (self.failed or self.passed) else total
-
-        title = "❌ Avoid the Obstacles" if self.failed else (
-            "✅ Avoid the Obstacles" if self.passed else "🕹️ Avoid the Obstacles"
-        )
-        
-        progress = f"Obstacle {current}/{total}\n"
-        
-        desc = self.result_message if (self.failed or self.passed) else self.build_obstacle_scene(self.step)
-        
-        embed = discord.Embed(
-            title=title,
-            description=progress + desc,
-            color=discord.Color.blurple()
-        )
-        return embed
-
-
-
+                self.reset_timeout()   # Make sure to reset timeout here!
 
     def reset_timeout(self):
         if self._timeout_task and not self._timeout_task.done():
             self._timeout_task.cancel()
         self._timeout_task = asyncio.create_task(self._timeout())
 
-
     async def _timeout(self):
         await asyncio.sleep(10)
         if not self.is_finished():
-            # Check if current lane is safe for this predicament
-            result, _ = await self.predicaments[self.step](self.current_lane, self.step)
-            if result:
-                # User "did nothing" but is safe, so advance step
+            # Check if the current lane is safe for this predicament
+            is_safe, _ = await self.predicaments[self.step](self.current_lane, self.step)
+
+            if is_safe:
+                # Safe lane, so advance to next step automatically
                 self.step += 1
+
                 if self.step >= len(self.predicaments):
                     self.passed = True
                     self.result_message = "You safely navigated all obstacles! 🎉"
@@ -140,16 +120,14 @@ class TravelMiniGameView(View):
                     self.stop()
                 else:
                     if self._interaction:
-                        # show next step
                         await self.start_step(await self._interaction.original_response())
             else:
-                # Current lane is NOT safe, fail due to timeout
+                # Unsafe lane with no response = fail
                 self.failed = True
                 self.result_message = "⏰ Timeout! You didn’t respond in time and hit an obstacle."
                 if self._interaction:
                     await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
                 self.stop()
-
 
     def is_finished(self):
         return self.failed or self.passed or self.step >= len(self.predicaments)
@@ -204,37 +182,6 @@ class TravelMiniGameView(View):
         self.obstacle_lanes[idx] = obstacles
         safe_lane = next(l for l in ["left", "middle", "right"] if l not in obstacles)
         return (user_lane == safe_lane), f"You hit obstacles in lanes {obstacles[0]} and {obstacles[1]}! 💥"
-
-    def predicament_text(self, step, current_lane):
-        lanes = self.obstacle_lanes[step]
-        if lanes is None:
-            return "Loading..."
-
-        if len(lanes) == 1:
-            lane_desc = lanes[0]
-            if step == 0:
-                return (
-                    f"A kid runs in the **{lane_desc} lane**. You are in the **{current_lane} lane**. "
-                    f"Move out of the {lane_desc} lane to avoid hitting the kid."
-                )
-            elif step == 1:
-                return (
-                    f"A grandma stands in the **{lane_desc} lane**. You are in the **{current_lane} lane**. "
-                    f"Stay out of the {lane_desc} lane to avoid her."
-                )
-            elif step == 2:
-                return (
-                    f"A ball rolls in the **{lane_desc} lane**. You are in the **{current_lane} lane**. "
-                    f"Avoid the {lane_desc} lane to keep your ride smooth."
-                )
-        elif len(lanes) == 2:
-            lane_desc = " and ".join(lanes)
-            return (
-                f"Two obstacles block the **{lane_desc} lanes**. "
-                f"You must pick the only safe lane (not blocked) to avoid crashing."
-            )
-        else:
-            return "Unknown predicament..."
 
     async def on_timeout(self):
         if self._timeout_task and not self._timeout_task.done():
