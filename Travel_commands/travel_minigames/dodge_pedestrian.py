@@ -123,7 +123,7 @@ class TravelMiniGameView(View):
     def build_obstacle_scene(self, step):
         road = "🛣️"
         car = "🚗"
-        empty = "     "
+        empty = ""  # no emoji
 
         obstacles = self.obstacle_lanes[step]
         icons = {
@@ -137,6 +137,7 @@ class TravelMiniGameView(View):
         bottom = " ".join(car if lane == self.current_lane else empty for lane in self.lanes)
 
         return f"{top}\n{bottom}"
+
 
     # These predicament functions are no longer called except to provide messages; obstacles generated once
     async def predicament_1(self, user_lane, idx):
