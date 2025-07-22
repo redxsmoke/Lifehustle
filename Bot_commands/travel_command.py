@@ -523,10 +523,10 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         mini_game_view = TravelMiniGameView(user_id=interaction.user.id, multiplier=multiplier)
 
         msg = await interaction.followup.send(embed=mini_game_view.get_embed(), view=mini_game_view)
-        mini_game_view._interaction = interaction  # ✅ Needed for timeouts to edit correctly
-        await mini_game_view.start_step(msg)
+        mini_game_view._interaction = interaction  # ✅ For timeout-safe editing
+        await mini_game_view.start_step(msg)  # Initialize + send first step
 
-
+        await mini_game_view.wait()  # 🛑 WAIT here until game is finished
 
         if mini_game_view.failed:
             penalty_amount = 1000 * multiplier
@@ -540,6 +540,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
                 ephemeral=False,
             )
             return  # Stop travel outcome
+
 
         elif mini_game_view.passed:
             reward_amount = 1000 * multiplier
