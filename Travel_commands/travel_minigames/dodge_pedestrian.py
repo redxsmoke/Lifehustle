@@ -33,13 +33,10 @@ class TravelMiniGameView(View):
 
         self.obstacle_lanes = [None] * len(self.predicaments)
 
-    async def start_step(self, interaction):
-        idx = self.step  # current step number
-        # Generate obstacles for current predicament, pass a special flag or None for user lane
-        await self.predicaments[idx](None, idx, generate_only=True)
-        await interaction.response.edit_message(embed=self.get_embed(), view=self)
-        self.reset_timeout()
 
+    async def initialize(self):
+        for idx, predicament in enumerate(self.predicaments):
+            await predicament(self.current_lane, idx)
 
     async def _initialize_obstacles(self):
         for idx, predicament in enumerate(self.predicaments):
@@ -87,10 +84,9 @@ class TravelMiniGameView(View):
                 await interaction.response.edit_message(embed=self.get_embed(), view=None)
                 self.stop()
                 return
-
-            # Start the next step (next predicament)
-            await self.start_step(interaction)
-
+            else:
+                await interaction.response.edit_message(embed=self.get_embed(), view=self)
+                self.reset_timeout()
 
     def get_embed(self):
         if self.step >= len(self.predicaments):
@@ -153,33 +149,25 @@ class TravelMiniGameView(View):
 
         return f"{top}\n{bottom}"
 
-    async def predicament_1(self, user_lane, idx, generate_only=False):
+    async def predicament_1(self, user_lane, idx):
         kid_lane = random.choice(["left", "middle", "right"])
         self.obstacle_lanes[idx] = [kid_lane]
-        if generate_only:
-            return  # Just generate obstacle, no success/fail check
         return (user_lane != kid_lane), f"You hit the kid in the {kid_lane} lane! 💥"
 
-    async def predicament_2(self, user_lane, idx, generate_only=False):
+    async def predicament_2(self, user_lane, idx):
         grandma_lane = random.choice(["left", "middle", "right"])
         self.obstacle_lanes[idx] = [grandma_lane]
-        if generate_only:
-            return
         return (user_lane != grandma_lane), f"You hit grandma in the {grandma_lane} lane! 💥"
 
-    async def predicament_3(self, user_lane, idx, generate_only=False):
+    async def predicament_3(self, user_lane, idx):
         ball_lane = random.choice(["left", "middle", "right"])
         self.obstacle_lanes[idx] = [ball_lane]
-        if generate_only:
-            return
         return (user_lane != ball_lane), f"You ran over the ball in the {ball_lane} lane! 💥"
 
-    async def predicament_4(self, user_lane, idx, generate_only=False):
+    async def predicament_4(self, user_lane, idx):
         possible_pairs = [["left", "middle"], ["left", "right"], ["middle", "right"]]
         obstacles = random.choice(possible_pairs)
         self.obstacle_lanes[idx] = obstacles
-        if generate_only:
-            return
         safe_lane = next(l for l in ["left", "middle", "right"] if l not in obstacles)
         return (user_lane == safe_lane), f"You hit obstacles in lanes {obstacles[0]} and {obstacles[1]}! 💥"
 
