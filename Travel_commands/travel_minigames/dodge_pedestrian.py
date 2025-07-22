@@ -82,7 +82,7 @@ class TravelMiniGameView(View):
 
     async def _timeout(self):
         # Wait 10 seconds uninterrupted
-        await asyncio.sleep(5)
+        await asyncio.sleep(10)
         if self.is_finished():
             return
 
@@ -100,10 +100,42 @@ class TravelMiniGameView(View):
                 await self.start_step(self._message)
         else:
             self.failed = True
-            obstacle_desc = ", ".join(obstacles)
-            self.result_message = f"You hit obstacles in lane(s): {obstacle_desc}! 💥"
+
+            # Get obstacle name and funny fine reason for this predicament and lane hit
+            obstacle_name, fine_reason = self.get_failure_details(self.step, obstacles)
+
+            fine_amount = 2203 * self.multiplier  # Example multiplier
+            fine_str = f"You were fined ${fine_amount:,.2f} for {fine_reason}"
+
+            # Build combined failure message
+            self.result_message = (
+                f"You hit {obstacle_name} in the {', '.join(obstacles)} lane{'s' if len(obstacles) > 1 else ''}! 💥\n"
+                f"{fine_str}"
+            )
+
             await self._message.edit(embed=self.get_embed(), view=None)
             self.stop()
+
+    def get_failure_details(self, step, obstacles):
+        # Return obstacle name string and funny fine reason string based on step or obstacles
+        obstacle_names = {
+            0: "the kid",
+            1: "grandma",
+            2: "the ball",
+            3: "the roadworks",
+        }
+
+        funny_fines = {
+            0: "their missing homework excuses",
+            1: "grandma's hip replacement surgery",
+            2: "the new soccer ball fund",
+            3: "the city's repair budget",
+        }
+
+        name = obstacle_names.get(step, "an obstacle")
+        fine = funny_fines.get(step, "emergency repairs")
+
+        return name, fine
 
     def get_embed(self):
         title = "❌ Avoid the Obstacles" if self.failed else (
