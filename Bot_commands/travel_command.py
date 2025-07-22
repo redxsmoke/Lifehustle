@@ -517,7 +517,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
 
     if method == "car" and random.random() < 0.99:
         multiplier = random.uniform(1.0, 5.0)
-        mini_game_view = TravelMiniGameView(user_id=interaction.user.id, multiplier=multiplier)
+        mini_game_view = TravelMiniGameView(user_id=interaction.user.id, multiplier=multiplier, pool=pool)
         msg = await interaction.followup.send(embed=mini_game_view.get_embed(), view=mini_game_view)
         await mini_game_view.start_step(msg)
         await mini_game_view.wait()  # Wait for mini-game to finish (pass/fail)
