@@ -35,8 +35,8 @@ class TravelMiniGameView(View):
 
 
     async def initialize(self):
-    for idx, predicament in enumerate(self.predicaments):
-        await predicament(self.current_lane, idx)
+        for idx, predicament in enumerate(self.predicaments):
+            await predicament(self.current_lane, idx)
 
     async def _initialize_obstacles(self):
         for idx, predicament in enumerate(self.predicaments):
