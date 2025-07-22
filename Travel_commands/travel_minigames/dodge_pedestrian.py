@@ -126,31 +126,29 @@ class TravelMiniGameView(View):
 
     async def _timeout(self):
         await asyncio.sleep(10)
-        if self.is_finished():
-            return
-
-        # Check if current lane is safe for current step
-        result, _ = await self.predicaments[self.step](self.current_lane, self.step)
-        if result:
-            # Safe - move to next step
-            self.step += 1
-            if self.step >= len(self.predicaments):
-                self.passed = True
-                self.result_message = "You safely navigated all obstacles! 🎉"
+        if not self.is_finished():
+            # Check if current lane is safe for this predicament
+            result, _ = await self.predicaments[self.step](self.current_lane, self.step)
+            if result:
+                # User "did nothing" but is safe, so advance step
+                self.step += 1
+                if self.step >= len(self.predicaments):
+                    self.passed = True
+                    self.result_message = "You safely navigated all obstacles! 🎉"
+                    if self._interaction:
+                        await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
+                    self.stop()
+                else:
+                    if self._interaction:
+                        # show next step
+                        await self.start_step(await self._interaction.original_response())
+            else:
+                # Current lane is NOT safe, fail due to timeout
+                self.failed = True
+                self.result_message = "⏰ Timeout! You didn’t respond in time and hit an obstacle."
                 if self._interaction:
                     await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
                 self.stop()
-            else:
-                if self._interaction:
-                    await self.start_step(await self._interaction.original_response())
-        else:
-            # Unsafe - fail due to timeout
-            self.failed = True
-            self.result_message = "⏰ Timeout! You didn’t respond in time and hit an obstacle."
-            if self._interaction:
-                await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
-            self.stop()
-
 
 
     def is_finished(self):
