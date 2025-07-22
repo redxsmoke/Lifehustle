@@ -96,21 +96,16 @@ class TravelMiniGameView(View):
             else:
                 await interaction.response.edit_message(embed=self.get_embed(), view=self)
                 self.reset_timeout()
-
     def get_embed(self):
-        if self.step >= len(self.predicaments):
-            title = "✅ Avoid the Obstacles"
-            desc = self.result_message
-        elif self.failed:
-            title = "❌ Avoid the Obstacles"
-            desc = self.result_message
-        else:
-            title = "🕹️ Avoid the Obstacles"
-            desc = self.predicament_text(self.step, self.current_lane) + "\n\n" + self.build_obstacle_scene(self.step)
+        title = "❌ Avoid the Obstacles" if self.failed else (
+            "✅ Avoid the Obstacles" if self.passed else "🕹️ Avoid the Obstacles"
+        )
+        desc = self.result_message if (self.failed or self.passed) else self.build_obstacle_scene(self.step)
 
-        embed = discord.Embed(title=title, description=desc, color=discord.Color.blurple())
-        embed.set_footer(text=f"Current lane: {self.current_lane.capitalize()} | You have 10 seconds to respond")
-        return embed
+        return discord.Embed(title=title, description=desc, color=discord.Color.blurple())
+
+
+
 
     def reset_timeout(self):
         if self._timeout_task and not self._timeout_task.done():
@@ -121,15 +116,8 @@ class TravelMiniGameView(View):
     async def _timeout(self):
         await asyncio.sleep(10)
         if not self.is_finished():
-            lanes = self.obstacle_lanes[self.step]
-            if self.current_lane in lanes:
-                self.failed = True
-                self.result_message = "⏰ Timeout! You didn’t respond in time and hit an obstacle."
-                if self._interaction:
-                    await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
-                self.stop()
-                return
-            else:
+            result, _ = await self.predicaments[self.step](self.current_lane, self.step)
+            if result:
                 self.step += 1
                 if self.step >= len(self.predicaments):
                     self.passed = True
@@ -137,9 +125,17 @@ class TravelMiniGameView(View):
                     if self._interaction:
                         await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
                     self.stop()
-                    return
+                else:
+                    if self._interaction:
+                        await self.start_step(await self._interaction.original_response())
+            else:
+                self.failed = True
+                self.result_message = "⏰ Timeout! You didn’t respond in time and hit an obstacle."
                 if self._interaction:
-                    await self.start_step(await self._interaction.original_response())
+                    await self._interaction.edit_original_response(embed=self.get_embed(), view=None)
+                self.stop()
+
+
 
     def is_finished(self):
         return self.failed or self.passed or self.step >= len(self.predicaments)
