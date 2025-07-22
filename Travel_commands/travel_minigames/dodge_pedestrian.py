@@ -82,7 +82,7 @@ class TravelMiniGameView(View):
 
     async def _timeout(self):
         # Wait 10 seconds uninterrupted
-        await asyncio.sleep(10)
+        await asyncio.sleep(5)
         if self.is_finished():
             return
 
@@ -123,7 +123,7 @@ class TravelMiniGameView(View):
     def build_obstacle_scene(self, step):
         road = "🛣️"
         car = "🚗"
-        empty = "⬜"
+        empty = "     "
 
         obstacles = self.obstacle_lanes[step]
         icons = {
