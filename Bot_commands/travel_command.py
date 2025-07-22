@@ -523,17 +523,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
         await mini_game_view.wait()  # Wait for mini-game to finish (pass/fail)
 
         if mini_game_view.failed:
-            penalty_amount = 1000 * multiplier
-            await charge_user(pool, user_id, penalty_amount)
-            await interaction.followup.send(
-                embed=discord.Embed(
-                    title="❌ Mini-Game Failed",
-                    description=f"You hit an obstacle and lost **${penalty_amount:,.2f}**!",
-                    color=discord.Color.red(),
-                ),
-                ephemeral=False,
-            )
-            return
+              return
 
         elif mini_game_view.passed:
             reward_amount = 1000 * multiplier
