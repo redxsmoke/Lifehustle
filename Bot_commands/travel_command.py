@@ -88,10 +88,6 @@ class LocationSelect(discord.ui.Select):
                 await interaction.response.send_message("❌ Something went wrong. Try again.", ephemeral=True)
 
 
-
-
-
-
 class LocationTravelView(discord.ui.View):
     def __init__(self, locations, user_id, pool):
         super().__init__(timeout=60)
@@ -522,7 +518,7 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
     # The rest of your travel logic continues here...
 
 
-    if method == "car" and random.random() < 0.5:
+    if method == "car" and random.random() < 0.99:
         multiplier = random.uniform(1.0, 5.0)
         mini_game_view = TravelMiniGameView(user_id, multiplier=multiplier)
         # You need to send the initial message first
