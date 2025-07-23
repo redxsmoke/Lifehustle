@@ -533,12 +533,21 @@ async def handle_travel_with_vehicle(interaction, vehicle, method, user_travel_l
             reward_amount = 1000 * multiplier
             try:
                 await reward_user(pool, user_id, reward_amount)
-                # Update the user's location after passing the mini-game
+                
+                # Update the user's location
                 await pool.execute(
                     "UPDATE users SET current_location = $1 WHERE user_id = $2",
                     user_travel_location,
                     user_id
                 )
+
+                # Update the user's vehicle location
+                await pool.execute(
+                    "UPDATE user_vehicle_inventory SET location_id = $1 WHERE user_id = $2",
+                    user_travel_location,
+                    user_id
+                )
+
             except Exception as e:
                 print(f"[ERROR] reward_user or location update failed: {e}")
 
