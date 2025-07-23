@@ -90,7 +90,7 @@ class SneakInMiniGameView(View):
         await interaction.response.edit_message(embed=self.get_embed(), view=self)
 
     async def _timeout(self):
-        await asyncio.sleep(10)
+        await asyncio.sleep(3)
         if self.is_finished():
             return
 
@@ -147,7 +147,7 @@ class SneakInMiniGameView(View):
         user_lane = self.current_lane
         obstacles = self.obstacle_lanes[step]
         obstacle_emoji = self.predicament_data[step]["emoji"]
-        safe_emojis = ["📎", "🔇", "🚪", "📤", "🕶️"]
+        safe_emojis = ["🚪"]
 
         top_row = " ".join(obstacle_emoji if lane in obstacles else random.choice(safe_emojis) for lane in lanes)
         bottom_row = " ".join("🧍" if lane == user_lane else "⬛" for lane in lanes)
