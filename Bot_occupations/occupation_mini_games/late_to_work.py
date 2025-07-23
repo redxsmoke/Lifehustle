@@ -217,15 +217,15 @@ class SneakInMiniGameView(View):
         return safe, msg
 
 
-    async def sneak_in_late_game(ctx, user_id, pool):
-        view = SneakInMiniGameView(user_id=user_id, pool=pool)
-        message = await ctx.followup.send(embed=view.get_embed(), view=view)
-        await view.start_step(message)
-        await view.wait()
-        return {
-            "result": "win" if view.passed else "fail" if view.failed else "neutral",
-            "bonus": 500 if view.passed else -250,
-            "message": view.result_message or "",
-            "dock": 0,
-            "penalty": 250 if view.failed else 0,
-        }
+async def sneak_in_late_game(ctx, user_id, pool):
+    view = SneakInMiniGameView(user_id=user_id, pool=pool)
+    message = await ctx.followup.send(embed=view.get_embed(), view=view)
+    await view.start_step(message)
+    await view.wait()
+    return {
+        "result": "win" if view.passed else "fail" if view.failed else "neutral",
+        "bonus": 500 if view.passed else -250,
+        "message": view.result_message or "",
+        "dock": 0,
+        "penalty": 250 if view.failed else 0,
+    }
