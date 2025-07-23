@@ -144,10 +144,11 @@ class CareerPath(commands.Cog):
 
                 if occupation is None:
                     msg = "❌ You don't have a job yet. Use `/need_work` to get hired!"
-                    if hasattr(ctx, "followup"):
-                        await ctx.followup.send(msg)
+                    if hasattr(ctx, "interaction") and ctx.interaction is not None:
+                        await ctx.interaction.followup.send(msg)
                     else:
                         await ctx.send(msg)
+
                     return
 
                 occupation_id = occupation["cd_occupation_id"]
@@ -182,10 +183,11 @@ class CareerPath(commands.Cog):
                         f"🧹 You worked a shift as a **{occupation_name}**, "
                         "but this job doesn't have a mini-game yet. No payout this time!"
                     )
-                    if hasattr(ctx, "followup"):
-                        await ctx.followup.send(no_minigame_msg)
+                    if hasattr(ctx, "interaction") and ctx.interaction is not None:
+                        await ctx.interaction.followup.send(msg)
                     else:
-                        await ctx.send(no_minigame_msg)
+                        await ctx.send(msg)
+
                     return
 
                 minigame_module = random.choice(mini_game_modules)
@@ -303,10 +305,10 @@ class CareerPath(commands.Cog):
             print(f"[clockin] Exception caught: {e}")
             error_msg = "❌ An error occurred while processing your shift. Please try again later."
             if hasattr(ctx, "interaction") and ctx.interaction is not None:
-                # Use interaction followup if interaction exists (like slash command)
                 await ctx.interaction.followup.send(msg)
             else:
                 await ctx.send(msg)
+
 
 
     @careerpath.command(name="resign", description="Resign from your job with confirmation")
