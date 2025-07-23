@@ -28,7 +28,8 @@ class GroceryCog(commands.Cog):
 
         # Build the view and first embed
         view = GroceryMarketView(user_id=interaction.user.id, bot=self.bot, categories_with_items=categories_with_items)
-        embed = view.page_view.create_embed()
+        embed = view.create_embed()
+
 
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
