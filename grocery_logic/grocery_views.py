@@ -65,10 +65,9 @@ class GroceryMarketView(View):
             balance = finances.get("money", 0)
             current_stash = finances.get("groceries", [])
 
-            # Cap at 10 groceries
             if len(current_stash) >= 10:
                 return await interaction.response.send_message(
-                    "🚫 You’re already carrying too many groceries. What is this, a Costco haul?",
+                    "🧊 Your fridge is full! You’re one step away from being featured on *Hoarders: Cold Storage Edition.*",
                     ephemeral=True
                 )
 
