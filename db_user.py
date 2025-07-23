@@ -2,7 +2,7 @@ import json
 import asyncpg
 import datetime
 import traceback
-
+from datetime import datetime, timedelta
  
 
 #------------ADD USER TO DB IF MISSING AND RUN COMMAND = TRUE--------------
@@ -249,3 +249,47 @@ async def update_last_used_vehicle(pool, user_id: int, vehicle_id: int | None, v
         print("[DEBUG] update_last_used_vehicle executed successfully.")
     except Exception as e:
         print(f"[ERROR] update_last_used_vehicle failed: {e}")
+
+ 
+async def add_grocery_to_stash(pool, user_id: int, item: dict):
+    """Add or update grocery item in user's stash, resetting expiration, with cap."""
+    grocery_type_id = item["id"]
+    grocery_category_id = item["category_id"]
+    shelf_life_days = item.get("shelf_life", 0)
+
+    now = datetime.utcnow()
+    expiration_date = now + timedelta(days=shelf_life_days) if shelf_life_days > 0 else None
+
+    async with pool.acquire() as conn:
+        # Check total inventory quantity
+        total_quantity = await conn.fetchval("""
+            SELECT COALESCE(SUM(quantity), 0)
+            FROM user_grocery_inventory
+            WHERE user_id = $1 AND sold_at IS NULL
+        """, user_id)
+
+        if total_quantity >= 10:
+            raise ValueError("🧊 Your fridge is full. One more apple and it’s starting a reality show called Hoarders: Cold Edition.")
+
+        # Check if this item already exists
+        existing = await conn.fetchrow("""
+            SELECT id, quantity
+            FROM user_grocery_inventory
+            WHERE user_id = $1 AND grocery_type_id = $2 AND sold_at IS NULL
+        """, user_id, grocery_type_id)
+
+        if existing:
+            await conn.execute("""
+                UPDATE user_grocery_inventory
+                SET quantity = quantity + 1,
+                    expiration_date = $1,
+                    created_at = $2
+                WHERE id = $3
+            """, expiration_date, now, existing["id"])
+        else:
+            await conn.execute("""
+                INSERT INTO user_grocery_inventory (
+                    user_id, grocery_type_id, grocery_category_id,
+                    quantity, created_at, expiration_date
+                ) VALUES ($1, $2, $3, 1, $4, $5)
+            """, user_id, grocery_type_id, grocery_category_id, now, expiration_date)
