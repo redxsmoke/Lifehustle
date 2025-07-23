@@ -269,7 +269,7 @@ async def add_grocery_to_stash(pool, user_id: int, item: dict):
         """, user_id)
 
         if total_quantity >= 10:
-            raise ValueError("🧊 Your fridge is full. One more apple and it’s starting a reality show called Hoarders: Cold Edition.")
+            raise ValueError("🧊 Easy there, chef. Your fridge is so full, even Tetris gave up.")
 
         # Check if this item already exists
         existing = await conn.fetchrow("""
