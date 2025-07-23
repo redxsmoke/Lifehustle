@@ -30,7 +30,7 @@ class SneakInMiniGameView(View):
             {"title": "Avoid the janitor's mop bucket!", "emoji": "🧹", "fail_actor": "the janitor", "reason": "spilling dirty water everywhere"},
             {"title": "Avoid your coworkers!", "emoji": "🧍‍♀️", "fail_actor": "a nosy coworker", "reason": "an awkward water cooler chat"},
             {"title": "Avoid the security cameras!", "emoji": "🎥", "fail_actor": "a security camera", "reason": "being spotted by security"},
-            {"title": "Avoid your bosses!", "emoji": "👔", "fail_actor": "your boss", "reason": "a surprise performance review"},
+            {"title": "Avoid your bosses!", "emoji": "🧑‍💼", "fail_actor": "your boss", "reason": "a surprise performance review"},
         ]
 
 
