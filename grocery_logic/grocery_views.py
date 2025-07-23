@@ -14,13 +14,13 @@ class GroceryMarketView(View):
         self.current_category_index = 0
         self.current_page = 0
 
-        # Nav buttons
+        # Navigation buttons
         self.prev_button = Button(label="⬅️ Prev", style=discord.ButtonStyle.secondary)
         self.next_button = Button(label="Next ➡️", style=discord.ButtonStyle.secondary)
         self.prev_button.callback = self.prev_page
         self.next_button.callback = self.next_page
 
-        # We'll dynamically add item buttons and nav buttons in update_buttons()
+        # Initialize buttons
         self.update_buttons()
 
     def build_market_message(self):
@@ -35,19 +35,16 @@ class GroceryMarketView(View):
 
         lines = [f"🛒 **{category_name} Market**\n"]
 
-        for idx, item in enumerate(page_items, start=1 + self.current_page * ITEMS_PER_PAGE):
-            lines.append(f"**Buying {idx} {item['emoji']} {item['name']}**")
+        for item in page_items:
+            lines.append(f"{item['emoji']} {item['name']}")
             lines.append(f"├ For: ${item['cost']}")
-            lines.append(f"├ Value per Unit: {item.get('value_per_unit', 'N/A')}")
-            lines.append(f"├ Expires: {item['shelf_life']} days")
-            lines.append(f"├ ID: {item['id']}\n")
+            lines.append(f"├ Expires: {item['shelf_life']} days\n")
 
         lines.append(f"Page {self.current_page + 1} / {max_page + 1} — Category {self.current_category_index + 1} / {len(self.categories_with_items)}")
 
         return "\n".join(lines)
 
     def update_buttons(self):
-        # Clear all buttons first
         self.clear_items()
 
         _, groceries = self.categories_with_items[self.current_category_index]
@@ -58,7 +55,7 @@ class GroceryMarketView(View):
         end = start + ITEMS_PER_PAGE
         page_items = groceries[start:end]
 
-        # Add one button per item in order
+        # Add one button per item
         for item in page_items:
             btn = Button(
                 label=f"Accept (${item['cost']})",
@@ -68,7 +65,7 @@ class GroceryMarketView(View):
             btn.callback = self.make_buy_callback(item)
             self.add_item(btn)
 
-        # Add nav buttons at bottom
+        # Add navigation buttons
         self.prev_button.disabled = self.current_page == 0
         self.next_button.disabled = self.current_page == max_page
         self.add_item(self.prev_button)
