@@ -7,7 +7,8 @@ import discord
 from discord import app_commands, Interaction
 
 from vehicle_logic import generate_random_plate
-from grocery_logic.grocery_views import GroceryCategoryView, GroceryStashPaginationView
+from grocery_logic.grocery_views import GroceryCategoryPageView, GroceryStashPaginationView
+
 import globals
 
 from datetime import datetime, timezone, timedelta   
