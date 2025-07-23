@@ -1,7 +1,7 @@
 import discord
 from discord import app_commands, Interaction
 from discord.ext import commands
-from grocery_logic.grocery_views import GroceryMarketView  # your view import
+from grocery_logic.grocery_views import GroceryMarketView  # Adjust path if needed
 
 class GroceryCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -10,7 +10,7 @@ class GroceryCog(commands.Cog):
     @app_commands.command(name="market", description="Browse and buy groceries")
     async def market(self, interaction: Interaction):
         async with self.bot.pool.acquire() as conn:
-            # Fetch all grocery categories
+            # Fetch grocery categories
             categories = await conn.fetch("SELECT id, name, emoji FROM cd_grocery_category ORDER BY name")
 
             categories_with_items = []
@@ -25,24 +25,28 @@ class GroceryCog(commands.Cog):
                     category["id"]
                 )
 
-                # Format each grocery row into a dictionary with expected keys
+                # Format items
                 formatted_items = [
                     {
                         "id": item["id"],
                         "emoji": item["emoji"],
                         "name": item["name"],
                         "cost": item["cost"],
-                        "shelf_life": item["shelf_life"],
+                        "shelf_life": item["shelf_life"]
                     }
                     for item in groceries
                 ]
 
                 categories_with_items.append((category["name"], formatted_items))
 
-        view = GroceryMarketView(user_id=interaction.user.id, bot=self.bot, categories_with_items=categories_with_items)
-        content = view.build_market_message()
-        msg = await interaction.response.send_message(content=content, view=view, ephemeral=True)
-        view.message = await interaction.original_response()  # store message to edit on timeout
+        # Initial message (needed to anchor the view)
+        await interaction.response.send_message("🛒 Loading market...", ephemeral=True)
+        main_msg = await interaction.original_response()
 
+        # Start view
+        view = GroceryMarketView(user_id=interaction.user.id, bot=self.bot, categories_with_items=categories_with_items, main_message=main_msg)
+        await view.send_item_messages()
+
+# Setup function for bot.load_extension
 async def setup(bot: commands.Bot):
     await bot.add_cog(GroceryCog(bot))
