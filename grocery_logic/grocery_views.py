@@ -1,7 +1,6 @@
 import discord
 from discord.ui import View, Button
 from discord import Interaction
-from db_user import get_user_finances, upsert_user_finances, add_grocery_to_stash
 
 ITEMS_PER_PAGE = 3  # Number of grocery items to show per page within a category
 
@@ -14,43 +13,40 @@ class GroceryMarketView(View):
         self.current_category_index = 0
         self.current_page = 0  # pagination within current category
 
-        # Nav buttons
+        # Navigation buttons
         self.prev_button = Button(label="⬅️ Prev", style=discord.ButtonStyle.secondary)
         self.next_button = Button(label="Next ➡️", style=discord.ButtonStyle.secondary)
         self.prev_button.callback = self.prev_page
         self.next_button.callback = self.next_page
 
-        # Add nav buttons initially
         self.add_item(self.prev_button)
         self.add_item(self.next_button)
 
-        # Add buy buttons for the current page
         self.add_buy_buttons()
 
-    def create_embed(self):
+    def build_market_message(self):
         category_name, groceries = self.categories_with_items[self.current_category_index]
 
-        # Calculate paging for items within this category
         total_items = len(groceries)
         max_page = max(0, (total_items - 1) // ITEMS_PER_PAGE)
+
         start = self.current_page * ITEMS_PER_PAGE
         end = start + ITEMS_PER_PAGE
         page_items = groceries[start:end]
 
-        embed = discord.Embed(
-            title=f"🛒 {category_name} Market",
-            color=discord.Color.green()
-        )
+        lines = [f"🛒 **{category_name} Market**\n"]
 
-        for item in page_items:
-            embed.add_field(
-                name=f"{item['emoji']} {item['name']}",
-                value=f"Price: ${item['cost']}\nShelf Life: {item['shelf_life']} days",
-                inline=False,
-            )
+        for idx, item in enumerate(page_items, start=1 + self.current_page * ITEMS_PER_PAGE):
+            lines.append(f"**Buying {idx} {item['emoji']} {item['name']}**")
+            lines.append(f"├ For: ${item['cost']}")
+            lines.append(f"├ Value per Unit: {item.get('value_per_unit', 'N/A')}")
+            lines.append(f"├ Expires: {item['shelf_life']} days")
+            lines.append(f"├ ID: {item['id']}")
+            lines.append("")  # blank line after each item
 
-        embed.set_footer(text=f"Page {self.current_page + 1} / {max_page + 1} — Category {self.current_category_index + 1} / {len(self.categories_with_items)}")
-        return embed
+        lines.append(f"Page {self.current_page + 1} / {max_page + 1} — Category {self.current_category_index + 1} / {len(self.categories_with_items)}")
+
+        return "\n".join(lines)
 
     def add_buy_buttons(self):
         # Remove all buy buttons first, keep nav buttons
@@ -120,7 +116,7 @@ class GroceryMarketView(View):
         if self.current_page > 0:
             self.current_page -= 1
             self.add_buy_buttons()
-            await interaction.response.edit_message(embed=self.create_embed(), view=self)
+            await interaction.response.edit_message(content=self.build_market_message(), view=self)
 
     async def next_page(self, interaction: Interaction):
         if interaction.user.id != self.user_id:
@@ -132,7 +128,7 @@ class GroceryMarketView(View):
         if self.current_page < max_page:
             self.current_page += 1
             self.add_buy_buttons()
-            await interaction.response.edit_message(embed=self.create_embed(), view=self)
+            await interaction.response.edit_message(content=self.build_market_message(), view=self)
 
     async def on_timeout(self):
         for child in self.children:
