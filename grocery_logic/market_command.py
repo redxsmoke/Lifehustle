@@ -43,3 +43,6 @@ class GroceryCog(commands.Cog):
         content = view.build_market_message()
         msg = await interaction.response.send_message(content=content, view=view, ephemeral=True)
         view.message = await interaction.original_response()  # store message to edit on timeout
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(GroceryCog(bot))
