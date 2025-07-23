@@ -20,59 +20,59 @@ class GroceryMarketView(View):
         self.prev_button.callback = self.prev_page
         self.next_button.callback = self.next_page
 
-        self.message = None  # will hold the sent message for editing
-        self.refresh_view()
+        # We'll dynamically add item buttons and nav buttons in update_buttons()
+        self.update_buttons()
 
-    def refresh_view(self):
+    def build_market_message(self):
+        category_name, groceries = self.categories_with_items[self.current_category_index]
+
+        total_items = len(groceries)
+        max_page = max(0, (total_items - 1) // ITEMS_PER_PAGE)
+
+        start = self.current_page * ITEMS_PER_PAGE
+        end = start + ITEMS_PER_PAGE
+        page_items = groceries[start:end]
+
+        lines = [f"🛒 **{category_name} Market**\n"]
+
+        for idx, item in enumerate(page_items, start=1 + self.current_page * ITEMS_PER_PAGE):
+            lines.append(f"**Buying {idx} {item['emoji']} {item['name']}**")
+            lines.append(f"├ For: ${item['cost']}")
+            lines.append(f"├ Value per Unit: {item.get('value_per_unit', 'N/A')}")
+            lines.append(f"├ Expires: {item['shelf_life']} days")
+            lines.append(f"├ ID: {item['id']}\n")
+
+        lines.append(f"Page {self.current_page + 1} / {max_page + 1} — Category {self.current_category_index + 1} / {len(self.categories_with_items)}")
+
+        return "\n".join(lines)
+
+    def update_buttons(self):
+        # Clear all buttons first
         self.clear_items()
+
         _, groceries = self.categories_with_items[self.current_category_index]
         total_items = len(groceries)
         max_page = max(0, (total_items - 1) // ITEMS_PER_PAGE)
 
         start = self.current_page * ITEMS_PER_PAGE
         end = start + ITEMS_PER_PAGE
-        self.page_items = groceries[start:end]
+        page_items = groceries[start:end]
 
-        # Add one Accept button per item, vertically stacked
-        for idx, item in enumerate(self.page_items):
-            button = Button(
+        # Add one button per item in order
+        for item in page_items:
+            btn = Button(
                 label=f"Accept (${item['cost']})",
                 style=discord.ButtonStyle.success,
-                custom_id=f"buy_{item['id']}",
-                row=idx  # One button per row
+                custom_id=f"buy_{item['id']}"
             )
-            button.callback = self.make_buy_callback(item)
-            self.add_item(button)
+            btn.callback = self.make_buy_callback(item)
+            self.add_item(btn)
 
-        # Add pagination buttons at bottom row
-        nav_row = len(self.page_items)
+        # Add nav buttons at bottom
         self.prev_button.disabled = self.current_page == 0
-        self.next_button.disabled = self.current_page >= max_page
-        self.prev_button.row = nav_row
-        self.next_button.row = nav_row
+        self.next_button.disabled = self.current_page == max_page
         self.add_item(self.prev_button)
         self.add_item(self.next_button)
-
-    def build_message_text(self):
-        category_name, _ = self.categories_with_items[self.current_category_index]
-        total_categories = len(self.categories_with_items)
-
-        lines = [f"🛒 **{category_name} Market**\n"]
-
-        for idx, item in enumerate(self.page_items, start=1 + self.current_page * ITEMS_PER_PAGE):
-            lines.append(f"**Buying {idx} {item['emoji']} {item['name']}**")
-            lines.append(f"├ For: ${item['cost']}")
-            lines.append(f"├ Value per Unit: {item.get('value_per_unit', 'N/A')}")
-            lines.append(f"├ Expires: {item['shelf_life']} days")
-            lines.append(f"├ ID: {item['id']}")
-            lines.append("")  # space above button
-
-        _, groceries = self.categories_with_items[self.current_category_index]
-        max_page = max(0, (len(groceries) - 1) // ITEMS_PER_PAGE)
-
-        lines.append(f"Page {self.current_page + 1} / {max_page + 1} — Category {self.current_category_index + 1} / {total_categories}")
-
-        return "\n".join(lines)
 
     def make_buy_callback(self, item):
         async def callback(interaction: Interaction):
@@ -98,8 +98,7 @@ class GroceryMarketView(View):
                 )
                 return
 
-            new_balance = balance - item['cost']
-            await upsert_user_finances(self.bot.pool, self.user_id, money=new_balance)
+            await upsert_user_finances(self.bot.pool, self.user_id, money=balance - item['cost'])
             await add_grocery_to_stash(self.bot.pool, self.user_id, item)
 
             await interaction.response.send_message(
@@ -112,24 +111,28 @@ class GroceryMarketView(View):
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("This isn’t your market view.", ephemeral=True)
             return
+
         if self.current_page > 0:
             self.current_page -= 1
-            self.refresh_view()
-            await interaction.response.edit_message(content=self.build_message_text(), view=self)
+            self.update_buttons()
+            await interaction.response.edit_message(content=self.build_market_message(), view=self)
 
     async def next_page(self, interaction: Interaction):
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("This isn’t your market view.", ephemeral=True)
             return
+
         _, groceries = self.categories_with_items[self.current_category_index]
-        max_page = max(0, (len(groceries) - 1) // ITEMS_PER_PAGE)
+        total_items = len(groceries)
+        max_page = max(0, (total_items - 1) // ITEMS_PER_PAGE)
+
         if self.current_page < max_page:
             self.current_page += 1
-            self.refresh_view()
-            await interaction.response.edit_message(content=self.build_message_text(), view=self)
+            self.update_buttons()
+            await interaction.response.edit_message(content=self.build_market_message(), view=self)
 
     async def on_timeout(self):
         for child in self.children:
             child.disabled = True
-        if self.message:
+        if hasattr(self, "message") and self.message:
             await self.message.edit(view=self)

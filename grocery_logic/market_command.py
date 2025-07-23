@@ -41,10 +41,9 @@ class GroceryCog(commands.Cog):
                 categories_with_items.append((category["name"], formatted_items))
 
         view = GroceryMarketView(user_id=interaction.user.id, bot=self.bot, categories_with_items=categories_with_items)
-        text = view.build_message_text()
-        view.message = await interaction.response.send_message(content=text, view=view, ephemeral=True)
-
+        content = view.build_market_message()
         await interaction.response.send_message(content=content, view=view, ephemeral=True)
+        view.message = await interaction.original_response()  # store message to edit on timeout
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(GroceryCog(bot))
