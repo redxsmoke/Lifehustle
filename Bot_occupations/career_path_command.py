@@ -15,7 +15,8 @@ from Bot_occupations.occupation_mini_games import whichdidthat
 from Bot_occupations.occupation_mini_games import snake_breakroom
 from Bot_occupations.occupation_mini_games.quickchange import run_quick_math_game
 from Bot_occupations.occupation_mini_games.shared import build_paystub_embed
-from Bot_occupations.occupation_mini_games.late_to_work import SneakInMiniGameView
+from Bot_occupations.occupation_mini_games.late_to_work import sneak_in_late_game
+
 
 
 
