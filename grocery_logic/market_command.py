@@ -1,140 +1,7 @@
 import discord
-from discord.ext import commands
 from discord import app_commands, Interaction
-from discord.ui import View, Button
-import asyncio
-
-ITEMS_PER_PAGE = 3
-
-class ItemButton(Button):
-    def __init__(self, item, user_id, bot):
-        super().__init__(label=f"Accept (${item['cost']})", style=discord.ButtonStyle.success)
-        self.item = item
-        self.user_id = user_id
-        self.bot = bot
-
-    async def callback(self, interaction: Interaction):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("This isn’t your market view.", ephemeral=True)
-            return
-
-        # Your purchase logic here - placeholder
-        await interaction.response.send_message(f"Bought {self.item['emoji']} **{self.item['name']}** for ${self.item['cost']}!", ephemeral=True)
-
-
-class ControlView(View):
-    def __init__(self, user_id, bot, categories_with_items, main_message=None):
-        super().__init__(timeout=300)
-        self.user_id = user_id
-        self.bot = bot
-        self.categories_with_items = categories_with_items
-        self.current_category_index = 0
-        self.current_page = 0
-        self.main_message = main_message
-        self.item_messages = []
-
-        self.prev_button = Button(label="⬅️ Prev", style=discord.ButtonStyle.secondary)
-        self.next_button = Button(label="Next ➡️", style=discord.ButtonStyle.secondary)
-        self.prev_button.callback = self.prev_page
-        self.next_button.callback = self.next_page
-
-        # We will add pagination message after items, so no buttons here initially
-
-
-    async def send_item_messages(self):
-        # Delete old item messages and pagination message
-        for msg in self.item_messages:
-            try:
-                await msg.delete()
-            except:
-                pass
-        self.item_messages = []
-
-        if self.main_message:
-            try:
-                await self.main_message.delete()
-            except:
-                pass
-            self.main_message = None
-
-        category_name, groceries = self.categories_with_items[self.current_category_index]
-        total_items = len(groceries)
-        max_page = max(0, (total_items - 1) // ITEMS_PER_PAGE)
-        start = self.current_page * ITEMS_PER_PAGE
-        end = start + ITEMS_PER_PAGE
-        page_items = groceries[start:end]
-
-        # Send one message per item with its own button
-        for item in page_items:
-            content = (
-                f"**{item['emoji']} {item['name']}**\n"
-                f"├ For: ${item['cost']}\n"
-                f"├ Expires: {item['shelf_life']} days\n"
-            )
-            view = View()
-            view.add_item(ItemButton(item, self.user_id, self.bot))
-            msg = await self.channel.send(content=content, view=view)
-            self.item_messages.append(msg)
-
-        # After sending items, send pagination message with buttons
-        self.prev_button.disabled = self.current_page == 0
-        self.next_button.disabled = self.current_page == max_page
-
-        view = View()
-        view.add_item(self.prev_button)
-        view.add_item(self.next_button)
-
-        self.main_message = await self.channel.send(content=self.build_main_message_text(), view=view)
-
-
-    def build_main_message_text(self):
-        total_categories = len(self.categories_with_items)
-        category_name, groceries = self.categories_with_items[self.current_category_index]
-        total_items = len(groceries)
-        max_page = max(0, (total_items - 1) // ITEMS_PER_PAGE)
-        return f"🛒 **{category_name} Market**\nPage {self.current_page + 1} / {max_page + 1} — Category {self.current_category_index + 1} / {total_categories}"
-
-    @property
-    def channel(self):
-        # helper to get channel from main_message or bot cache
-        if self.main_message:
-            return self.main_message.channel
-        # fallback to None if no message yet (shouldn't happen)
-        return None
-
-    async def prev_page(self, interaction: Interaction):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("This isn’t your market view.", ephemeral=True)
-            return
-        if self.current_page > 0:
-            self.current_page -= 1
-            await interaction.response.defer()
-            await self.send_item_messages()
-
-    async def next_page(self, interaction: Interaction):
-        if interaction.user.id != self.user_id:
-            await interaction.response.send_message("This isn’t your market view.", ephemeral=True)
-            return
-        category_name, groceries = self.categories_with_items[self.current_category_index]
-        total_items = len(groceries)
-        max_page = max(0, (total_items - 1) // ITEMS_PER_PAGE)
-        if self.current_page < max_page:
-            self.current_page += 1
-            await interaction.response.defer()
-            await self.send_item_messages()
-
-    async def on_timeout(self):
-        for msg in self.item_messages:
-            try:
-                await msg.delete()
-            except:
-                pass
-        if self.main_message:
-            try:
-                await self.main_message.delete()
-            except:
-                pass
-
+from discord.ext import commands
+from grocery_logic.grocery_views import GroceryMarketView  # your view import
 
 class GroceryCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -143,7 +10,9 @@ class GroceryCog(commands.Cog):
     @app_commands.command(name="market", description="Browse and buy groceries")
     async def market(self, interaction: Interaction):
         async with self.bot.pool.acquire() as conn:
+            # Fetch all grocery categories
             categories = await conn.fetch("SELECT id, name, emoji FROM cd_grocery_category ORDER BY name")
+
             categories_with_items = []
             for category in categories:
                 groceries = await conn.fetch(
@@ -155,6 +24,8 @@ class GroceryCog(commands.Cog):
                     """,
                     category["id"]
                 )
+
+                # Format each grocery row into a dictionary with expected keys
                 formatted_items = [
                     {
                         "id": item["id"],
@@ -165,15 +36,10 @@ class GroceryCog(commands.Cog):
                     }
                     for item in groceries
                 ]
+
                 categories_with_items.append((category["name"], formatted_items))
 
-        # Send a dummy message for control message
-        await interaction.response.send_message(content="Loading market...", ephemeral=True)
-        main_msg = await interaction.original_response()
-
-        view = ControlView(interaction.user.id, self.bot, categories_with_items, main_msg)
-        await view.send_item_messages()
-
-
-async def setup(bot: commands.Bot):
-    await bot.add_cog(GroceryCog(bot))
+        view = GroceryMarketView(user_id=interaction.user.id, bot=self.bot, categories_with_items=categories_with_items)
+        content = view.build_market_message()
+        msg = await interaction.response.send_message(content=content, view=view, ephemeral=True)
+        view.message = await interaction.original_response()  # store message to edit on timeout
