@@ -302,10 +302,12 @@ class CareerPath(commands.Cog):
         except Exception as e:
             print(f"[clockin] Exception caught: {e}")
             error_msg = "❌ An error occurred while processing your shift. Please try again later."
-            if hasattr(ctx, "followup"):
-                await ctx.followup.send(error_msg)
+            if hasattr(ctx, "interaction") and ctx.interaction is not None:
+                # Use interaction followup if interaction exists (like slash command)
+                await ctx.interaction.followup.send(msg)
             else:
-                await ctx.send(error_msg)
+                await ctx.send(msg)
+
 
     @careerpath.command(name="resign", description="Resign from your job with confirmation")
     async def resign(self, ctx):
