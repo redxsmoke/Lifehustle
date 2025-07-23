@@ -219,7 +219,14 @@ class SneakInMiniGameView(View):
 
 async def sneak_in_late_game(ctx, user_id, pool):
     view = SneakInMiniGameView(user_id=user_id, pool=pool)
-    message = await ctx.followup.send(embed=view.get_embed(), view=view)
+
+    if hasattr(ctx, "interaction") and ctx.interaction is not None:
+        # Use interaction followup
+        message = await ctx.interaction.followup.send(embed=view.get_embed(), view=view)
+    else:
+        # Fallback to normal ctx.send
+        message = await ctx.send(embed=view.get_embed(), view=view)
+
     await view.start_step(message)
     await view.wait()
     return {
