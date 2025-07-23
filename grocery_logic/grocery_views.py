@@ -14,7 +14,7 @@ class GroceryMarketView(View):
         self.current_category_index = 0
         self.current_page = 0
 
-        # Nav buttons
+        # Create nav buttons
         self.prev_button = Button(label="⬅️ Prev", style=discord.ButtonStyle.secondary)
         self.next_button = Button(label="Next ➡️", style=discord.ButtonStyle.secondary)
         self.prev_button.callback = self.prev_page
@@ -40,7 +40,7 @@ class GroceryMarketView(View):
             lines.append(f"├ Value per Unit: {item.get('value_per_unit', 'N/A')}")
             lines.append(f"├ Expires: {item['shelf_life']} days")
             lines.append(f"├ ID: {item['id']}")
-            lines.append("")  # visually separate each item from its button
+            lines.append("")  # spacer before button
 
         lines.append(f"Page {self.current_page + 1} / {max_page + 1} — Category {self.current_category_index + 1} / {len(self.categories_with_items)}")
 
@@ -57,16 +57,20 @@ class GroceryMarketView(View):
         end = start + ITEMS_PER_PAGE
         page_items = groceries[start:end]
 
-        for item in page_items:
+        for idx, item in enumerate(page_items):
             button = Button(
                 label=f"Accept (${item['cost']})",
                 style=discord.ButtonStyle.success,
-                custom_id=f"buy_{item['id']}"
+                custom_id=f"buy_{item['id']}",
+                row=idx  # 🟩 this forces vertical stacking (1 button per row)
             )
             button.callback = self.make_buy_callback(item)
             self.add_item(button)
 
-        # Spacer line
+        # Nav buttons below all item buttons
+        nav_row = len(page_items)
+        self.prev_button.row = nav_row
+        self.next_button.row = nav_row
         self.add_item(self.prev_button)
         self.add_item(self.next_button)
 
