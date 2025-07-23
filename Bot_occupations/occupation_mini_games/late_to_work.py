@@ -3,7 +3,6 @@ from discord.ui import View, Button
 import discord
 import asyncio
 from utilities import reward_user, charge_user
-from globals import pool
 
 class SneakInMiniGameView(View):
     def __init__(self, user_id, multiplier=1.0, pool=None):
@@ -27,24 +26,23 @@ class SneakInMiniGameView(View):
         self.add_item(self.left_button)
         self.add_item(self.right_button)
 
-        self.predicaments = [
-            self.predicament_1,
-            self.predicament_2,
-            self.predicament_3,
-            self.predicament_4
+        self.predicament_data = [
+            {"title": "Avoid the security cameras!", "emoji": "🎥", "fail_actor": "a security camera", "reason": "being spotted by security"},
+            {"title": "Avoid your coworkers!", "emoji": "🧍‍♀️", "fail_actor": "a nosy coworker", "reason": "an awkward water cooler chat"},
+            {"title": "Avoid your bosses!", "emoji": "👔", "fail_actor": "your boss", "reason": "a surprise performance review"},
+            {"title": "Avoid the janitor's mop bucket!", "emoji": "🧹", "fail_actor": "the janitor", "reason": "spilling dirty water everywhere"},
         ]
-        random.shuffle(self.predicaments)
 
-        self.obstacle_lanes = []
-        for idx in range(len(self.predicaments)):
-            self.obstacle_lanes.append(self.generate_obstacles_for_predicament(idx))
+        self.obstacle_lanes = self.generate_obstacles_for_all()
 
-    def generate_obstacles_for_predicament(self, idx):
-        if idx == 3:
-            pairs = [["left", "middle"], ["left", "right"], ["middle", "right"]]
-            return random.choice(pairs)
-        else:
-            return [random.choice(self.lanes)]
+    def generate_obstacles_for_all(self):
+        result = []
+        for _ in self.predicament_data:
+            safe_lane = random.choice(self.lanes)
+            obstacles = [lane for lane in self.lanes if lane != safe_lane]
+            random.shuffle(obstacles)
+            result.append(obstacles)
+        return result
 
     async def start_step(self, message: discord.Message):
         if self._timeout_task and not self._timeout_task.done():
@@ -54,23 +52,21 @@ class SneakInMiniGameView(View):
             except asyncio.CancelledError:
                 pass
 
-        if self.step >= len(self.predicaments):
+        if self.step >= len(self.predicament_data):
             self.passed = True
             reward_amount = 1000 * self.multiplier
             try:
                 await reward_user(self.pool, self.user_id, reward_amount)
             except Exception as e:
                 print(f"[ERROR] reward_user failed: {e}")
-            self.result_message = f"You safely navigated all obstacles and earned ${reward_amount:,.2f}! 🎉"
+            self.result_message = f"You quietly slipped into your desk and earned ${reward_amount:,.2f}! 🎉"
             await self._message.edit(embed=self.get_embed(), view=None)
             self.stop()
-
             return
 
         self._message = message
         await message.edit(embed=self.get_embed(), view=self)
         self._timeout_task = asyncio.create_task(self._timeout())
-
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.user_id
@@ -83,7 +79,6 @@ class SneakInMiniGameView(View):
 
     async def handle_move(self, interaction: discord.Interaction, move: str):
         self._interaction = interaction
-
         idx = self.lanes.index(self.current_lane)
 
         if move == "left" and idx > 0:
@@ -94,7 +89,7 @@ class SneakInMiniGameView(View):
         await interaction.response.edit_message(embed=self.get_embed(), view=self)
 
     async def _timeout(self):
-        await asyncio.sleep(3)
+        await asyncio.sleep(10)
         if self.is_finished():
             return
 
@@ -103,15 +98,13 @@ class SneakInMiniGameView(View):
 
         if safe:
             self.step += 1
-            if self.step >= len(self.predicaments):
+            if self.step >= len(self.predicament_data):
                 self.passed = True
-                # Removed reward_user call here to avoid double rewards/messages
-                self.result_message = "You quietly slipped into your desk. Nobody suspects a thing. 🎯"
+                self.result_message = "You made it in undetected. Nice work! 🕶️"
                 await self._message.edit(embed=self.get_embed(), view=None)
                 self.stop()
             else:
                 await self.start_step(self._message)
-
         else:
             self.failed = True
             penalty_amount = 1000 * self.multiplier
@@ -120,113 +113,50 @@ class SneakInMiniGameView(View):
             except Exception as e:
                 print(f"[ERROR] charge_user failed: {e}")
 
-            obstacle_name, fine_reason = self.get_failure_details(self.step, obstacles)
+            pred = self.predicament_data[self.step]
             self.result_message = (
-                f"You were spotted by {obstacle_name} in the {', '.join(obstacles)} lane{'s' if len(obstacles) > 1 else ''}! 💥\n"
-                f"You’ve been flagged for {fine_reason}."
+                f"You were caught by {pred['fail_actor']} in the {', '.join(obstacles)} lane(s)! 💥\n"
+                f"You’ve been flagged for {pred['reason']}."
             )
-
-
             await self._message.edit(embed=self.get_embed(), view=None)
             self.stop()
 
-
-    def get_failure_details(self, step, obstacles):
-        obstacle_names = {
-            0: "your boss",
-            1: "a nosy coworker",
-            2: "a security camera",
-            3: "the janitor with a mop bucket",
-        }
-
-        funny_fines = {
-            0: "getting pulled into a surprise meeting",
-            1: "an awkward water cooler chat",
-            2: "HR sensitivity training",
-            3: "mop-related injury paperwork",
-        }
-
-        name = obstacle_names.get(step, "someone")
-        fine = funny_fines.get(step, "an internal investigation")
-
-        return name, fine
-
-
     def get_embed(self):
-        title = "❌ Caught Sneaking In!" if self.failed else (
-            "✅ You Snuck In!" if self.passed else "🕵️ Sneak In Late"
-        )
-        desc = self.result_message if (self.failed or self.passed) else self.build_obstacle_scene(self.step)
-        page = f"{self.step+1}/4" if not (self.failed or self.passed) else ""
+        if self.failed:
+            title = "❌ Caught Sneaking In!"
+        elif self.passed:
+            title = "✅ You Snuck In!"
+        else:
+            title = self.predicament_data[self.step]["title"]
 
-        color = discord.Color.green() if self.passed else (discord.Color.red() if self.failed else discord.Color.dark_gray())
+        desc = self.result_message if (self.failed or self.passed) else self.build_obstacle_scene(self.step)
+        page = f"{self.step + 1}/4" if not (self.failed or self.passed) else ""
+        color = discord.Color.green() if self.passed else discord.Color.red() if self.failed else discord.Color.dark_gray()
 
         embed = discord.Embed(title=title, description=desc, color=color)
         if page:
             embed.set_footer(text=page)
         return embed
 
-
-
     def is_finished(self):
-        return self.failed or self.passed or self.step >= len(self.predicaments)
+        return self.failed or self.passed or self.step >= len(self.predicament_data)
 
     def build_obstacle_scene(self, step):
         lanes = self.lanes
         user_lane = self.current_lane
         obstacles = self.obstacle_lanes[step]
-
-        obstacle_emojis = {
-            0: "👀",   # Boss
-            1: "🧍‍♀️", # Coworker
-            2: "🎥",   # Security cam
-            3: "🧹",   # Janitor
-        }
+        obstacle_emoji = self.predicament_data[step]["emoji"]
         safe_emojis = ["📎", "🔇", "🚪", "📤", "🕶️"]
-        default_obstacle = "🚫"
-        obstacle_icon = obstacle_emojis.get(step, default_obstacle)
 
-        top = " ".join(obstacle_icon if lane in obstacles else random.choice(safe_emojis) for lane in lanes)
-        bottom = " ".join("🧍" if lane == user_lane else "⬛" for lane in lanes)
+        top_row = " ".join(obstacle_emoji if lane in obstacles else random.choice(safe_emojis) for lane in lanes)
+        bottom_row = " ".join("🧍" if lane == user_lane else "⬛" for lane in lanes)
 
-        return f"{top}\n{bottom}"
-
-    async def predicament_1(self, user_lane, idx):
-        lane = self.obstacle_lanes[idx][0]
-        safe = user_lane != lane
-        msg = f"You hit the kid in the {lane} lane! 💥" if not safe else ""
-        return safe, msg
-
-    async def predicament_2(self, user_lane, idx):
-        lane = self.obstacle_lanes[idx][0]
-        safe = user_lane != lane
-        msg = f"You hit grandma in the {lane} lane! 💥" if not safe else ""
-        return safe, msg
-
-    async def predicament_3(self, user_lane, idx):
-        lane = self.obstacle_lanes[idx][0]
-        safe = user_lane != lane
-        msg = f"You ran over the ball in the {lane} lane! 💥" if not safe else ""
-        return safe, msg
-
-    async def predicament_4(self, user_lane, idx):
-        obstacles = self.obstacle_lanes[idx]
-        safe_lane = next(l for l in self.lanes if l not in obstacles)
-        safe = user_lane == safe_lane
-        msg = f"You hit obstacles in lanes {obstacles[0]} and {obstacles[1]}! 💥" if not safe else ""
-        return safe, msg
+        return f"{top_row}\n{bottom_row}"
 
 
 async def sneak_in_late_game(ctx, user_id, pool):
     view = SneakInMiniGameView(user_id=user_id, pool=pool)
-
-    if hasattr(ctx, "interaction") and ctx.interaction is not None:
-        # Use interaction followup
-        message = await ctx.interaction.followup.send(embed=view.get_embed(), view=view)
-    else:
-        # Fallback to normal ctx.send
-        message = await ctx.send(embed=view.get_embed(), view=view)
-
+    message = await ctx.followup.send(embed=view.get_embed(), view=view)
     await view.start_step(message)
     await view.wait()
     return {
