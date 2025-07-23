@@ -27,11 +27,12 @@ class SneakInMiniGameView(View):
         self.add_item(self.right_button)
 
         self.predicament_data = [
-            {"title": "Avoid the security cameras!", "emoji": "🎥", "fail_actor": "a security camera", "reason": "being spotted by security"},
-            {"title": "Avoid your coworkers!", "emoji": "🧍‍♀️", "fail_actor": "a nosy coworker", "reason": "an awkward water cooler chat"},
-            {"title": "Avoid your bosses!", "emoji": "👔", "fail_actor": "your boss", "reason": "a surprise performance review"},
             {"title": "Avoid the janitor's mop bucket!", "emoji": "🧹", "fail_actor": "the janitor", "reason": "spilling dirty water everywhere"},
+            {"title": "Avoid your coworkers!", "emoji": "🧍‍♀️", "fail_actor": "a nosy coworker", "reason": "an awkward water cooler chat"},
+            {"title": "Avoid the security cameras!", "emoji": "🎥", "fail_actor": "a security camera", "reason": "being spotted by security"},
+            {"title": "Avoid your bosses!", "emoji": "👔", "fail_actor": "your boss", "reason": "a surprise performance review"},
         ]
+
 
         self.obstacle_lanes = self.generate_obstacles_for_all()
 
