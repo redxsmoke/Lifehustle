@@ -4,11 +4,11 @@ from discord import app_commands, Interaction
 from discord.ui import View, Button
 import asyncio
 
-ITEMS_PER_PAGE = 3
+ITEMS_PER_PAGE = 10
 
 class ItemButton(Button):
     def __init__(self, item, user_id, bot):
-        super().__init__(label=f"Accept (${item['cost']})", style=discord.ButtonStyle.success)
+        super().__init__(label=f"Buy (${item['cost']})", style=discord.ButtonStyle.success)
         self.item = item
         self.user_id = user_id
         self.bot = bot
