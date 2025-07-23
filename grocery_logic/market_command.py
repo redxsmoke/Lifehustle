@@ -40,9 +40,9 @@ class GroceryCog(commands.Cog):
 
                 categories_with_items.append((category["name"], formatted_items))
 
-        # Build the view and message content
         view = GroceryMarketView(user_id=interaction.user.id, bot=self.bot, categories_with_items=categories_with_items)
-        content = view.build_market_message()
+        text = view.build_message_text()
+        view.message = await interaction.response.send_message(content=text, view=view, ephemeral=True)
 
         await interaction.response.send_message(content=content, view=view, ephemeral=True)
 
