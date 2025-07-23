@@ -106,6 +106,8 @@ async def setup_hook():
     await bot.load_extension("Easter_eggs.secretbutton")
     await bot.load_extension("Achievements.user_achievements")
     await bot.load_extension("crimes.crime_command")
+    await bot.load_extension("grocery_logic.market_command")
+
 
 
     
