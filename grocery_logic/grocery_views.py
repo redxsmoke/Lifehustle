@@ -1,8 +1,9 @@
 import discord
 from discord.ui import View, Button
 from discord import Interaction
+from db_user import get_user_finances, upsert_user_finances, add_grocery_to_stash
 
-ITEMS_PER_PAGE = 3  # Number of grocery items to show per page within a category
+ITEMS_PER_PAGE = 3
 
 class GroceryMarketView(View):
     def __init__(self, user_id, bot, categories_with_items):
@@ -11,16 +12,13 @@ class GroceryMarketView(View):
         self.bot = bot
         self.categories_with_items = categories_with_items
         self.current_category_index = 0
-        self.current_page = 0  # pagination within current category
+        self.current_page = 0
 
-        # Navigation buttons
+        # Nav buttons
         self.prev_button = Button(label="⬅️ Prev", style=discord.ButtonStyle.secondary)
         self.next_button = Button(label="Next ➡️", style=discord.ButtonStyle.secondary)
         self.prev_button.callback = self.prev_page
         self.next_button.callback = self.next_page
-
-        self.add_item(self.prev_button)
-        self.add_item(self.next_button)
 
         self.add_buy_buttons()
 
@@ -42,17 +40,14 @@ class GroceryMarketView(View):
             lines.append(f"├ Value per Unit: {item.get('value_per_unit', 'N/A')}")
             lines.append(f"├ Expires: {item['shelf_life']} days")
             lines.append(f"├ ID: {item['id']}")
-            lines.append("")  # blank line after each item
+            lines.append("")  # visually separate each item from its button
 
         lines.append(f"Page {self.current_page + 1} / {max_page + 1} — Category {self.current_category_index + 1} / {len(self.categories_with_items)}")
 
         return "\n".join(lines)
 
     def add_buy_buttons(self):
-        # Remove all buy buttons first, keep nav buttons
-        buttons_to_remove = [child for child in self.children if child not in (self.prev_button, self.next_button)]
-        for button in buttons_to_remove:
-            self.remove_item(button)
+        self.clear_items()
 
         _, groceries = self.categories_with_items[self.current_category_index]
         total_items = len(groceries)
@@ -63,15 +58,18 @@ class GroceryMarketView(View):
         page_items = groceries[start:end]
 
         for item in page_items:
-            btn = Button(
-                label=f"Buy ${item['cost']}",
+            button = Button(
+                label=f"Accept (${item['cost']})",
                 style=discord.ButtonStyle.success,
                 custom_id=f"buy_{item['id']}"
             )
-            btn.callback = self.make_buy_callback(item)
-            self.add_item(btn)
+            button.callback = self.make_buy_callback(item)
+            self.add_item(button)
 
-        # Disable prev/next nav buttons on edges
+        # Spacer line
+        self.add_item(self.prev_button)
+        self.add_item(self.next_button)
+
         self.prev_button.disabled = self.current_page == 0
         self.next_button.disabled = self.current_page == max_page
 
