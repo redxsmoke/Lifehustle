@@ -59,7 +59,7 @@ class GroceryMarketView(View):
 
         for idx, item in enumerate(page_items):
             button = Button(
-                label=f"Accept (${item['cost']})",
+                label=f"Buy (${item['cost']})",
                 style=discord.ButtonStyle.success,
                 custom_id=f"buy_{item['id']}",
                 row=idx  # 🟩 this forces vertical stacking (1 button per row)
