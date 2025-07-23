@@ -129,3 +129,54 @@ class GroceryMarketView(View):
             child.disabled = True
         if hasattr(self, "message"):
             await self.message.edit(view=self)
+
+class GroceryStashPaginationView(View):
+    def __init__(self, user_id, embeds):
+        super().__init__(timeout=180)
+        self.user_id = user_id
+        self.embeds = embeds
+        self.current_page = 0
+        self.max_page = len(embeds) - 1
+
+        self.prev_button = Button(label="Previous", style=discord.ButtonStyle.secondary)
+        self.next_button = Button(label="Next", style=discord.ButtonStyle.secondary)
+        self.prev_button.callback = self.prev_page
+        self.next_button.callback = self.next_page
+
+        self.add_item(self.prev_button)
+        self.add_item(self.next_button)
+
+        self.update_buttons()
+
+    def update_buttons(self):
+        self.prev_button.disabled = self.current_page == 0
+        self.next_button.disabled = self.current_page == self.max_page
+
+    async def prev_page(self, interaction: Interaction):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This is not your stash view!", ephemeral=True)
+        if self.current_page > 0:
+            self.current_page -= 1
+            self.update_buttons()
+            await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
+        else:
+            await interaction.response.defer()
+
+    async def next_page(self, interaction: Interaction):
+        if interaction.user.id != self.user_id:
+            return await interaction.response.send_message("This is not your stash view!", ephemeral=True)
+        if self.current_page < self.max_page:
+            self.current_page += 1
+            self.update_buttons()
+            await interaction.response.edit_message(embed=self.embeds[self.current_page], view=self)
+        else:
+            await interaction.response.defer()
+
+    async def send(self, interaction: Interaction):
+        self.message = await interaction.followup.send(embed=self.embeds[self.current_page], view=self, ephemeral=True)
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if hasattr(self, "message"):
+            await self.message.edit(view=self)

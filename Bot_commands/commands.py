@@ -399,6 +399,7 @@ def register_commands(tree: app_commands.CommandTree):
                     view = GroceryStashPaginationView(interaction.user.id, embeds)
                     await view.send(interaction)
 
+
         except Exception as e:
             await interaction.followup.send(f"❌ An error occurred: {e}")
 
