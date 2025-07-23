@@ -184,9 +184,9 @@ class CareerPath(commands.Cog):
                         "but this job doesn't have a mini-game yet. No payout this time!"
                     )
                     if hasattr(ctx, "interaction") and ctx.interaction is not None:
-                        await ctx.interaction.followup.send(msg)
+                        await ctx.interaction.followup.send(no_minigame_msg)
                     else:
-                        await ctx.send(msg)
+                        await ctx.send(no_minigame_msg)
 
                     return
 
@@ -226,7 +226,10 @@ class CareerPath(commands.Cog):
                     }
 
                 if mini_game_result is None:
-                    await ctx.send("❌ Mini-game did not complete correctly. Please try again.")
+                    if hasattr(ctx, "interaction") and ctx.interaction is not None:
+                        await ctx.interaction.followup.send("❌ Mini-game did not complete correctly. Please try again.")
+                    else:
+                        await ctx.send("❌ Mini-game did not complete correctly. Please try again.")
                     return
                 print(f"[DEBUG] mini_game_result raw: {mini_game_result}")
 
@@ -305,9 +308,9 @@ class CareerPath(commands.Cog):
             print(f"[clockin] Exception caught: {e}")
             error_msg = "❌ An error occurred while processing your shift. Please try again later."
             if hasattr(ctx, "interaction") and ctx.interaction is not None:
-                await ctx.interaction.followup.send(msg)
+                await ctx.interaction.followup.send(error_msg)
             else:
-                await ctx.send(msg)
+                await ctx.send(error_msg)
 
 
 
