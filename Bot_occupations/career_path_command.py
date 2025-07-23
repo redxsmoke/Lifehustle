@@ -15,6 +15,7 @@ from Bot_occupations.occupation_mini_games import whichdidthat
 from Bot_occupations.occupation_mini_games import snake_breakroom
 from Bot_occupations.occupation_mini_games.quickchange import run_quick_math_game
 from Bot_occupations.occupation_mini_games.shared import build_paystub_embed
+from Bot_occupations.occupation_mini_games.late_to_work import SneakInMiniGameView
 
 
 
@@ -96,208 +97,214 @@ class CareerPath(commands.Cog):
             return True
 
 
-    @careerpath.command(name="clockin", description="Clock in to work and collect your pay")
-    async def clockin(self, ctx):
-        print("✅ DEBUG: clockin command invoked")
-        await ctx.defer()
-        user_id = ctx.author.id
-        print(f"[clockin] Started for user_id: {user_id}")
+@careerpath.command(name="clockin", description="Clock in to work and collect your pay")
+async def clockin(self, ctx):
+    print("✅ DEBUG: clockin command invoked")
+    await ctx.defer()
+    user_id = ctx.author.id
+    print(f"[clockin] Started for user_id: {user_id}")
 
-        try:
-            async with self.db_pool.acquire() as conn:
-                print("[clockin] Checking occupation_needs_warning...")
+    try:
+        async with self.db_pool.acquire() as conn:
+            print("[clockin] Checking occupation_needs_warning...")
+            try:
+                needs_warning = await conn.fetchval(
+                    "SELECT occupation_needs_warning FROM users WHERE user_id = $1",
+                    user_id
+                )
+                print(f"[clockin] occupation_needs_warning: {needs_warning}")
+            except Exception as e:
+                print(f"[clockin] ERROR fetching occupation_needs_warning: {e}")
+                raise
+
+            if needs_warning:
+                print("[clockin] Sending warning message...")
+                await self._send_warning_message(ctx)
                 try:
-                    needs_warning = await conn.fetchval(
-                        "SELECT occupation_needs_warning FROM users WHERE user_id = $1",
+                    await conn.execute(
+                        "UPDATE users SET occupation_needs_warning = FALSE WHERE user_id = $1",
                         user_id
                     )
-                    print(f"[clockin] occupation_needs_warning: {needs_warning}")
+                    print("[clockin] Cleared occupation_needs_warning flag.")
                 except Exception as e:
-                    print(f"[clockin] ERROR fetching occupation_needs_warning: {e}")
+                    print(f"[clockin] ERROR clearing occupation_needs_warning: {e}")
                     raise
 
-                if needs_warning:
-                    print("[clockin] Sending warning message...")
-                    await self._send_warning_message(ctx)
-                    try:
-                        await conn.execute(
-                            "UPDATE users SET occupation_needs_warning = FALSE WHERE user_id = $1",
-                            user_id
-                        )
-                        print("[clockin] Cleared occupation_needs_warning flag.")
-                    except Exception as e:
-                        print(f"[clockin] ERROR clearing occupation_needs_warning: {e}")
-                        raise
+            print("[clockin] Fetching occupation info...")
+            occ_query = """
+                SELECT o.cd_occupation_id, o.description, o.pay_rate, o.required_shifts_per_day, o.company_name
+                FROM users u
+                JOIN cd_occupations o ON u.occupation_id = o.cd_occupation_id
+                WHERE u.user_id = $1
+                AND u.occupation_id IS NOT NULL;
+            """
+            occupation = await conn.fetchrow(occ_query, user_id)
+            print(f"[clockin] Occupation row: {occupation}")
 
-                print("[clockin] Fetching occupation info...")
-                occ_query = """
-                    SELECT o.cd_occupation_id, o.description, o.pay_rate, o.required_shifts_per_day, o.company_name
-                    FROM users u
-                    JOIN cd_occupations o ON u.occupation_id = o.cd_occupation_id
-                    WHERE u.user_id = $1
-                    AND u.occupation_id IS NOT NULL;
-                """
-                occupation = await conn.fetchrow(occ_query, user_id)
-                print(f"[clockin] Occupation row: {occupation}")
+            if occupation is None:
+                msg = "❌ You don't have a job yet. Use `/need_work` to get hired!"
+                if hasattr(ctx, "followup"):
+                    await ctx.followup.send(msg)
+                else:
+                    await ctx.send(msg)
+                return
 
-                if occupation is None:
-                    msg = "❌ You don't have a job yet. Use `/need_work` to get hired!"
-                    if hasattr(ctx, "followup"):
-                        await ctx.followup.send(msg)
-                    else:
-                        await ctx.send(msg)
-                    return
+            occupation_id = occupation["cd_occupation_id"]
+            occupation_name = occupation["description"]
+            company_name = occupation["company_name"]
+            pay_rate = float(occupation["pay_rate"])
+            required_shifts_per_day = occupation["required_shifts_per_day"]
 
-                occupation_id = occupation["cd_occupation_id"]
-                occupation_name = occupation["description"]
-                company_name = occupation["company_name"]
-                pay_rate = float(occupation["pay_rate"])
-                required_shifts_per_day = occupation["required_shifts_per_day"]
+            # Insert a new shift log
+            await conn.execute(
+                "INSERT INTO user_work_log(user_id, work_timestamp) VALUES ($1, NOW())",
+                user_id
+            )
+            print("[clockin] Shift log inserted.")
 
-                                # Insert a new shift log
-                await conn.execute(
-                    "INSERT INTO user_work_log(user_id, work_timestamp) VALUES ($1, NOW())",
-                    user_id
+            # --- MINI-GAME SELECTION ---
+            minigames_by_id = {
+                1: [run_quick_math_game, snake_breakroom, whichdidthat],  # Professional Cuddler
+                2: [snake_breakroom, whichdidthat],                      # Senior Bubble Wrap Popper
+                3: [snake_breakroom, whichdidthat],                      # Street Performer
+                4: [run_quick_math_game, snake_breakroom, whichdidthat], # Dog Walker
+                5: [snake_breakroom, whichdidthat],                      # Human Statue
+                11: [run_quick_math_game, snake_breakroom, whichdidthat, sneak_in_late_game], # Grocery Store Clerk
+                16: [run_quick_math_game, snake_breakroom, whichdidthat, sneak_in_late_game], # Ice Cream Truck Driver
+                19: [sneak_in_late_game], # Waiter/Waitress
+                61: [snake_breakroom, sneak_in_late_game],               # Animal Control only
+            }
+
+            mini_game_modules = minigames_by_id.get(occupation_id)
+            if not mini_game_modules:
+                no_minigame_msg = (
+                    f"🧹 You worked a shift as a **{occupation_name}**, "
+                    "but this job doesn't have a mini-game yet. No payout this time!"
                 )
-                print("[clockin] Shift log inserted.")
+                if hasattr(ctx, "followup"):
+                    await ctx.followup.send(no_minigame_msg)
+                else:
+                    await ctx.send(no_minigame_msg)
+                return
 
-                            # --- MINI-GAME SELECTION ---
-                minigames_by_id = {
-                    1: [run_quick_math_game, snake_breakroom, whichdidthat],  # Professional Cuddler
-                    2: [snake_breakroom, whichdidthat],                      # Senior Bubble Wrap Popper
-                    3: [snake_breakroom, whichdidthat],                      # Street Performer
-                    4: [run_quick_math_game, snake_breakroom, whichdidthat], # Dog Walker
-                    5: [snake_breakroom, whichdidthat],                      # Human Statue
-                    11: [run_quick_math_game, snake_breakroom, whichdidthat],
-                    16: [run_quick_math_game, snake_breakroom, whichdidthat],
-                    19: [run_quick_math_game, snake_breakroom, whichdidthat],
-                    61: [snake_breakroom],                                   # Animal Control only
+            minigame_module = random.choice(mini_game_modules)
+
+            mini_game_result = None
+            message = None  # Track message for editing paystub later
+
+            # Existing run_quick_math_game logic
+            if minigame_module == run_quick_math_game:
+                mini_game_result = await run_quick_math_game(ctx.interaction, job_key=occupation_name.lower())
+                message = None
+
+            # Your new sneak_in_late_game logic
+            elif minigame_module == sneak_in_late_game:
+                mini_game_result = await sneak_in_late_game(ctx, user_id, self.db_pool)
+                message = None  # The wrapper sends its own message
+
+            # Existing .play() interface for other games
+            else:
+                embed, view = await minigame_module.play(
+                    self.db_pool,
+                    ctx.guild.id,
+                    user_id,
+                    occupation_id,
+                    pay_rate if minigame_module == snake_breakroom else None,
+                    None
+                )
+                message = await ctx.send(embed=embed, view=view)
+                await view.wait()
+                mini_game_result = {
+                    "result": getattr(view, "outcome_type", "neutral"),
+                    "bonus": getattr(view, "bonus_amount", 0),
+                    "message": getattr(view, "outcome_summary", None),
+                    "dock": getattr(view, "dock_amount", 0),
+                    "penalty": getattr(view, "penalty_amount", 0),
                 }
 
-                mini_game_modules = minigames_by_id.get(occupation_id)
-                if not mini_game_modules:
-                    no_minigame_msg = (
-                        f"🧹 You worked a shift as a **{occupation_name}**, "
-                        "but this job doesn't have a mini-game yet. No payout this time!"
-                    )
-                    if hasattr(ctx, "followup"):
-                        await ctx.followup.send(no_minigame_msg)
-                    else:
-                        await ctx.send(no_minigame_msg)
-                    return
+            if mini_game_result is None:
+                await ctx.send("❌ Mini-game did not complete correctly. Please try again.")
+                return
+            print(f"[DEBUG] mini_game_result raw: {mini_game_result}")
 
-                minigame_module = random.choice(mini_game_modules)
+            result_type = mini_game_result.get('result', 'neutral')
 
-                mini_game_result = None  
+            # Pull bonus or fallback to penalty/dock if bonus is missing
+            if 'bonus' in mini_game_result:
+                bonus = mini_game_result['bonus']
+            elif result_type == 'timeout' and 'penalty' in mini_game_result:
+                bonus = -abs(mini_game_result['penalty'])
+            elif result_type in ('wrong', 'negative') and 'dock' in mini_game_result:
+                bonus = -abs(mini_game_result['dock'])
+            else:
+                bonus = 0
 
-                if minigame_module == run_quick_math_game:
-                    mini_game_result = await run_quick_math_game(ctx.interaction, job_key=occupation_name.lower())
-                    message = None
-                else:
-                    embed, view = await minigame_module.play(
-                        self.db_pool,
-                        ctx.guild.id,
-                        user_id,
-                        occupation_id,
-                        pay_rate if minigame_module == snake_breakroom else None,
-                        None
-                    )
-                    message = await ctx.send(embed=embed, view=view)
-                    await view.wait()
-                    mini_game_result = {
-                        "result": getattr(view, "outcome_type", "neutral"),
-                        "bonus": getattr(view, "bonus_amount", 0),
-                        "message": getattr(view, "outcome_summary", None),
-                        "dock": getattr(view, "dock_amount", 0),
-                        "penalty": getattr(view, "penalty_amount", 0),
-                    }
+            print(f"[DEBUG] Calculated bonus: {bonus}")
 
-                if mini_game_result is None:
-                    await ctx.send("❌ Mini-game did not complete correctly. Please try again.")
-                    return
-                print(f"[DEBUG] mini_game_result raw: {mini_game_result}")
+            outcome_summary = mini_game_result.get('message', "No mini-game outcome.")
+            total_pay = pay_rate + bonus
+            print(f"[DEBUG] pay_rate: {pay_rate}, total_pay (base + bonus): {total_pay}")
 
-                result_type = mini_game_result.get('result', 'neutral')
+            # Count shifts today
+            shifts_today = await conn.fetchval(
+                "SELECT COUNT(*) FROM user_work_log WHERE user_id = $1 AND work_timestamp >= CURRENT_DATE",
+                user_id
+            )
+            print(f"[clockin] Shifts today: {shifts_today}")
 
-                # Pull bonus or fallback to penalty/dock if bonus is missing
-                if 'bonus' in mini_game_result:
-                    bonus = mini_game_result['bonus']
-                elif result_type == 'timeout' and 'penalty' in mini_game_result:
-                    bonus = -abs(mini_game_result['penalty'])
-                elif result_type in ('wrong', 'negative') and 'dock' in mini_game_result:
-                    bonus = -abs(mini_game_result['dock'])
-                else:
-                    bonus = 0
-
-                print(f"[DEBUG] Calculated bonus: {bonus}")
-
-
-                outcome_summary = mini_game_result.get('message', "No mini-game outcome.")
-                total_pay = pay_rate + bonus
-                print(f"[DEBUG] pay_rate: {pay_rate}, total_pay (base + bonus): {total_pay}")
-
-                # Count shifts today
-                shifts_today = await conn.fetchval(
-                    "SELECT COUNT(*) FROM user_work_log WHERE user_id = $1 AND work_timestamp >= CURRENT_DATE",
-                    user_id
-                )
-                print(f"[clockin] Shifts today: {shifts_today}")
-
-
-                # Get new balance to show in embed
-                new_balance = await conn.fetchval(
-                    "SELECT checking_account_balance FROM user_finances WHERE user_id = $1",
-                    user_id
-                )
-
-            # Update user balance once here
-            async with self.db_pool.acquire() as conn:
-                await conn.execute(
-                    "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
-                    total_pay,
-                    user_id
-                )
-                new_balance = await conn.fetchval(
-                    "SELECT checking_account_balance FROM user_finances WHERE user_id = $1",
-                    user_id
-                )
-
-            # Build the combined paystub description
-            paystub_description = (
-                f"> You completed your shift as a **{occupation_name}**.\n"
-                f"> Base pay: **${pay_rate:.2f}**\n"
-                f"> Mini-game bonus: **${bonus:+.2f}**\n"
-                f"> Total earned: **${total_pay:.2f}**\n"
-                f"> New balance: **${new_balance:,.2f}**\n"
+            # Get new balance to show in embed
+            new_balance = await conn.fetchval(
+                "SELECT checking_account_balance FROM user_finances WHERE user_id = $1",
+                user_id
             )
 
-            if outcome_summary:
-                paystub_description += f"\n**Mini-game outcome:**\n{outcome_summary}\n"
-
-            combined_embed = discord.Embed(
-                title=f"🕒 Shift Logged - Pay Stub from ***{company_name}***",
-                description=paystub_description,
-                color=discord.Color.green() if bonus > 0 else discord.Color.red() if bonus < 0 else discord.Color.gold()
+        # Update user balance once here
+        async with self.db_pool.acquire() as conn:
+            await conn.execute(
+                "UPDATE user_finances SET checking_account_balance = checking_account_balance + $1 WHERE user_id = $2",
+                total_pay,
+                user_id
+            )
+            new_balance = await conn.fetchval(
+                "SELECT checking_account_balance FROM user_finances WHERE user_id = $1",
+                user_id
             )
 
-            # Edit the original mini-game message to remove buttons and show paystub
-            # Only if message is defined (i.e., not None)
-            if message:
-                await message.edit(embed=combined_embed, view=None)
-            else:
-                # If no original message (e.g., quick math game), just send the embed
-                await ctx.send(embed=combined_embed)
+        # Build the combined paystub description
+        paystub_description = (
+            f"> You completed your shift as a **{occupation_name}**.\n"
+            f"> Base pay: **${pay_rate:.2f}**\n"
+            f"> Mini-game bonus: **${bonus:+.2f}**\n"
+            f"> Total earned: **${total_pay:.2f}**\n"
+            f"> New balance: **${new_balance:,.2f}**\n"
+        )
 
-            print("[clockin] Response sent.")
+        if outcome_summary:
+            paystub_description += f"\n**Mini-game outcome:**\n{outcome_summary}\n"
 
+        combined_embed = discord.Embed(
+            title=f"🕒 Shift Logged - Pay Stub from ***{company_name}***",
+            description=paystub_description,
+            color=discord.Color.green() if bonus > 0 else discord.Color.red() if bonus < 0 else discord.Color.gold()
+        )
 
-        except Exception as e:
-            print(f"[clockin] Exception caught: {e}")
-            error_msg = "❌ An error occurred while processing your shift. Please try again later."
-            if hasattr(ctx, "followup"):
-                await ctx.followup.send(error_msg)
-            else:
-                await ctx.send(error_msg)
+        # Edit the original mini-game message to remove buttons and show paystub
+        # Only if message is defined (i.e., not None)
+        if message:
+            await message.edit(embed=combined_embed, view=None)
+        else:
+            # If no original message (e.g., quick math game or sneak_in_late_game), just send the embed
+            await ctx.send(embed=combined_embed)
+
+        print("[clockin] Response sent.")
+
+    except Exception as e:
+        print(f"[clockin] Exception caught: {e}")
+        error_msg = "❌ An error occurred while processing your shift. Please try again later."
+        if hasattr(ctx, "followup"):
+            await ctx.followup.send(error_msg)
+        else:
+            await ctx.send(error_msg)
 
     @careerpath.command(name="resign", description="Resign from your job with confirmation")
     async def resign(self, ctx):
