@@ -396,8 +396,8 @@ def register_commands(tree: app_commands.CommandTree):
                 if len(embeds) == 1:
                     await interaction.followup.send(embed=embeds[0])
                 else:
-                view = GroceryStashPaginationView(interaction.user.id, embeds)
-                await view.send(interaction)
+                    view = GroceryStashPaginationView(interaction.user.id, embeds)
+                    await view.send(interaction)
 
 
         except Exception as e:
