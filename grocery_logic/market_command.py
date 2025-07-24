@@ -37,24 +37,21 @@ class ControlView(View):
         self.next_button = Button(label="Next ➡️", style=discord.ButtonStyle.secondary)
         self.prev_button.callback = self.prev_page
         self.next_button.callback = self.next_page
-        # DON'T add buttons here to self — we'll build a nav-only view instead
+        # Note: NOT adding buttons to self here; we'll build nav-only view at bottom
 
     def build_nav_view(self):
         view = View()
-        # Set disabled state depending on current page
         self.prev_button.disabled = self.current_page == 0
         category_name, groceries = self.categories_with_items[self.current_category_index]
         total_items = len(groceries)
         max_page = max(0, (total_items - 1) // ITEMS_PER_PAGE)
         self.next_button.disabled = self.current_page == max_page
-
-        # Add buttons to new view
         view.add_item(self.prev_button)
         view.add_item(self.next_button)
         return view
 
     async def send_item_messages(self):
-        # Delete old item messages
+        # Delete old item messages (the per-item ones)
         for msg in self.item_messages:
             try:
                 await msg.delete()
@@ -69,7 +66,7 @@ class ControlView(View):
         end = start + ITEMS_PER_PAGE
         page_items = groceries[start:end]
 
-        # Send one message per item with its own accept button only
+        # Send one message per item, each with accept button
         for idx, item in enumerate(page_items, start=1 + self.current_page * ITEMS_PER_PAGE):
             content = (
                 f"**Buying {idx} {item['emoji']} {item['name']}**\n"
@@ -79,12 +76,13 @@ class ControlView(View):
                 f"├ ID: {item['id']}\n"
             )
             view = View()
-            view.add_item(ItemButton(item, self.user_id, self.bot))  # Accept button only
+            view.add_item(ItemButton(item, self.user_id, self.bot))
             msg = await self.main_message.channel.send(content=content, view=view)
             self.item_messages.append(msg)
 
-        # Edit main message with nav buttons only
+        # Now edit the main message with the category text + nav buttons only
         await self.main_message.edit(content=self.build_main_message_text(), view=self.build_nav_view())
+
 
     def build_main_message_text(self):
         total_categories = len(self.categories_with_items)
