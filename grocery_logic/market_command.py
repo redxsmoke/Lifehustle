@@ -37,8 +37,21 @@ class ControlView(View):
         self.next_button = Button(label="Next ➡️", style=discord.ButtonStyle.secondary)
         self.prev_button.callback = self.prev_page
         self.next_button.callback = self.next_page
-        self.add_item(self.prev_button)
-        self.add_item(self.next_button)
+        # DON'T add buttons here to self — we'll build a nav-only view instead
+
+    def build_nav_view(self):
+        view = View()
+        # Set disabled state depending on current page
+        self.prev_button.disabled = self.current_page == 0
+        category_name, groceries = self.categories_with_items[self.current_category_index]
+        total_items = len(groceries)
+        max_page = max(0, (total_items - 1) // ITEMS_PER_PAGE)
+        self.next_button.disabled = self.current_page == max_page
+
+        # Add buttons to new view
+        view.add_item(self.prev_button)
+        view.add_item(self.next_button)
+        return view
 
     async def send_item_messages(self):
         # Delete old item messages
@@ -56,38 +69,22 @@ class ControlView(View):
         end = start + ITEMS_PER_PAGE
         page_items = groceries[start:end]
 
-        # Build item list content in a single message
-        lines = [f"🛒 **{category_name} Market**\n"]
-        view = View(timeout=300)
-
+        # Send one message per item with its own accept button only
         for idx, item in enumerate(page_items, start=1 + self.current_page * ITEMS_PER_PAGE):
-            lines.append(f"**Buying {idx} {item['emoji']} {item['name']}**")
-            lines.append(f"├ For: ${item['cost']}")
-            lines.append(f"├ Value per Unit: {item.get('value_per_unit', 'N/A')}")
-            lines.append(f"├ Expires: {item['shelf_life']} days")
-            lines.append(f"├ ID: {item['id']}")
-            lines.append("")
+            content = (
+                f"**Buying {idx} {item['emoji']} {item['name']}**\n"
+                f"├ For: ${item['cost']}\n"
+                f"├ Value per Unit: {item.get('value_per_unit', 'N/A')}\n"
+                f"├ Expires: {item['shelf_life']} days\n"
+                f"├ ID: {item['id']}\n"
+            )
+            view = View()
+            view.add_item(ItemButton(item, self.user_id, self.bot))  # Accept button only
+            msg = await self.main_message.channel.send(content=content, view=view)
+            self.item_messages.append(msg)
 
-            button = ItemButton(item, self.user_id, self.bot)
-            button.row = idx  # Forces vertical stacking
-            view.add_item(button)
-
-        # Pagination footer
-        lines.append(f"Page {self.current_page + 1} / {max_page + 1} — Category {self.current_category_index + 1} / {len(self.categories_with_items)}")
-
-        # Add nav buttons at bottom
-        nav_row = len(page_items)
-        self.prev_button.row = nav_row
-        self.next_button.row = nav_row
-        view.add_item(self.prev_button)
-        view.add_item(self.next_button)
-
-        self.prev_button.disabled = self.current_page == 0
-        self.next_button.disabled = self.current_page == max_page
-
-        msg = await self.main_message.channel.send(content="\n".join(lines), view=view)
-        self.item_messages.append(msg)
-
+        # Edit main message with nav buttons only
+        await self.main_message.edit(content=self.build_main_message_text(), view=self.build_nav_view())
 
     def build_main_message_text(self):
         total_categories = len(self.categories_with_items)
