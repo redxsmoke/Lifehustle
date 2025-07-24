@@ -1,9 +1,27 @@
 import discord
-from discord.ui import View, Button
+from discord.ui import View, Button, Select
 from discord import Interaction
 from db_user import get_user_finances, upsert_user_finances, add_grocery_to_stash
 
 ITEMS_PER_PAGE = 3
+
+class CategorySelect(Select):
+    def __init__(self, control_view: "GroceryMarketView"):
+        self.control_view = control_view
+        options = [
+            discord.SelectOption(label=cat[0], description=f"Category {i+1}", value=str(i))
+            for i, cat in enumerate(control_view.categories_with_items)
+        ]
+        super().__init__(placeholder="Select Category...", options=options, row=0)
+
+    async def callback(self, interaction: Interaction):
+        if interaction.user.id != self.control_view.user_id:
+            await interaction.response.send_message("This isn’t your market view.", ephemeral=True)
+            return
+        self.control_view.current_category_index = int(self.values[0])
+        self.control_view.current_page = 0
+        self.control_view.add_buy_buttons()
+        await interaction.response.edit_message(content=self.control_view.build_market_message(), view=self.control_view)
 
 class GroceryMarketView(View):
     def __init__(self, user_id, bot, categories_with_items):
@@ -20,6 +38,10 @@ class GroceryMarketView(View):
         self.prev_button.callback = self.prev_page
         self.next_button.callback = self.next_page
 
+        # Add category dropdown
+        self.category_select = CategorySelect(self)
+        self.add_item(self.category_select)
+
         self.add_buy_buttons()
 
     def build_market_message(self):
@@ -35,11 +57,9 @@ class GroceryMarketView(View):
         lines = [f"🛒 **{category_name} Market**\n"]
 
         for idx, item in enumerate(page_items, start=1 + self.current_page * ITEMS_PER_PAGE):
-            lines.append(f"**Buying {idx} {item['emoji']} {item['name']}**")
-            lines.append(f"├ For: ${item['cost']}")
-            lines.append(f"├ Value per Unit: {item.get('value_per_unit', 'N/A')}")
+            lines.append(f"**{item['emoji']} {item['name']}**")
+            lines.append(f"├ Price: ${item['cost']}")
             lines.append(f"├ Expires: {item['shelf_life']} days")
-            lines.append(f"├ ID: {item['id']}")
             lines.append("")  # spacer before button
 
         lines.append(f"Page {self.current_page + 1} / {max_page + 1} — Category {self.current_category_index + 1} / {len(self.categories_with_items)}")
@@ -48,6 +68,9 @@ class GroceryMarketView(View):
 
     def add_buy_buttons(self):
         self.clear_items()
+
+        # Add the category dropdown again
+        self.add_item(self.category_select)
 
         _, groceries = self.categories_with_items[self.current_category_index]
         total_items = len(groceries)
@@ -62,13 +85,13 @@ class GroceryMarketView(View):
                 label=f"Buy (${item['cost']})",
                 style=discord.ButtonStyle.success,
                 custom_id=f"buy_{item['id']}",
-                row=idx  # 🟩 this forces vertical stacking (1 button per row)
+                row=idx + 1  # +1 so dropdown is row 0, buttons start on row 1
             )
             button.callback = self.make_buy_callback(item)
             self.add_item(button)
 
         # Nav buttons below all item buttons
-        nav_row = len(page_items)
+        nav_row = len(page_items) + 1
         self.prev_button.row = nav_row
         self.next_button.row = nav_row
         self.add_item(self.prev_button)

@@ -74,19 +74,17 @@ class ControlView(View):
         end = start + ITEMS_PER_PAGE
         page_items = groceries[start:end]
 
-        # Send one message per item, each with accept button
         for idx, item in enumerate(page_items, start=1 + self.current_page * ITEMS_PER_PAGE):
             content = (
-                f"**Buying {idx} {item['emoji']} {item['name']}**\n"
-                f"├ For: ${item['cost']}\n"
-                f"├ Value per Unit: {item.get('value_per_unit', 'N/A')}\n"
+                f"{item['emoji']} {item['name']}\n"
+                f"├ Price: ${item['cost']}\n"
                 f"├ Expires: {item['shelf_life']} days\n"
-                f"├ ID: {item['id']}\n"
             )
             view = View()
             view.add_item(ItemButton(item, self.user_id, self.bot))
             msg = await self.main_message.channel.send(content=content, view=view)
             self.item_messages.append(msg)
+
 
         # Now send the footer + nav buttons as a new message below all items
         footer_text = self.build_main_message_text()
