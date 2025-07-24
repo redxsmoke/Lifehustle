@@ -166,12 +166,13 @@ class GroceryCog(commands.Cog):
                 ]
                 categories_with_items.append((category["name"], formatted_items))
 
-        # Send a dummy message for controls first
-        main_msg = await interaction.response.send_message(content="Loading market...", ephemeral=True)
-        main_msg = await interaction.original_response()
+        
+        await interaction.response.defer()  
+
+        main_msg = await interaction.followup.send(content="Loading market...", ephemeral=False)
 
         view = ControlView(interaction.user.id, self.bot, categories_with_items, main_msg)
-        await view.send_item_messages()  # Send item messages after main
+        await view.send_item_messages()
 
         # Edit main message with proper content and view
         await main_msg.edit(content=view.build_main_message_text(), view=view)
