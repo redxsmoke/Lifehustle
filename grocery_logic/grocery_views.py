@@ -69,13 +69,15 @@ class GroceryMarketView(View):
     def add_buy_buttons(self):
         self.clear_items()
         self.add_item(self.category_select)
-        self.add_item(self.prev_button)
-        self.add_item(self.next_button)
 
         self.prev_button.disabled = self.current_page == 0
         _, groceries = self.categories_with_items[self.current_category_index]
         max_page = max(0, (len(groceries) - 1) // ITEMS_PER_PAGE)
         self.next_button.disabled = self.current_page == max_page
+
+        self.add_item(self.prev_button)
+        self.add_item(self.next_button)
+
 
 
     def make_buy_callback(self, item):

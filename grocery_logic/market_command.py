@@ -103,6 +103,7 @@ class ControlView(View):
             msg = await self.channel.send(content=content, view=view)
             self.item_messages.append(msg)
 
+
         footer_text = self.build_main_message_text()
         footer_view = self.build_nav_view()
         footer_view.add_item(self.category_select)
