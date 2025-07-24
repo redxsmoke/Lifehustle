@@ -23,17 +23,13 @@ class ItemButton(Button):
 
 
 class CategorySelect(Select):
-    def __init__(self, control_view):
+    def __init__(self, control_view: "ControlView"):
+        self.control_view = control_view
         options = [
-            discord.SelectOption(
-                label=cat[0],
-                value=str(i),
-                description=f"Category {i + 1}"
-            )
+            discord.SelectOption(label=cat[0], description=f"Category {i+1}", value=str(i))
             for i, cat in enumerate(control_view.categories_with_items)
         ]
         super().__init__(placeholder="Select Category...", options=options, row=0)
-        self.control_view = control_view
 
     async def callback(self, interaction: Interaction):
         if interaction.user.id != self.control_view.user_id:
@@ -41,12 +37,12 @@ class CategorySelect(Select):
             return
         self.control_view.current_category_index = int(self.values[0])
         self.control_view.current_page = 0
-        await interaction.response.defer()
-        await self.control_view.send_item_messages()
+        self.control_view.add_buy_buttons()
+        await interaction.response.edit_message(content=self.control_view.build_main_message_text(), view=self.control_view)
 
 
 class ControlView(View):
-    def __init__(self, user_id, bot, categories_with_items, channel):
+    def __init__(self, user_id, bot, categories_with_items, channel, main_message):
         super().__init__(timeout=300)
         self.user_id = user_id
         self.bot = bot
@@ -54,16 +50,18 @@ class ControlView(View):
         self.current_category_index = 0
         self.current_page = 0
         self.channel = channel
+        self.main_message = main_message
         self.item_messages = []
-
-        self.category_select = CategorySelect(self)
-        self.add_item(self.category_select)
 
         self.prev_button = Button(label="⬅️ Prev", style=discord.ButtonStyle.secondary)
         self.next_button = Button(label="Next ➡️", style=discord.ButtonStyle.secondary)
         self.prev_button.callback = self.prev_page
         self.next_button.callback = self.next_page
-        # Note: NOT adding buttons to self here; we'll build nav-only view at bottom
+
+        self.category_select = CategorySelect(self)
+        self.add_item(self.category_select)
+
+        self.add_buy_buttons()
 
     def build_nav_view(self):
         view = View()
@@ -98,10 +96,6 @@ class ControlView(View):
         end = start + ITEMS_PER_PAGE
         page_items = groceries[start:end]
 
-        # Update dropdown selected option
-        for option in self.category_select.options:
-            option.default = (int(option.value) == self.current_category_index)
-
         for idx, item in enumerate(page_items, start=1 + self.current_page * ITEMS_PER_PAGE):
             content = (
                 f"{item['emoji']} {item['name']}\n"
@@ -124,26 +118,70 @@ class ControlView(View):
         max_page = max(0, (total_items - 1) // ITEMS_PER_PAGE)
         return f"🛒 **{category_name} Market**\nPage {self.current_page + 1} / {max_page + 1} — Category {self.current_category_index + 1} / {total_categories}"
 
+    def add_buy_buttons(self):
+        self.clear_items()
+        self.add_item(self.category_select)
+
+        _, groceries = self.categories_with_items[self.current_category_index]
+        total_items = len(groceries)
+        max_page = max(0, (total_items - 1) // ITEMS_PER_PAGE)
+
+        start = self.current_page * ITEMS_PER_PAGE
+        end = start + ITEMS_PER_PAGE
+        page_items = groceries[start:end]
+
+        for idx, item in enumerate(page_items):
+            button = Button(
+                label=f"Buy (${item['cost']})",
+                style=discord.ButtonStyle.success,
+                custom_id=f"buy_{item['id']}",
+                row=idx + 1
+            )
+            button.callback = self.make_buy_callback(item)
+            self.add_item(button)
+
+        nav_row = len(page_items) + 1
+        self.prev_button.row = nav_row
+        self.next_button.row = nav_row
+        self.add_item(self.prev_button)
+        self.add_item(self.next_button)
+
+        self.prev_button.disabled = self.current_page == 0
+        self.next_button.disabled = self.current_page == max_page
+
+    def make_buy_callback(self, item):
+        async def callback(interaction: Interaction):
+            if interaction.user.id != self.user_id:
+                await interaction.response.send_message("This isn’t your market view.", ephemeral=True)
+                return
+
+            # Replace with your actual purchase logic
+            await interaction.response.send_message(
+                f"{item['emoji']} **{item['name']}** added to your stash for ${item['cost']}!",
+                ephemeral=True
+            )
+        return callback
+
     async def prev_page(self, interaction: Interaction):
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("This isn’t your market view.", ephemeral=True)
             return
         if self.current_page > 0:
             self.current_page -= 1
-            await interaction.response.defer()
-            await self.send_item_messages()
+            self.add_buy_buttons()
+            await interaction.response.edit_message(content=self.build_main_message_text(), view=self)
 
     async def next_page(self, interaction: Interaction):
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("This isn’t your market view.", ephemeral=True)
             return
-        category_name, groceries = self.categories_with_items[self.current_category_index]
+        _, groceries = self.categories_with_items[self.current_category_index]
         total_items = len(groceries)
         max_page = max(0, (total_items - 1) // ITEMS_PER_PAGE)
         if self.current_page < max_page:
             self.current_page += 1
-            await interaction.response.defer()
-            await self.send_item_messages()
+            self.add_buy_buttons()
+            await interaction.response.edit_message(content=self.build_main_message_text(), view=self)
 
     async def on_timeout(self):
         for msg in self.item_messages:
@@ -151,12 +189,7 @@ class ControlView(View):
                 await msg.delete()
             except:
                 pass
-        if hasattr(self, 'footer_message') and self.footer_message:
-            try:
-                await self.footer_message.delete()
-            except:
-                pass
-        if hasattr(self, "main_message") and self.main_message:
+        if self.main_message:
             for child in self.children:
                 child.disabled = True
             await self.main_message.edit(view=self)
@@ -194,8 +227,9 @@ class GroceryCog(commands.Cog):
                 categories_with_items.append((category["name"], formatted_items))
 
         await interaction.response.defer(ephemeral=False)
+        main_msg = await interaction.followup.send("Loading market...", ephemeral=False)
 
-        view = ControlView(interaction.user.id, self.bot, categories_with_items, interaction.channel)
+        view = ControlView(interaction.user.id, self.bot, categories_with_items, interaction.channel, main_msg)
         await view.send_item_messages()
 
 
