@@ -91,11 +91,7 @@ class ControlView(View):
         footer_view = self.build_nav_view()
         self.footer_message = await self.main_message.channel.send(content=footer_text, view=footer_view)
 
-        # Optionally, delete the original main message since it's just a dummy placeholder
-        try:
-            await self.main_message.delete()
-        except:
-            pass
+
 
 
     def build_main_message_text(self):
