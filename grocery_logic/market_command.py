@@ -4,6 +4,7 @@ from discord import app_commands, Interaction
 from discord.ui import View, Button
 import asyncio
 
+ITEMS_PER_PAGE = 50
 
 class ItemButton(Button):
     def __init__(self, item, user_id, bot):
@@ -69,7 +70,9 @@ class ControlView(View):
         category_name, groceries = self.categories_with_items[self.current_category_index]
         total_items = len(groceries)
         max_page = max(0, (total_items - 1) // ITEMS_PER_PAGE)
-        page_items = groceries 
+        start = self.current_page * ITEMS_PER_PAGE
+        end = start + ITEMS_PER_PAGE
+        page_items = groceries[start:end]
 
         for idx, item in enumerate(page_items, start=1 + self.current_page * ITEMS_PER_PAGE):
             content = (
