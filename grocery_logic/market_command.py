@@ -23,14 +23,13 @@ class ItemButton(Button):
 
 
 class ControlView(View):
-    def __init__(self, user_id, bot, categories_with_items, main_message):
+    def __init__(self, user_id, bot, categories_with_items, channel):
         super().__init__(timeout=300)
         self.user_id = user_id
         self.bot = bot
         self.categories_with_items = categories_with_items
         self.current_category_index = 0
         self.current_page = 0
-        self.main_message = main_message
         self.channel = channel
         self.item_messages = []
 
@@ -83,17 +82,14 @@ class ControlView(View):
             )
             view = View()
             view.add_item(ItemButton(item, self.user_id, self.bot))
-            msg = await self.main_message.channel.send(content=content, view=view)
+            msg = await self.channel.send(content=content, view=view)
             self.item_messages.append(msg)
 
 
         # Now send the footer + nav buttons as a new message below all items
         footer_text = self.build_main_message_text()
         footer_view = self.build_nav_view()
-        self.footer_message = await self.main_message.channel.send(content=footer_text, view=footer_view)
-
-
-
+        self.footer_message = await self.channel.send(content=footer_text, view=footer_view)
 
     def build_main_message_text(self):
         total_categories = len(self.categories_with_items)
