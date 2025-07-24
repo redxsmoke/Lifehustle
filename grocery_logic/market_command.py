@@ -51,13 +51,21 @@ class ControlView(View):
         return view
 
     async def send_item_messages(self):
-        # Delete old item messages (the per-item ones)
+        # Delete old item messages including nav/footer message if exists
         for msg in self.item_messages:
             try:
                 await msg.delete()
             except:
                 pass
         self.item_messages = []
+
+        # Also delete old footer message if we have one stored
+        if hasattr(self, 'footer_message') and self.footer_message:
+            try:
+                await self.footer_message.delete()
+            except:
+                pass
+            self.footer_message = None
 
         category_name, groceries = self.categories_with_items[self.current_category_index]
         total_items = len(groceries)
@@ -80,8 +88,16 @@ class ControlView(View):
             msg = await self.main_message.channel.send(content=content, view=view)
             self.item_messages.append(msg)
 
-        # Now edit the main message with the category text + nav buttons only
-        await self.main_message.edit(content=self.build_main_message_text(), view=self.build_nav_view())
+        # Now send the footer + nav buttons as a new message below all items
+        footer_text = self.build_main_message_text()
+        footer_view = self.build_nav_view()
+        self.footer_message = await self.main_message.channel.send(content=footer_text, view=footer_view)
+
+        # Optionally, delete the original main message since it's just a dummy placeholder
+        try:
+            await self.main_message.delete()
+        except:
+            pass
 
 
     def build_main_message_text(self):
