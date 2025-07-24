@@ -1,10 +1,10 @@
 import discord
 from discord.ext import commands
 from discord import app_commands, Interaction
-from discord.ui import View, Button
+from discord.ui import View, Button, Select
 import asyncio
 
-ITEMS_PER_PAGE = 50
+ITEMS_PER_PAGE = 20
 
 class ItemButton(Button):
     def __init__(self, item, user_id, bot):
@@ -22,6 +22,29 @@ class ItemButton(Button):
         await interaction.response.send_message(f"Bought {self.item['emoji']} **{self.item['name']}** for ${self.item['cost']}!", ephemeral=True)
 
 
+class CategorySelect(Select):
+    def __init__(self, control_view):
+        options = [
+            discord.SelectOption(
+                label=cat[0],
+                value=str(i),
+                description=f"Category {i + 1}"
+            )
+            for i, cat in enumerate(control_view.categories_with_items)
+        ]
+        super().__init__(placeholder="Select Category...", options=options, row=0)
+        self.control_view = control_view
+
+    async def callback(self, interaction: Interaction):
+        if interaction.user.id != self.control_view.user_id:
+            await interaction.response.send_message("This isn’t your market view.", ephemeral=True)
+            return
+        self.control_view.current_category_index = int(self.values[0])
+        self.control_view.current_page = 0
+        await interaction.response.defer()
+        await self.control_view.send_item_messages()
+
+
 class ControlView(View):
     def __init__(self, user_id, bot, categories_with_items, channel):
         super().__init__(timeout=300)
@@ -32,6 +55,9 @@ class ControlView(View):
         self.current_page = 0
         self.channel = channel
         self.item_messages = []
+
+        self.category_select = CategorySelect(self)
+        self.add_item(self.category_select)
 
         self.prev_button = Button(label="⬅️ Prev", style=discord.ButtonStyle.secondary)
         self.next_button = Button(label="Next ➡️", style=discord.ButtonStyle.secondary)
@@ -51,7 +77,6 @@ class ControlView(View):
         return view
 
     async def send_item_messages(self):
-        # Delete old item messages including nav/footer message if exists
         for msg in self.item_messages:
             try:
                 await msg.delete()
@@ -59,7 +84,6 @@ class ControlView(View):
                 pass
         self.item_messages = []
 
-        # Also delete old footer message if we have one stored
         if hasattr(self, 'footer_message') and self.footer_message:
             try:
                 await self.footer_message.delete()
@@ -74,6 +98,10 @@ class ControlView(View):
         end = start + ITEMS_PER_PAGE
         page_items = groceries[start:end]
 
+        # Update dropdown selected option
+        for option in self.category_select.options:
+            option.default = (int(option.value) == self.current_category_index)
+
         for idx, item in enumerate(page_items, start=1 + self.current_page * ITEMS_PER_PAGE):
             content = (
                 f"{item['emoji']} {item['name']}\n"
@@ -85,8 +113,6 @@ class ControlView(View):
             msg = await self.channel.send(content=content, view=view)
             self.item_messages.append(msg)
 
-
-        # Now send the footer + nav buttons as a new message below all items
         footer_text = self.build_main_message_text()
         footer_view = self.build_nav_view()
         self.footer_message = await self.channel.send(content=footer_text, view=footer_view)
@@ -125,7 +151,12 @@ class ControlView(View):
                 await msg.delete()
             except:
                 pass
-        if self.main_message:
+        if hasattr(self, 'footer_message') and self.footer_message:
+            try:
+                await self.footer_message.delete()
+            except:
+                pass
+        if hasattr(self, "main_message") and self.main_message:
             for child in self.children:
                 child.disabled = True
             await self.main_message.edit(view=self)
@@ -164,12 +195,8 @@ class GroceryCog(commands.Cog):
 
         await interaction.response.defer(ephemeral=False)
 
-        await interaction.followup.send("Market View", ephemeral=False)
-
         view = ControlView(interaction.user.id, self.bot, categories_with_items, interaction.channel)
         await view.send_item_messages()
-
-
 
 
 async def setup(bot: commands.Bot):
