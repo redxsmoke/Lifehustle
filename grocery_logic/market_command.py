@@ -123,31 +123,23 @@ class ControlView(View):
         self.add_item(self.category_select)
 
         _, groceries = self.categories_with_items[self.current_category_index]
-        total_items = len(groceries)
-        max_page = max(0, (total_items - 1) // ITEMS_PER_PAGE)
 
-        start = self.current_page * ITEMS_PER_PAGE
-        end = start + ITEMS_PER_PAGE
-        page_items = groceries[start:end]
-
-        for idx, item in enumerate(page_items):
+        for item in groceries:
             button = Button(
                 label=f"Buy (${item['cost']})",
                 style=discord.ButtonStyle.success,
-                custom_id=f"buy_{item['id']}",
-                row=idx + 1
+                custom_id=f"buy_{item['id']}"
             )
             button.callback = self.make_buy_callback(item)
             self.add_item(button)
 
-        nav_row = len(page_items) + 1
-        self.prev_button.row = nav_row
-        self.next_button.row = nav_row
         self.add_item(self.prev_button)
         self.add_item(self.next_button)
 
         self.prev_button.disabled = self.current_page == 0
+        max_page = max(0, (len(groceries) - 1) // ITEMS_PER_PAGE)
         self.next_button.disabled = self.current_page == max_page
+
 
     def make_buy_callback(self, item):
         async def callback(interaction: Interaction):
