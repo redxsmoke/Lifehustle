@@ -31,6 +31,7 @@ class ControlView(View):
         self.current_category_index = 0
         self.current_page = 0
         self.main_message = main_message
+        self.channel = channel
         self.item_messages = []
 
         self.prev_button = Button(label="⬅️ Prev", style=discord.ButtonStyle.secondary)
@@ -139,7 +140,7 @@ class GroceryCog(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name="market", description="Browse and buy groceries")
-    async def market(self, interaction: Interaction):
+    async def market(self, interaction: discord.Interaction):
         async with self.bot.pool.acquire() as conn:
             categories = await conn.fetch("SELECT id, name, emoji FROM cd_grocery_category ORDER BY name")
             categories_with_items = []
@@ -160,21 +161,15 @@ class GroceryCog(commands.Cog):
                         "name": item["name"],
                         "cost": item["cost"],
                         "shelf_life": item["shelf_life"],
-                        "value_per_unit": "N/A"
                     }
                     for item in groceries
                 ]
                 categories_with_items.append((category["name"], formatted_items))
 
-        
         await interaction.response.defer(ephemeral=False)
-        main_msg = await interaction.original_response()
 
-
-        view = ControlView(interaction.user.id, self.bot, categories_with_items, main_msg)
+        view = ControlView(interaction.user.id, self.bot, categories_with_items, interaction.channel)
         await view.send_item_messages()
-
-        await main_msg.edit(content=view.build_main_message_text(), view=view)
 
 
 
