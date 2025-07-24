@@ -164,8 +164,11 @@ class GroceryCog(commands.Cog):
 
         await interaction.response.defer(ephemeral=False)
 
+        await interaction.followup.send("Market View", ephemeral=False)
+
         view = ControlView(interaction.user.id, self.bot, categories_with_items, interaction.channel)
         await view.send_item_messages()
+
 
 
 
