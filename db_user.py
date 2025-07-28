@@ -261,35 +261,39 @@ async def add_grocery_to_stash(pool, user_id: int, item: dict):
     expiration_date = now + timedelta(days=shelf_life_days) if shelf_life_days > 0 else None
 
     async with pool.acquire() as conn:
-        # Check total inventory quantity
-        total_quantity = await conn.fetchval("""
-            SELECT COALESCE(SUM(quantity), 0)
-            FROM user_grocery_inventory
-            WHERE user_id = $1 AND sold_at IS NULL
-        """, user_id)
+        try:
+            # Check total inventory quantity
+            total_quantity = await conn.fetchval("""
+                SELECT COALESCE(SUM(quantity), 0)
+                FROM user_grocery_inventory
+                WHERE user_id = $1 AND sold_at IS NULL
+            """, user_id)
 
-        if total_quantity >= 10:
-            raise ValueError("🧊 Easy there, chef. Your fridge is so full, even Tetris gave up.")
+            if total_quantity >= 10:
+                raise ValueError("🧊 Easy there, chef. Your fridge is so full, even Tetris gave up.")
 
-        # Check if this item already exists
-        existing = await conn.fetchrow("""
-            SELECT id, quantity
-            FROM user_grocery_inventory
-            WHERE user_id = $1 AND grocery_type_id = $2 AND sold_at IS NULL
-        """, user_id, grocery_type_id)
+            # Check if this item already exists
+            existing = await conn.fetchrow("""
+                SELECT id, quantity
+                FROM user_grocery_inventory
+                WHERE user_id = $1 AND grocery_type_id = $2 AND sold_at IS NULL
+            """, user_id, grocery_type_id)
 
-        if existing:
-            await conn.execute("""
-                UPDATE user_grocery_inventory
-                SET quantity = quantity + 1,
-                    expiration_date = $1,
-                    created_at = $2
-                WHERE id = $3
-            """, expiration_date, now, existing["id"])
-        else:
-            await conn.execute("""
-                INSERT INTO user_grocery_inventory (
-                    user_id, grocery_type_id, grocery_category_id,
-                    quantity, created_at, expiration_date
-                ) VALUES ($1, $2, $3, 1, $4, $5)
-            """, user_id, grocery_type_id, grocery_category_id, now, expiration_date)
+            if existing:
+                await conn.execute("""
+                    UPDATE user_grocery_inventory
+                    SET quantity = quantity + 1,
+                        expiration_date = $1,
+                        created_at = $2
+                    WHERE id = $3
+                """, expiration_date, now, existing["id"])
+            else:
+                await conn.execute("""
+                    INSERT INTO user_grocery_inventory (
+                        user_id, grocery_type_id, grocery_category_id,
+                        quantity, created_at, expiration_date
+                    ) VALUES ($1, $2, $3, 1, $4, $5)
+                """, user_id, grocery_type_id, grocery_category_id, now, expiration_date)
+        except Exception as e:
+            print(f"[ERROR in add_grocery_to_stash]: {e}")
+            raise  # re-raise so the caller also sees it

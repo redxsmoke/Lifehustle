@@ -115,6 +115,7 @@ class GroceryMarketView(View):
                 "debt_balance": finances.get("debt_balance", 0),
                 "last_paycheck_claimed": finances.get("last_paycheck_claimed"),
             })
+            print(f"[DEBUG] User {self.user_id} is trying to add item to stash: {item}")
 
             try:
                 await add_grocery_to_stash(self.bot.pool, self.user_id, item)
