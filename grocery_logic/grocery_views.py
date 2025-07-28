@@ -70,28 +70,28 @@ class GroceryMarketView(View):
         return "\n".join(lines)
 
     def add_buy_buttons(self):
-        # Clear all existing buttons and re-add dropdown + nav + buy buttons for current page
         self.clear_items()
-        self.add_item(self.category_select)  # row=0
 
-        self.prev_button.disabled = self.current_page == 0
-        _, groceries = self.categories_with_items[self.current_category_index]
-        max_page = max(0, (len(groceries) - 1) // ITEMS_PER_PAGE)
-        self.next_button.disabled = self.current_page == max_page
+        # Row 0: Category dropdown
+        self.category_select.row = 0
+        self.add_item(self.category_select)
 
-        self.add_item(self.prev_button)  # row=1
-        self.add_item(self.next_button)  # row=1
+        # Row 1: Navigation buttons
+        self.prev_button.row = 1
+        self.next_button.row = 1
+        self.add_item(self.prev_button)
+        self.add_item(self.next_button)
 
-        # Add buy buttons for current page items on separate rows (row 2+)
+        # Row 2, 3, 4: Buy buttons (1 per row to avoid overflow)
         start = self.current_page * ITEMS_PER_PAGE
         end = start + ITEMS_PER_PAGE
-        page_items = groceries[start:end]
+        page_items = self.categories_with_items[self.current_category_index][1][start:end]
 
-        # Assign each buy button to its own row to avoid row width error
         for i, item in enumerate(page_items):
             buy_button = Button(label=f"Accept (${item['cost']})", style=discord.ButtonStyle.success, row=2 + i)
             buy_button.callback = self.make_buy_callback(item)
             self.add_item(buy_button)
+
 
     def make_buy_callback(self, item):
         async def callback(interaction: Interaction):
