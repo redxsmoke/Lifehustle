@@ -78,8 +78,6 @@ class GroceryMarketView(View):
         self.add_item(self.prev_button)
         self.add_item(self.next_button)
 
-
-
     def make_buy_callback(self, item):
         async def callback(interaction: Interaction):
             if interaction.user.id != self.user_id:
@@ -87,15 +85,7 @@ class GroceryMarketView(View):
                 return
 
             finances = await get_user_finances(self.bot.pool, self.user_id)
-            balance = finances.get("money", 0)
-            current_stash = finances.get("groceries", [])
-
-            if len(current_stash) >= 10:
-                await interaction.response.send_message(
-                    "🧊 Your fridge is full! You’re one step away from being featured on *Hoarders: Cold Storage Edition.*",
-                    ephemeral=True
-                )
-                return
+            balance = finances.get("checking_account_balance", 0)
 
             if balance < item['cost']:
                 await interaction.response.send_message(
@@ -106,13 +96,20 @@ class GroceryMarketView(View):
 
             new_balance = balance - item['cost']
             await upsert_user_finances(self.bot.pool, self.user_id, money=new_balance)
-            await add_grocery_to_stash(self.bot.pool, self.user_id, item)
+
+            try:
+                await add_grocery_to_stash(self.bot.pool, self.user_id, item)
+            except ValueError as e:
+                await interaction.response.send_message(str(e), ephemeral=True)
+                return
 
             await interaction.response.send_message(
-                f"{item['emoji']} **{item['name']}** added to your stash for ${item['cost']}!",
+                f"{item['emoji']} **{item['name']}** added to your stash for ${item['cost']:,}!",
                 ephemeral=True
             )
+
         return callback
+
 
     async def prev_page(self, interaction: Interaction):
         if interaction.user.id != self.user_id:
