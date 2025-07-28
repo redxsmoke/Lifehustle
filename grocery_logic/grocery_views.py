@@ -35,14 +35,14 @@ class GroceryMarketView(View):
         self.current_page = 0
 
         # Navigation buttons
-        self.prev_button = Button(label="⬅️ Prev", style=discord.ButtonStyle.secondary)
-        self.next_button = Button(label="Next ➡️", style=discord.ButtonStyle.secondary)
+        self.prev_button = Button(label="⬅️ Prev", style=discord.ButtonStyle.secondary, row=1)
+        self.next_button = Button(label="Next ➡️", style=discord.ButtonStyle.secondary, row=1)
         self.prev_button.callback = self.prev_page
         self.next_button.callback = self.next_page
 
         # Category dropdown
         self.category_select = CategorySelect(self)
-        self.add_item(self.category_select)
+        self.add_item(self.category_select)  # row=0 by default
 
         # Add initial buy buttons and nav buttons
         self.add_buy_buttons()
@@ -72,23 +72,24 @@ class GroceryMarketView(View):
     def add_buy_buttons(self):
         # Clear all existing buttons and re-add dropdown + nav + buy buttons for current page
         self.clear_items()
-        self.add_item(self.category_select)
+        self.add_item(self.category_select)  # row=0
 
         self.prev_button.disabled = self.current_page == 0
         _, groceries = self.categories_with_items[self.current_category_index]
         max_page = max(0, (len(groceries) - 1) // ITEMS_PER_PAGE)
         self.next_button.disabled = self.current_page == max_page
 
-        self.add_item(self.prev_button)
-        self.add_item(self.next_button)
+        self.add_item(self.prev_button)  # row=1
+        self.add_item(self.next_button)  # row=1
 
-        # Add buy buttons for current page items
+        # Add buy buttons for current page items on separate rows (row 2+)
         start = self.current_page * ITEMS_PER_PAGE
         end = start + ITEMS_PER_PAGE
         page_items = groceries[start:end]
 
-        for item in page_items:
-            buy_button = Button(label=f"Accept (${item['cost']})", style=discord.ButtonStyle.success)
+        # Assign each buy button to its own row to avoid row width error
+        for i, item in enumerate(page_items):
+            buy_button = Button(label=f"Accept (${item['cost']})", style=discord.ButtonStyle.success, row=2 + i)
             buy_button.callback = self.make_buy_callback(item)
             self.add_item(buy_button)
 
