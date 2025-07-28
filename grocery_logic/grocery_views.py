@@ -18,10 +18,12 @@ class CategorySelect(Select):
         if interaction.user.id != self.control_view.user_id:
             await interaction.response.send_message("This isn’t your market view.", ephemeral=True)
             return
+
         self.control_view.current_category_index = int(self.values[0])
         self.control_view.current_page = 0
         self.control_view.add_buy_buttons()
         await interaction.response.edit_message(content=self.control_view.build_market_message(), view=self.control_view)
+
 
 class GroceryMarketView(View):
     def __init__(self, user_id, bot, categories_with_items):
@@ -32,16 +34,17 @@ class GroceryMarketView(View):
         self.current_category_index = 0
         self.current_page = 0
 
-        # Create nav buttons
+        # Navigation buttons
         self.prev_button = Button(label="⬅️ Prev", style=discord.ButtonStyle.secondary)
         self.next_button = Button(label="Next ➡️", style=discord.ButtonStyle.secondary)
         self.prev_button.callback = self.prev_page
         self.next_button.callback = self.next_page
 
-        # Add category dropdown
+        # Category dropdown
         self.category_select = CategorySelect(self)
         self.add_item(self.category_select)
 
+        # Add initial buy buttons and nav buttons
         self.add_buy_buttons()
 
     def build_market_message(self):
@@ -60,13 +63,14 @@ class GroceryMarketView(View):
             lines.append(f"**{item['emoji']} {item['name']}**")
             lines.append(f"├ Price: ${item['cost']}")
             lines.append(f"├ Expires: {item['shelf_life']} days")
-            lines.append("")  # spacer before button
+            lines.append("")  # spacer before buttons
 
         lines.append(f"Page {self.current_page + 1} / {max_page + 1} — Category {self.current_category_index + 1} / {len(self.categories_with_items)}")
 
         return "\n".join(lines)
 
     def add_buy_buttons(self):
+        # Clear all existing buttons and re-add dropdown + nav + buy buttons for current page
         self.clear_items()
         self.add_item(self.category_select)
 
@@ -77,6 +81,16 @@ class GroceryMarketView(View):
 
         self.add_item(self.prev_button)
         self.add_item(self.next_button)
+
+        # Add buy buttons for current page items
+        start = self.current_page * ITEMS_PER_PAGE
+        end = start + ITEMS_PER_PAGE
+        page_items = groceries[start:end]
+
+        for item in page_items:
+            buy_button = Button(label=f"Accept (${item['cost']})", style=discord.ButtonStyle.success)
+            buy_button.callback = self.make_buy_callback(item)
+            self.add_item(buy_button)
 
     def make_buy_callback(self, item):
         async def callback(interaction: Interaction):
@@ -95,12 +109,21 @@ class GroceryMarketView(View):
                 return
 
             new_balance = balance - item['cost']
-            await upsert_user_finances(self.bot.pool, self.user_id, money=new_balance)
+            await upsert_user_finances(self.bot.pool, self.user_id, {
+                "checking_account_balance": new_balance,
+                "savings_account_balance": finances.get("savings_account_balance", 0),
+                "debt_balance": finances.get("debt_balance", 0),
+                "last_paycheck_claimed": finances.get("last_paycheck_claimed"),
+            })
 
             try:
                 await add_grocery_to_stash(self.bot.pool, self.user_id, item)
             except ValueError as e:
                 await interaction.response.send_message(str(e), ephemeral=True)
+                return
+            except Exception as e:
+                print(f"[ERROR] Adding grocery failed: {e}")
+                await interaction.response.send_message("❌ Something went wrong adding the item.", ephemeral=True)
                 return
 
             await interaction.response.send_message(
@@ -109,7 +132,6 @@ class GroceryMarketView(View):
             )
 
         return callback
-
 
     async def prev_page(self, interaction: Interaction):
         if interaction.user.id != self.user_id:

@@ -175,6 +175,7 @@ class GroceryCog(commands.Cog):
                         "name": item["name"],
                         "cost": item["cost"],
                         "shelf_life": item["shelf_life"],
+                        "category_id": category["id"],
                     }
                     for item in groceries
                 ]
